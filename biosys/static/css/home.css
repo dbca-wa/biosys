@@ -1,0 +1,8 @@
+.banner {
+    display: flex;
+    justify-content: center;
+}
+
+.caption H3 {
+	text-align: center;
+}

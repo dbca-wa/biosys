@@ -1,0 +1,58 @@
+{% extends "main/main_change_form.html" %}
+
+{% block javascripts %}
+	{{ block.super }}
+    <script type="text/javascript" charset="utf-8">
+	    (function($) {
+	        $(document).ready(function() {
+	        	API_PROJECT_URL = '/api/v1/project/';
+	        	API_SITE_URL = '/api/v1/site/';
+
+				// change initial zoom for map if a point it set        	
+	        	geodjango_geometry.map.zoomTo(6);
+
+				$('#id_project').change(function() {
+					var siteParams = {
+						format: 'json',
+						project__id: this.value
+					};
+
+					$.ajax({
+						url: API_SITE_URL,
+						type: 'get',
+						data: siteParams,
+						dataType: 'json'
+					}).done(function (data) {
+						$('#id_sites_to').find('option').remove();
+
+						var id_parent_site = $('#id_parent_site');
+						id_parent_site.find('option[value!=""]').remove();
+
+						// derive site's pk from URL
+						current_site_pk = parseInt(window.location.href.split('/').slice(-2)[0]);
+
+						$.each(data.objects, function(index, site) {
+							if (site.id !== current_site_pk) {
+								id_parent_site.append($('<option>').attr({value: site.id}).text(site.site_code));
+							}
+						});
+					});
+
+					var projectParams = {
+							format: 'json',
+							id: this.value
+						};
+
+					$.ajax({
+						url: API_PROJECT_URL,
+						type: 'get',
+						data: projectParams,
+						dataType: 'json'
+					}).done(function (data) {
+						$('#id_datum').val(data.objects[0].datum);
+					});
+				});
+			});
+	    })(grp.jQuery);
+	</script>
+{% endblock %}

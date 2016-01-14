@@ -1,0 +1,1190 @@
+[
+{
+    "fields": {
+        "deprecated": false,
+        "code": "1",
+        "value": "Basalt"
+    },
+    "model": "main.geologygrouplookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "2",
+        "value": "Black Soil"
+    },
+    "model": "main.geologygrouplookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "3",
+        "value": "Flood plain"
+    },
+    "model": "main.geologygrouplookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "4",
+        "value": "Laterite"
+    },
+    "model": "main.geologygrouplookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "5",
+        "value": "Limestone"
+    },
+    "model": "main.geologygrouplookup",
+    "pk": 5
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "6",
+        "value": "Sand plain"
+    },
+    "model": "main.geologygrouplookup",
+    "pk": 6
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "7",
+        "value": "Sandstone"
+    },
+    "model": "main.geologygrouplookup",
+    "pk": 7
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "8",
+        "value": "Volcanic"
+    },
+    "model": "main.geologygrouplookup",
+    "pk": 8
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "9",
+        "value": "Volcanic/Sandstone"
+    },
+    "model": "main.geologygrouplookup",
+    "pk": 9
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Airfield Swamp"
+    },
+    "model": "main.locationlookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Bachsten Creek"
+    },
+    "model": "main.locationlookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Cascade"
+    },
+    "model": "main.locationlookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "King Edward"
+    },
+    "model": "main.locationlookup",
+    "pk": 5
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Laterite"
+    },
+    "model": "main.locationlookup",
+    "pk": 6
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "MNP"
+    },
+    "model": "main.locationlookup",
+    "pk": 7
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Mount Elizabeth"
+    },
+    "model": "main.locationlookup",
+    "pk": 8
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Mount Hart"
+    },
+    "model": "main.locationlookup",
+    "pk": 9
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "North"
+    },
+    "model": "main.locationlookup",
+    "pk": 10
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Northern"
+    },
+    "model": "main.locationlookup",
+    "pk": 11
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Orchid Creek"
+    },
+    "model": "main.locationlookup",
+    "pk": 12
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "PLNR"
+    },
+    "model": "main.locationlookup",
+    "pk": 13
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Ranger Station"
+    },
+    "model": "main.locationlookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Silent Grove"
+    },
+    "model": "main.locationlookup",
+    "pk": 14
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "South"
+    },
+    "model": "main.locationlookup",
+    "pk": 15
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Surveyors Pool"
+    },
+    "model": "main.locationlookup",
+    "pk": 16
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Trafalgar"
+    },
+    "model": "main.locationlookup",
+    "pk": 17
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "West"
+    },
+    "model": "main.locationlookup",
+    "pk": 18
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Yalgi Track"
+    },
+    "model": "main.locationlookup",
+    "pk": 19
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Grassland"
+    },
+    "model": "main.vegetationgrouplookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Rainforest"
+    },
+    "model": "main.vegetationgrouplookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Riparian"
+    },
+    "model": "main.vegetationgrouplookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Scree"
+    },
+    "model": "main.vegetationgrouplookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Shrubland"
+    },
+    "model": "main.vegetationgrouplookup",
+    "pk": 5
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Swamp"
+    },
+    "model": "main.vegetationgrouplookup",
+    "pk": 6
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Woodland"
+    },
+    "model": "main.vegetationgrouplookup",
+    "pk": 7
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Woodland slope"
+    },
+    "model": "main.vegetationgrouplookup",
+    "pk": 8
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "ALT"
+    },
+    "model": "main.tenurelookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "DRNP"
+    },
+    "model": "main.tenurelookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "KLRCR"
+    },
+    "model": "main.tenurelookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "LCP"
+    },
+    "model": "main.tenurelookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "MNP"
+    },
+    "model": "main.tenurelookup",
+    "pk": 5
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "MRNP"
+    },
+    "model": "main.tenurelookup",
+    "pk": 6
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Pastoral"
+    },
+    "model": "main.tenurelookup",
+    "pk": 7
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "PLNR"
+    },
+    "model": "main.tenurelookup",
+    "pk": 8
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "PNP"
+    },
+    "model": "main.tenurelookup",
+    "pk": 9
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "PRNP"
+    },
+    "model": "main.tenurelookup",
+    "pk": 10
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "UCL"
+    },
+    "model": "main.tenurelookup",
+    "pk": 11
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Brown"
+    },
+    "model": "main.soilcolourlookup",
+    "pk": 8
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Dark"
+    },
+    "model": "main.soilcolourlookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Grey"
+    },
+    "model": "main.soilcolourlookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Orange"
+    },
+    "model": "main.soilcolourlookup",
+    "pk": 6
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Pale"
+    },
+    "model": "main.soilcolourlookup",
+    "pk": 9
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Pink"
+    },
+    "model": "main.soilcolourlookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Red"
+    },
+    "model": "main.soilcolourlookup",
+    "pk": 5
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Yellow"
+    },
+    "model": "main.soilcolourlookup",
+    "pk": 7
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Clay"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "CS",
+        "value": "Clayey Sand"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 6
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "CL",
+        "value": "Clay Loam"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 11
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "CLS",
+        "value": "Clay Loam Sandy"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 12
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "HC",
+        "value": "Heavy Clay"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 18
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "LC",
+        "value": "Light Clay"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 14
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "LMC",
+        "value": "Light Medium Clay"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 15
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "L",
+        "value": "Loam"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 8
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "LS",
+        "value": "Loamy Sand"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 5
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "MC",
+        "value": "Medium Clay"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 16
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Medium Heavy Clay"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 17
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "S",
+        "value": "Sand"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "SCL",
+        "value": "Sandy Clay Loam"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 10
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "SL",
+        "value": "Sandy Loam"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 7
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "ZCL",
+        "value": "Silty Clay Loam"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 13
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "ZL",
+        "value": "Silty Loam"
+    },
+    "model": "main.soilsurfacetexturelookup",
+    "pk": 9
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Break Away"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "FOO",
+        "value": "Footslope"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "HCR",
+        "value": "Hillcrest"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "HSL",
+        "value": "Hillslope"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Hillslope/Gully"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 6
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "LEV",
+        "value": "Levee"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 7
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Levee/Hillslope"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 8
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "PLA",
+        "value": "Plain"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 9
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "RER",
+        "value": "Residual Rise"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 10
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "RES",
+        "value": "Riseslope"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 11
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "SCA",
+        "value": "Scarp"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 12
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Scarp/Gully"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 13
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Scree"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 14
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "SUS",
+        "value": "Summit Surface"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 15
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "SWP",
+        "value": "Swamp"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 16
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "TEF",
+        "value": "Terrace Flat"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 17
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "VLF",
+        "value": "Valley Flat"
+    },
+    "model": "main.landformelementlookup",
+    "pk": 18
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "ALP",
+        "value": "Alluvial Plain"
+    },
+    "model": "main.landformpatternlookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "ESC",
+        "value": "Escarpment"
+    },
+    "model": "main.landformpatternlookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "FLO",
+        "value": "Floodplain"
+    },
+    "model": "main.landformpatternlookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Gorge"
+    },
+    "model": "main.landformpatternlookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "HIL",
+        "value": "Hills (90-300m)"
+    },
+    "model": "main.landformpatternlookup",
+    "pk": 6
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "LOW",
+        "value": "Low Hills (30-90m)"
+    },
+    "model": "main.landformpatternlookup",
+    "pk": 9
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "PLA",
+        "value": "Plain"
+    },
+    "model": "main.landformpatternlookup",
+    "pk": 10
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "PLT",
+        "value": "Plateau"
+    },
+    "model": "main.landformpatternlookup",
+    "pk": 11
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "RIS",
+        "value": "Rises (9-30m)"
+    },
+    "model": "main.landformpatternlookup",
+    "pk": 13
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "SAN",
+        "value": "Sandplain"
+    },
+    "model": "main.landformpatternlookup",
+    "pk": 14
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Lake, Pool Permanent"
+    },
+    "model": "main.watertypelookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Lake, Pool Seasonal"
+    },
+    "model": "main.watertypelookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Pond, Marsh, Swamp"
+    },
+    "model": "main.watertypelookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Riverine Permanent"
+    },
+    "model": "main.watertypelookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Riverine Seasonal"
+    },
+    "model": "main.watertypelookup",
+    "pk": 5
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Seasonal Marsh"
+    },
+    "model": "main.watertypelookup",
+    "pk": 6
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Spring"
+    },
+    "model": "main.watertypelookup",
+    "pk": 7
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Wetland"
+    },
+    "model": "main.watertypelookup",
+    "pk": 8
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Abney Sandstone Member - Quartz sandstone"
+    },
+    "model": "main.geologylookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Alluvium"
+    },
+    "model": "main.geologylookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Antrim Plateau Volcanics"
+    },
+    "model": "main.geologylookup",
+    "pk": 5
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Antrim Plateau Volcanics - Basalt"
+    },
+    "model": "main.geologylookup",
+    "pk": 6
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Bauxite, aluminious laterite"
+    },
+    "model": "main.geologylookup",
+    "pk": 7
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Black soil"
+    },
+    "model": "main.geologylookup",
+    "pk": 8
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Carson Volcanics"
+    },
+    "model": "main.geologylookup",
+    "pk": 9
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Cecil Sandstone Member - Quartz sandstone"
+    },
+    "model": "main.geologylookup",
+    "pk": 10
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Colluvium and alluvium - Partly consolidated"
+    },
+    "model": "main.geologylookup",
+    "pk": 11
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Colluvium and rubble - Sand, gravel, conglomerate and sedimentary breccia"
+    },
+    "model": "main.geologylookup",
+    "pk": 12
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Hart Dolerite - Dark grey dolerite"
+    },
+    "model": "main.geologylookup",
+    "pk": 13
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Hart Dolerite - Dark grey dolerite / Colluvium and alluvium"
+    },
+    "model": "main.geologylookup",
+    "pk": 14
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Headleys Limestone"
+    },
+    "model": "main.geologylookup",
+    "pk": 15
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Kellys Knob Sandstone Member - Quartz sandstone"
+    },
+    "model": "main.geologylookup",
+    "pk": 16
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "King Leopold Sandstone"
+    },
+    "model": "main.geologylookup",
+    "pk": 17
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "King Leopold Sandstone / Colluvium and alluvium "
+    },
+    "model": "main.geologylookup",
+    "pk": 18
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Mendena Formation - Quartz sandstone with siltstone"
+    },
+    "model": "main.geologylookup",
+    "pk": 19
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Olympio Formation - Sandstone"
+    },
+    "model": "main.geologylookup",
+    "pk": 20
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Pentecost Sandstone - Middle: Blocky fine to medium grained quartz sandstone"
+    },
+    "model": "main.geologylookup",
+    "pk": 21
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Ranford Formation - Sandstone"
+    },
+    "model": "main.geologylookup",
+    "pk": 22
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Sand, soil cover, alluvium, travertine"
+    },
+    "model": "main.geologylookup",
+    "pk": 24
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Sandstone"
+    },
+    "model": "main.geologylookup",
+    "pk": 25
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Sand substrate over carson volcanics"
+    },
+    "model": "main.geologylookup",
+    "pk": 23
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Unconsolidated and partly consolidated sandplain deposits"
+    },
+    "model": "main.geologylookup",
+    "pk": 26
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Undifferentiated quartz sandstone, feldspathic sandstone"
+    },
+    "model": "main.geologylookup",
+    "pk": 27
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Warton Sandstone"
+    },
+    "model": "main.geologylookup",
+    "pk": 28
+}
+]

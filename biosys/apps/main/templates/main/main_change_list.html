@@ -1,0 +1,7 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools %}
+    {% if not readonly_user %}
+        {{ block.super }}
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends "main/main_change_form.html" %}
+{% load admin_urls admin_list %}
+
+{% block object-tools-items %}
+    {% if not readonly_user %}
+        {% if has_approve_permission and not original.is_approved %}
+        <li><a href="{% url 'admin:main_sitevisit_approve' original.pk %}">Approve site visit data</a></li>
+        {% endif %}
+        {{ block.super }}
+    {% endif %}
+{% endblock %}

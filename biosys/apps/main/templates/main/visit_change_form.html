@@ -1,0 +1,65 @@
+{% extends "main/main_change_form.html" %}
+{% load admin_urls admin_list %}
+
+{% block extrahead %}
+{{ block.super }}
+{% if not readonly_user and change %}
+<script type="text/javascript">
+    (function($) {
+        $(document).ready(function() {
+            $("select#id_datasheets").change(function() {
+                if (this.value) {
+                    url = "{% url 'download_visit_datasheet' original.pk %}";
+                    window.open(url, "_blank");
+                }
+            });
+        });
+    })(django.jQuery);
+</script>
+{% endif %}
+{% endblock %}
+
+{% block object-tools-items %}
+    {% if not readonly_user and change %}
+        {#{{ d_form.as_ul }}#}
+        <li><a href="{% url 'admin:main_visit_download_datasheet' original.pk %}">Download blank datasheets for all site visits</a></li>
+        <li><a href="{% url 'admin:main_visit_upload_datasheet' original.pk %}">Upload a completed datasheet for a site visit</a></li>
+        {{ block.super }}
+    {% endif %}
+{% endblock %}
+
+{% block javascripts %}
+	{{ block.super }}
+    <script type="text/javascript" charset="utf-8">
+	    (function($) {
+	        $(document).ready(function() {
+	        	API_SITE_URL = '/api/v1/site/';
+
+				$('#id_project').change(function() {
+					params = {
+						format: 'json',
+						project__id: this.value
+					};
+
+					$.ajax({
+						url: API_SITE_URL,
+						type: 'get',
+						data: params,
+						dataType: 'json'
+					}).done(function (data) {
+						$('#id_sites_to').find('option').remove();
+
+						var id_sites_from = $('#id_sites_from');
+						id_sites_from.find('option').remove();
+						$.each(data.objects, function(index, site) {
+							id_sites_from.append($('<option>').attr({value: site.id}).text(site.site_code));
+						});
+
+						SelectBox.init('id_sites_from');
+						SelectBox.init('id_sites_to');
+					});
+				});
+			});
+	    })(grp.jQuery);
+	</script>
+{% endblock %}

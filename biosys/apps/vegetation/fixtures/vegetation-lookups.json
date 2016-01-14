@@ -1,0 +1,434 @@
+[
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Healthy"
+    },
+    "model": "vegetation.conditionlookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Medium"
+    },
+    "model": "vegetation.conditionlookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Unhealthy"
+    },
+    "model": "vegetation.conditionlookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "G"
+    },
+    "model": "vegetation.stratumlookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "M1"
+    },
+    "model": "vegetation.stratumlookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "M2"
+    },
+    "model": "vegetation.stratumlookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "U"
+    },
+    "model": "vegetation.stratumlookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "D"
+    },
+    "model": "vegetation.significancelookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "None"
+    },
+    "model": "vegetation.significancelookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "",
+        "value": "Y"
+    },
+    "model": "vegetation.significancelookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "2",
+        "value": "1-3 Years"
+    },
+    "model": "vegetation.evidencerecentfirelookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "3",
+        "value": "<1 Year"
+    },
+    "model": "vegetation.evidencerecentfirelookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "1",
+        "value": "3-10 Years"
+    },
+    "model": "vegetation.evidencerecentfirelookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "0",
+        "value": "No Evidence"
+    },
+    "model": "vegetation.evidencerecentfirelookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "5",
+        "value": "Extreme"
+    },
+    "model": "vegetation.fireintensitylookup",
+    "pk": 6
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "4",
+        "value": "High"
+    },
+    "model": "vegetation.fireintensitylookup",
+    "pk": 5
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "2",
+        "value": "Low"
+    },
+    "model": "vegetation.fireintensitylookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "3",
+        "value": "Moderate"
+    },
+    "model": "vegetation.fireintensitylookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "0",
+        "value": "No Evidence"
+    },
+    "model": "vegetation.fireintensitylookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "1",
+        "value": "Patchy"
+    },
+    "model": "vegetation.fireintensitylookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "3",
+        "value": "Groups"
+    },
+    "model": "vegetation.cattlesightedlookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "0",
+        "value": "No Cattle Sighted"
+    },
+    "model": "vegetation.cattlesightedlookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "2",
+        "value": "Several Individuals"
+    },
+    "model": "vegetation.cattlesightedlookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "1",
+        "value": "Single Individual"
+    },
+    "model": "vegetation.cattlesightedlookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "3",
+        "value": "Heavy"
+    },
+    "model": "vegetation.grazinglevellookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "1",
+        "value": "Light"
+    },
+    "model": "vegetation.grazinglevellookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "2",
+        "value": "Moderate"
+    },
+    "model": "vegetation.grazinglevellookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "0",
+        "value": "No Evidence"
+    },
+    "model": "vegetation.grazinglevellookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "3",
+        "value": "Extensive"
+    },
+    "model": "vegetation.trackstramplinglookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "1",
+        "value": "Light"
+    },
+    "model": "vegetation.trackstramplinglookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "2",
+        "value": "Moderate"
+    },
+    "model": "vegetation.trackstramplinglookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "0",
+        "value": "No Evidence"
+    },
+    "model": "vegetation.trackstramplinglookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "3",
+        "value": "Extensive"
+    },
+    "model": "vegetation.cattledunglookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "0",
+        "value": "No Evidence"
+    },
+    "model": "vegetation.cattledunglookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "2",
+        "value": "Scattered"
+    },
+    "model": "vegetation.cattledunglookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "1",
+        "value": "Some Sighted"
+    },
+    "model": "vegetation.cattledunglookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "3",
+        "value": "Heavy"
+    },
+    "model": "vegetation.feralevidencelookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "1",
+        "value": "Light"
+    },
+    "model": "vegetation.feralevidencelookup",
+    "pk": 2
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "2",
+        "value": "Moderate"
+    },
+    "model": "vegetation.feralevidencelookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "N",
+        "value": "No"
+    },
+    "model": "vegetation.feralevidencelookup",
+    "pk": 6
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "0",
+        "value": "No Evidence"
+    },
+    "model": "vegetation.feralevidencelookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "Y",
+        "value": "Yes"
+    },
+    "model": "vegetation.feralevidencelookup",
+    "pk": 5
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "5",
+        "value": "Extensive"
+    },
+    "model": "vegetation.biodiversityindicatorlookup",
+    "pk": 6
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "4",
+        "value": "High"
+    },
+    "model": "vegetation.biodiversityindicatorlookup",
+    "pk": 5
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "2",
+        "value": "Low"
+    },
+    "model": "vegetation.biodiversityindicatorlookup",
+    "pk": 3
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "3",
+        "value": "Moderate"
+    },
+    "model": "vegetation.biodiversityindicatorlookup",
+    "pk": 4
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "0",
+        "value": "None"
+    },
+    "model": "vegetation.biodiversityindicatorlookup",
+    "pk": 1
+},
+{
+    "fields": {
+        "deprecated": false,
+        "code": "1",
+        "value": "Some"
+    },
+    "model": "vegetation.biodiversityindicatorlookup",
+    "pk": 2
+}
+]

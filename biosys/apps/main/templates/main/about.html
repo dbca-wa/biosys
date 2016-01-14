@@ -1,0 +1,76 @@
+{% extends 'base_biosys.html' %}
+
+{% load admin_urls %}
+
+{% load staticfiles %}
+
+{% block extra_style %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'css/home.css' %}">
+{% endblock %}
+
+{% block page_content_inner %}
+    <div class="row">
+        <div class="col-xs-12">
+            <h2>About BioSys</h2>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-10">
+            <p>BioSys – the Western Australian Biological Survey Database – is a web-based repository for the
+                Department’s biological survey data.
+                The system at Version 1.0 is currently a proof-of-concept,
+                funded by the <a
+                        href="http://www.dpaw.wa.gov.au/management/kimberley-strategy/conserving-the-unique-kimberley-environment/164-the-landscape-conservation-initiative">Kimberley
+                    Landscape Conservation Initiative (LCI)</a>, and supporting that initiative’s immediate data
+                requirements.
+            </p>
+
+            <p>
+                Biological survey databases typically manage highly complex and structured data.
+                In this initial version we have implemented data fields and workflow to specifically support the
+                Kimberley LCI.
+                In future versions, resources permitting, BioSys will be extended to support a much broader range of
+                ecological data types and sampling protocols, including localised and regional survey snapshots.
+            </p>
+
+            <p>
+                BioSys runs in a web browser within the Department’s internal network.
+                Data is currently uploaded to the system via supplied spreadsheet templates, permitting offline data
+                entry.
+                Published BioSys data can be downloaded by any authorised staff member via their normal login. Data will
+                also be warehoused in NatureMap, subject to custodial approval.
+            </p>
+        </div>
+        <div class="col-xs-2">
+            <img src="{% static 'img/frog-small.jpg' %}"  class="img-responsive">
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-12">
+            <h2>Acknowledgements</h2>
+
+            <p>
+                BioSys was developed at the instigation of the Director, Science and Conservation Division (SCD) using
+                LCI funding.
+                It was a key deliverable of the Office of Information Management’s (OIM) Knowledge Management
+                Initiative, a highly successful joint venture between SCD, OIM and other sections of the Department.
+                Both SCD and OIM contributed significant in-kind resources to this project, including project management
+                and user liaison. Gaia Resources and OIM provided system development.
+            </p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-12">
+            <h2>Feedback</h2>
+
+            <p>
+                Your feedback and suggestions are welcome.
+                For queries regarding BioSys aims, objectives and future directions, contact SCD’s <a
+                    href="mailto:paul.gioia@dpaw.wa.gov.au"> Ecoinformatics Unit Manager</a>.
+                For access to data, or technical queries contact the <a href="mailto:biosys@dpaw.wa.gov.au">system
+                custodian.</a>
+            </p>
+        </div>
+    </div>
+{% endblock %}

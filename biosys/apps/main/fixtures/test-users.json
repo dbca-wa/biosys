@@ -1,0 +1,73 @@
+[
+{
+    "fields": {
+        "username": "admin",
+        "first_name": "Admin",
+        "last_name": "User",
+        "is_active": true,
+        "is_superuser": true,
+        "is_staff": true,
+        "groups": [],
+        "user_permissions": [],
+        "password": "",
+        "email": "asi@dpaw.wa.gov.au"
+    },
+    "model": "auth.user"
+},
+{
+    "fields": {
+        "username": "normaluser",
+        "first_name": "Normal",
+        "last_name": "User",
+        "is_active": true,
+        "is_superuser": false,
+        "is_staff": false,
+        "groups": [],
+        "user_permissions": [],
+        "password": "",
+        "email": "normaluser@dpaw.wa.gov.au"
+    },
+    "model": "auth.user"
+},
+{
+    "fields": {
+        "username": "custodian",
+        "first_name": "Custodian",
+        "last_name": "User",
+        "is_active": true,
+        "is_superuser": false,
+        "is_staff": true,
+        "groups": [
+            [
+                "Uploaders"
+            ],
+            [
+                "Data custodians"
+            ]
+        ],
+        "user_permissions": [],
+        "password": "",
+        "email": "custodian@dpaw.wa.gov.au"
+    },
+    "model": "auth.user"
+},
+{
+    "fields": {
+        "username": "uploader",
+        "first_name": "Uploader",
+        "last_name": "User",
+        "is_active": true,
+        "is_superuser": false,
+        "is_staff": true,
+        "groups": [
+            [
+                "Uploaders"
+            ]
+        ],
+        "user_permissions": [],
+        "password": "",
+        "email": "uploader@dpaw.wa.gov.au"
+    },
+    "model": "auth.user"
+}
+]

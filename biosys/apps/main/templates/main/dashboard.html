@@ -1,0 +1,71 @@
+{% extends 'base_biosys.html' %}
+{% load admin_urls %}
+{% load staticfiles %}
+
+{% block extra_style %}
+{{ block.super }}
+	<link rel="stylesheet" href="{% static 'css/home.css' %}">
+{% endblock %}
+
+{% block page_content_inner %}
+<div class="row">
+    <div class="col-xs-12">
+	    <div class="page-header">
+	    	<h1 style="text-align:center">Welcome to BioSys</h1>
+	    </div>
+	    <div class="row">
+            {% if not readonly_user %}
+	    	<a href="{% url 'admin:main_project_changelist' %}">
+		  		<div class="col-md-3">
+		    		<div class="thumbnail">
+		      			<img src="{% static 'img/project.jpg' %}" alt="project">
+			      		<div class="caption">
+			        		<h3>Projects</h3>
+		      			</div>
+		    		</div>
+		  		</div>
+	  		</a>
+	    	<a href="{% url 'admin:main_site_changelist' %}">
+		  		<div class="col-md-3">
+		    		<div class="thumbnail">
+		      			<img src="{% static 'img/site.jpg' %}" alt="project">
+			      		<div class="caption">
+			        		<h3>Sites</h3>
+		      			</div>
+		    		</div>
+		    	</div>
+	  		</a>
+	    	<a href="{% url 'admin:main_visit_changelist' %}">
+		  		<div class="col-md-3">
+		    		<div class="thumbnail">
+		      			<img src="{% static 'img/visit.jpg' %}" alt="project">
+			      		<div class="caption">
+			        		<h3>Visits</h3>
+		      			</div>
+		    		</div>
+		    	</div>
+	  		</a>
+	    	<a href="{% url 'publish_report' %}">
+		  		<div class="col-md-3">
+		    		<div class="thumbnail">
+		      			<img src="{% static 'img/data.jpg' %}" alt="project">
+			      		<div class="caption">
+			        		<h3>Data</h3>
+		      			</div>
+		    		</div>
+		    	</div>
+	  		</a>
+            {% else %}
+	    	<a href="{% url 'publish_report' %}">
+            <div class="thumbnail">
+                <img src="{% static 'img/data.jpg' %}" alt="project">
+                <div class="caption">
+                    <h3>Data</h3>
+                </div>
+            </div>
+	  		</a>
+            {% endif %}
+        </div><!-- /.row -->
+    </div><!-- /.col-xs-12 -->
+</div><!-- /.row -->
+{% endblock %}

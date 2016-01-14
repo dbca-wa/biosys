@@ -1,0 +1,16 @@
+{% extends "admin/base.html" %}
+{# NOTE: this template overrides the django-grappelli base_site.html template. #}
+{% load i18n grp_tags %}
+
+{% block title %}{{ title }} | {% get_site_title %}{% endblock %}
+
+{% block branding %}
+    {# Use the div#grp-branding for branding elements, e.g. a logo #}
+    {# <div id="grp-branding"></div> #}
+{% endblock %}
+
+{% block nav-global %}
+<ul id="grp-user-tools">
+    <li class="grp-user-options-container"><a href="{% url 'publish_report' %}">Data</a></li>
+</ul>
+{% endblock %}
