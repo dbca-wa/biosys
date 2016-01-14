@@ -20,7 +20,7 @@ class SpeciesManager(models.Manager):
         """
         source = 'herbie'
         logger.info('Querying HERBIE.HBVSPECIES for species names')
-        url = os.environ['KMI_DPAW_WFS'].format('herbie_hbvspecies')
+        url = os.environ['KMI_WFS_URL'].format('dpaw:herbie_hbvspecies')
         auth = (os.environ['KMI_USER'], os.environ['KMI_PASSWORD'])
         r = requests.post(url, auth=auth)
         if r.status_code != 200:
