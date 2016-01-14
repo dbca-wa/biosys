@@ -1,6 +1,6 @@
 # BioSys - Biological Survey Database System #
 
-BioSys is a proposed biological survey database system for Science and
+BioSys is a biological survey database system for Science and
 Conservation Division within the Department of Parks and Wildlife.
 
 Confluence URL:
@@ -8,9 +8,11 @@ Confluence URL:
 
 ## Getting Started
 
-Biosys is build on Django, the Python web framework and also requires a PosgreSQL database server (9.3), with the PostGIS extension.
+Biosys is build on Django, the Python web framework and also requires a PostgreSQL database server
+(9.3+) with the PostGIS extension.
 
-It is recommended that the system is run in a Python virtual environment to allow the dependent libraries to be installed without possible collisions with other versions of the same libraries.
+It is recommended that the system is run in a Python virtual environment to allow the dependent
+libraries to be installed without possible collisions with other versions of the same libraries.
 
 ## Requirements
 
@@ -28,27 +30,28 @@ Python library requirements should be installed using `pip`:
 ## Environment settings
 
 The following environment settings should be defined in a `.env` file
-(used by `honcho`, below). Example settings:
+(set as runtime by `django-confy`). Required settings:
 
+    DJANGO_SETTINGS_MODULE="biosys.settings"
     DEBUG=True
-    PORT=8080
     DATABASE_URL="postgres://USER:PASSWORD@HOST:PORT/NAME"
     SECRET_KEY="ThisIsASecretKey"
-    LDAP_SERVER_URI="ldap://URL"
-    LDAP_ACCESS_DN="ldap-access-dn"
-    LDAP_ACCESS_PASSWORD="password"
-    LDAP_SEARCH_SCOPE="DC=searchscope"
+    CSRF_COOKIE_SECURE=False
+    SESSION_COOKIE_SECURE=False
+    KMI_USER="kmiuser"
+    KMI_PASSWORD="passwrod"
+    KMI_WFS_URL="https://kmi.dpaw.wa.gov.au/geoserver/ows?service=wfs&version=1.0.0&request=GetCapabilities&typeNames={}&outputFormat=application/json"
 
 ## Running
 
-Use `honcho` to run a local copy of the application:
+Start the application on port 8080:
 
-`honcho start`
+`python manage.py runserver 0.0.0.0:8080`
 
 ## Testing
 
-Use `honcho` to run unit tests or generate test coverage reports:
+To run unit tests or generate test coverage reports:
 
-    honcho run python manage.py test -k -v2
-    honcho run coverage run --source='.' manage.py test -k -v2
-    honcho run coverage report -m
+    python manage.py test -k -v2
+    coverage run --source='.' manage.py test -k -v2
+    coverage report -m
