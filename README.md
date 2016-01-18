@@ -30,7 +30,7 @@ Python library requirements should be installed using `pip`:
 ## Environment settings
 
 The following environment settings should be defined in a `.env` file
-(set as runtime by `django-confy`). Required settings:
+(set at runtime by `django-confy`). Required settings:
 
     DJANGO_SETTINGS_MODULE="biosys.settings"
     DEBUG=True
@@ -38,8 +38,8 @@ The following environment settings should be defined in a `.env` file
     SECRET_KEY="ThisIsASecretKey"
     CSRF_COOKIE_SECURE=False
     SESSION_COOKIE_SECURE=False
-    KMI_USER="kmiuser"
-    KMI_PASSWORD="passwrod"
+    KMI_USER="KMIUSER"
+    KMI_PASSWORD="PASSWORD"
     KMI_WFS_URL="https://kmi.dpaw.wa.gov.au/geoserver/ows?service=wfs&version=1.0.0&request=GetCapabilities&typeNames={}&outputFormat=application/json"
 
 ## Running
