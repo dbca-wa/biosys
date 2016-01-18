@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-import sys
 import confy
+import sys
+
 confy.read_environment_file()
 
 if __name__ == "__main__":
