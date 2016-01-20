@@ -14,6 +14,7 @@ django-grappelli>=2.6.5
 django-envelope>=1.0
 django-braces>=1.8.0
 django-debug-toolbar>=1.3.0
+django-wsgiserver
 # Testing requirements
 coverage==3.7.1
 flake8==2.4.0
