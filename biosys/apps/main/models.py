@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 import datetime
 from django.db import transaction
 from os import path
-import reversion
+from reversion import revisions as reversion
 
 from django.db.models import Max
 from django.contrib.gis.db import models
@@ -254,7 +254,7 @@ class SiteVisit(models.Model):
     def is_approved(self):
         return self.data_status == self.DATA_STATUS_APPROVED
 
-    @ property
+    @property
     def is_quarantined(self):
         return self.data_status == self.DATA_STATUS_QUAR
 

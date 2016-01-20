@@ -1,5 +1,6 @@
 import os
-from fabric.api import cd, run
+from fabric.api import cd, run, sudo
+from fabric.colors import green, yellow, red
 from fabric.contrib.files import exists, upload_template
 
 DEPLOY_REPO_URL = os.environ['DEPLOY_REPO_URL']
@@ -42,7 +43,7 @@ def _update_venv():
     with cd(DEPLOY_VENV_PATH):
         if not exists('{}/bin/pip'.format(DEPLOY_VENV_NAME)):
             run('virtualenv {}'.format(DEPLOY_VENV_NAME))
-        run('{}/bin/pip install -r requirements/base.txt'.format(DEPLOY_VENV_NAME))
+        run('{}/bin/pip install -r {}/requirements.txt'.format(DEPLOY_VENV_NAME, DEPLOY_TARGET))
 
 
 def _setup_env():
@@ -56,7 +57,11 @@ def _setup_env():
             'DEPLOY_SESSION_COOKIE_SECURE': DEPLOY_SESSION_COOKIE_SECURE,
             'KMI_PASSWORD': KMI_PASSWORD,
         }
-        upload_template('biosys/templates/env.jinja', '.env', context, use_jinja=True, backup=False)
+        if exists('.env'):
+            print(yellow("The existing .env file will be used."))
+        else:
+            upload_template('biosys/templates/env.jinja', '.env', context,
+                            use_jinja=True, backup=False)
 
 
 def _setup_supervisor_conf():
@@ -68,14 +73,19 @@ def _setup_supervisor_conf():
             'DEPLOY_VENV_PATH': DEPLOY_VENV_PATH,
             'DEPLOY_VENV_NAME': DEPLOY_VENV_NAME,
         }
-        upload_template(
-            'biosys/templates/supervisor.jinja', '{}.conf'.format(DEPLOY_SUPERVISOR_NAME),
-            context, use_jinja=True, backup=False)
+        if exists('{}/{}.conf'.format(DEPLOY_TARGET, DEPLOY_SUPERVISOR_NAME)):
+            print(yellow("The existing supervisor config file {}/{}.conf will be used.".format(
+                DEPLOY_TARGET, DEPLOY_SUPERVISOR_NAME)))
+        else:
+            upload_template(
+                'biosys/templates/supervisor.jinja', '{}/{}.conf'.format(
+                DEPLOY_TARGET, DEPLOY_SUPERVISOR_NAME),
+                context, use_jinja=True, backup=False)
 
 
 def _chown():
     # Assumes that the DEPLOY_USER user exists on the target server.
-    run('chown -R {0}:{0} {1}'.format(DEPLOY_USER, DEPLOY_TARGET))
+    sudo('chown -R {0}:{0} {1}'.format(DEPLOY_USER, DEPLOY_TARGET))
 
 
 def _collectstatic():

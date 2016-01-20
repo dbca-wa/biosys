@@ -13,7 +13,7 @@ from django.template.response import TemplateResponse
 from django.utils.encoding import force_text
 from django.utils.http import urlencode
 from django.views.generic import RedirectView
-import reversion
+from reversion.admin import VersionAdmin
 
 from upload.models import SiteVisitDataFileError
 from upload.validation import SiteDataFileValidator, SiteVisitDataBuilder
@@ -47,7 +47,7 @@ def user_can_approve(user):
     return user.is_superuser or user.groups.filter(name=CUSTODIANS).exists()
 
 
-class MainAppAdmin(reversion.VersionAdmin):
+class MainAppAdmin(VersionAdmin):
     change_form_template = 'main/main_change_form.html'
     change_list_template = 'main/main_change_list.html'
 
@@ -329,7 +329,7 @@ class VisitAdmin(MainAppAdmin):
 
 
 @admin.register(SiteCharacteristic)
-class SiteCharacteristicAdmin(reversion.VersionAdmin):
+class SiteCharacteristicAdmin(VersionAdmin):
     list_display = [
         'site_visit', 'underlaying_geology', 'closest_water_distance',
         'closest_water_type', 'landform_pattern', 'landform_element',
@@ -504,13 +504,13 @@ class SiteVisitDataFileAdmin(MainAppAdmin):
 
 
 @admin.register(SiteVisitDataSheetTemplate)
-class SiteVisitDataSheetTemplateAdmin(reversion.VersionAdmin):
+class SiteVisitDataSheetTemplateAdmin(VersionAdmin):
     list_display = ['filename', 'version']
     form = forms.SiteVisitDataSheetTemplateForm
 
 
 @admin.register(SpeciesObservation)
-class SpeciesObservationAdmin(reversion.VersionAdmin):
+class SpeciesObservationAdmin(VersionAdmin):
     list_display = ['input_name', 'name_id', 'valid', 'site_visit']
     pass
 
@@ -519,7 +519,7 @@ class SpeciesObservationAdmin(reversion.VersionAdmin):
 # Lookups
 #########################
 
-class AbstractLookupAdmin(reversion.VersionAdmin):
+class AbstractLookupAdmin(VersionAdmin):
     list_display = ['value', 'code', 'deprecated']
 
 

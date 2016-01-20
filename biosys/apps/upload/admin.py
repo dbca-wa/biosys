@@ -1,11 +1,11 @@
 from django.contrib import admin
-import reversion
+from reversion.admin import VersionAdmin
 
 from models import *
 
 
 @admin.register(SiteVisitDataFileError)
-class SiteVisitDataFileErrorAdmin(reversion.VersionAdmin):
+class SiteVisitDataFileErrorAdmin(VersionAdmin):
     list_display = ['file', 'message']
     readonly_fields = ['file']
     change_form_template = 'upload/sitevisitdatafile_change_form.html'
