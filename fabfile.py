@@ -42,7 +42,7 @@ def _update_venv():
     with cd(DEPLOY_VENV_PATH):
         if not exists('{}/bin/pip'.format(DEPLOY_VENV_NAME)):
             run('virtualenv {}'.format(DEPLOY_VENV_NAME))
-        run('{}/bin/pip install -r requirements/base.txt'.format(DEPLOY_VENV_NAME))
+        run('{}/bin/pip install -r {}/requirements.txt'.format(DEPLOY_VENV_NAME, DEPLOY_TARGET))
 
 
 def _setup_env():
