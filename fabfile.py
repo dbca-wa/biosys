@@ -5,15 +5,15 @@ from fabric.colors import green, yellow, red
 from fabric.contrib.files import exists, upload_template
 
 confy.read_environment_file()
-e = **os.environ
+e = os.environ
 
 def _get_latest_source():
-    run('mkdir -p {}'.format(DEPLOY_TARGET))
-    if exists(os.path.join(DEPLOY_TARGET, '.git')):
-        run('cd {DEPLOY_TARGET} && git pull'.format(e))
+    run('mkdir -p {DEPLOY_TARGET}'.format(**e))
+    if exists(os.path.join(e["DEPLOY_TARGET"], '.git')):
+        run('cd {DEPLOY_TARGET} && git pull'.format(**e))
     else:
-        run('git clone {DEPLOY_REPO_URL} {DEPLOY_TARGET}'.format(e))
-        run('cd {DEPLOY_TARGET} && git checkout master'.format(e))
+        run('git clone {DEPLOY_REPO_URL} {DEPLOY_TARGET}'.format(**e))
+        run('cd {DEPLOY_TARGET} && git checkout master'.format(**e))
 
 
 def _create_dirs():
@@ -25,9 +25,9 @@ def _create_dirs():
 def _update_venv():
     # Assumes that virtualenv is installed system-wide.
     with cd(e["DEPLOY_VENV_PATH"]):
-        if not exists('DEPLOY_VENV_NAME{}/bin/pip'.format(e)):
-            run('virtualenv {DEPLOY_VENV_NAME}'.format(e))
-        run('{DEPLOY_VENV_NAME}/bin/pip install -r {DEPLOY_TARGET}/requirements.txt'.format(e))
+        if not exists('DEPLOY_VENV_NAME{}/bin/pip'.format(**e)):
+            run('virtualenv {DEPLOY_VENV_NAME}'.format(**e))
+        run('{DEPLOY_VENV_NAME}/bin/pip install -r {DEPLOY_TARGET}/requirements.txt'.format(**e))
 
 
 def _setup_env():
@@ -40,47 +40,47 @@ def _setup_env():
 
 def _setup_supervisor_conf():
     with cd(e["DEPLOY_TARGET"]):
-        if exists('{DEPLOY_TARGET}/{DEPLOY_SUPERVISOR_NAME}.conf'.format(e)):
+        if exists('{DEPLOY_TARGET}/{DEPLOY_SUPERVISOR_NAME}.conf'.format(**e)):
             print(yellow("The existing supervisor config file"+\
-                    " {DEPLOY_TARGET}/{DEPLOY_SUPERVISOR_NAME}.conf will be used.".format(e)))
+                    " {DEPLOY_TARGET}/{DEPLOY_SUPERVISOR_NAME}.conf will be used.".format(**e)))
         else:
             upload_template(
                 'biosys/templates/supervisor.jinja',
-                '{DEPLOY_TARGET}/{DEPLOY_SUPERVISOR_NAME}.conf'.format(e),
+                '{DEPLOY_TARGET}/{DEPLOY_SUPERVISOR_NAME}.conf'.format(**e),
                 context, use_jinja=True, backup=False)
 
 
 def _chown():
     # Assumes that the DEPLOY_USER user exists on the target server.
-    sudo('chown -R {DEPLOY_USER}:{DEPLOY_USER} {DEPLOY_TARGET}'.format(e))
+    sudo('chown -R {DEPLOY_USER}:{DEPLOY_USER} {DEPLOY_TARGET}'.format(**e))
 
 
 def _collectstatic():
     with cd(e["DEPLOY_TARGET"]):
-        run("source {DEPLOY_VENV_PATH}/{DEPLOY_VENV_NAME}/bin/activate".format(e) +\
+        run("source {DEPLOY_VENV_PATH}/{DEPLOY_VENV_NAME}/bin/activate".format(**e) +\
             " && honcho run python manage.py collectstatic --noinput", shell='/bin/bash')
 
 
 def _create_db():
     # This script assumes that PGHOST and PGUSER are set.
     sql = '''CREATE DATABASE {DEPLOY_DB_NAME} OWNER {DEPLOY_DB_USER};
-    \c {DEPLOY_DB_NAME}'''.format(e)
+    \c {DEPLOY_DB_NAME}'''.format(**e)
     run('echo "{}" | psql -d postgres'.format(sql))
 
 
 def _migrate():
     with cd(e["DEPLOY_TARGET"]):
-        run("source {DEPLOY_VENV_PATH}/{DEPLOY_VENV_NAME}".format(e) +\
+        run("source {DEPLOY_VENV_PATH}/{DEPLOY_VENV_NAME}".format(**e) +\
             "/bin/activate && honcho run python manage.py migrate", shell="/bin/bash")
 
 
 def _create_superuser():
     script = """from django.contrib.auth.models import User;
 User.objects.create_superuser('{DEPLOY_SUPERUSER_USERNAME}',
-'{DEPLOY_SUPERUSER_EMAIL}', '{DEPLOY_SUPERUSER_PASSWORD}')""".format(e)
+'{DEPLOY_SUPERUSER_EMAIL}', '{DEPLOY_SUPERUSER_PASSWORD}')""".format(**e)
     with cd(["DEPLOY_TARGET"]):
-        run('source {DEPLOY_VENV_PATH}/{DEPLOY_VENV_NAME}/bin/activate &&'.format(e) +\
-            ' echo "{script}" | honcho run python manage.py shell'.format(e), shell='/bin/bash')
+        run('source {DEPLOY_VENV_PATH}/{DEPLOY_VENV_NAME}/bin/activate &&'.format(**e) +\
+            ' echo "{script}" | honcho run python manage.py shell'.format(**e), shell='/bin/bash')
 
 
 # --------------------------------------------------
@@ -95,7 +95,7 @@ def _load_fixtures():
         'vegetation/fixtures/vegetation-lookups.json']
     for f in fixtures:
         with cd(e["DEPLOY_TARGET"]):
-            run("source {DEPLOY_VENV_PATH}/{DEPLOY_VENV_NAME}/bin/activate".format(e) +\
+            run("source {DEPLOY_VENV_PATH}/{DEPLOY_VENV_NAME}/bin/activate".format(**e) +\
             " && honcho run python manage.py loaddata biosys/apps/{f}".format(f), shell='/bin/bash')
 
 
