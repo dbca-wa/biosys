@@ -1,21 +1,25 @@
 """
 Django settings for biosys project.
 """
-from confy import database
+from confy import env, database
 import os
 import sys
+from unipath import Path
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-root = lambda *x: os.path.join(BASE_DIR, *x)
-sys.path.insert(0, root('apps'))  # Add the apps directory into the path
+BASE_DIR = Path(__file__).ancestor(3)
+PROJECT_DIR = os.path.join(BASE_DIR, 'biosys')
+# Add PROJECT_DIR to the system path.
+sys.path.insert(0, PROJECT_DIR)
+# Add PROJECT_DIR/apps to the system path.
+sys.path.insert(0, os.path.join(PROJECT_DIR, 'apps'))
 
 
 # Security settings
-SECRET_KEY = os.environ['SECRET_KEY'] if os.environ.get('SECRET_KEY', False) else 'foo'
-DEBUG = True if os.environ.get('DEBUG', False) == 'True' else False
-CSRF_COOKIE_SECURE = True if os.environ.get('CSRF_COOKIE_SECURE', False) == 'True' else False
-SESSION_COOKIE_SECURE = True if os.environ.get('SESSION_COOKIE_SECURE', False) == 'True' else False
+DEBUG = env('DEBUG', False)
+SECRET_KEY = env('SECRET_KEY')
+CSRF_COOKIE_SECURE = env('CSRF_COOKIE_SECURE', False)
+SESSION_COOKIE_SECURE = env('SESSION_COOKIE_SECURE', False)
 if not DEBUG:
     # Localhost, UAT and Production hosts
     ALLOWED_HOSTS = [
@@ -82,7 +86,9 @@ ROOT_URLCONF = 'biosys.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [root('templates')],
+        'DIRS': [
+            os.path.join(PROJECT_DIR, 'templates'),
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -124,27 +130,22 @@ DATE_INPUT_FORMATS = (
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.8/howto/static-files/
 STATIC_URL = '/static/'
-
+# Absolute path to the directory static files should be collected to.
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+# Ensure that the media directory exists:
+if not os.path.exists(os.path.join(BASE_DIR, 'media')):
+    os.mkdir(os.path.join(BASE_DIR, 'media'))
 # Absolute filesystem path to the directory that will hold user-uploaded files.
-# Example: "/var/www/example.com/media/"
-MEDIA_ROOT = root('..', 'media')
-
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
-# Examples: "http://media.lawrence.com/media/", "http://example.com/media/"
 MEDIA_URL = '/media/'
 
-# Absolute path to the directory static files should be collected to.
-# Don't put anything in this directory yourself; store your static files
-# in apps' "static/" subdirectories and in STATICFILES_DIRS.
-# Example: "/home/media/media.lawrence.com/static/"
-STATIC_ROOT = 'static'
 
 # Additional locations of static files
 STATICFILES_DIRS = (
-    root('static'),
+    os.path.join(PROJECT_DIR, 'static'),
 )
 
 # List of finder classes that know how to find static files in
@@ -159,7 +160,10 @@ LOGIN_REDIRECT_URL = '/'
 
 
 # Logging settings
-LOG_FOLDER = root('..', 'log')
+# Ensure that the logs directory exists:
+LOG_FOLDER = os.path.join(BASE_DIR, 'logs')
+if not os.path.exists(LOG_FOLDER):
+    os.mkdir(LOG_FOLDER)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -241,5 +245,6 @@ GRAPPELLI_ADMIN_TITLE = SITE_TITLE + ' administration'
 ENVELOPE_EMAIL_RECIPIENTS = ['biosys@DPaW.wa.gov.au']
 ENVELOPE_USE_HTML_EMAIL = False
 
-EMAIL_HOST = 'alerts.corporateict.domain'
-EMAIL_PORT = 25
+# Email settings
+EMAIL_HOST = env('EMAIL_HOST', 'email.host')
+EMAIL_PORT = env('EMAIL_PORT', 25)
