@@ -40,3 +40,6 @@ staticfiles/
 
 # Testing coverage
 .coverage
+
+# generated Supervisor conf
+biosys.conf

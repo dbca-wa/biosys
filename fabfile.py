@@ -1,115 +1,86 @@
+import confy
 import os
-from fabric.api import cd, run
+from fabric.api import cd, run, sudo
+from fabric.colors import green, yellow, red
 from fabric.contrib.files import exists, upload_template
 
-DEPLOY_REPO_URL = os.environ['DEPLOY_REPO_URL']
-DEPLOY_TARGET = os.environ['DEPLOY_TARGET']
-DEPLOY_VENV_PATH = os.environ['DEPLOY_VENV_PATH']
-DEPLOY_VENV_NAME = os.environ['DEPLOY_VENV_NAME']
-DEPLOY_DEBUG = os.environ['DEPLOY_DEBUG']
-DEPLOY_PORT = os.environ['DEPLOY_PORT']
-DEPLOY_DATABASE_URL = os.environ['DEPLOY_DATABASE_URL']
-DEPLOY_SECRET_KEY = os.environ['DEPLOY_SECRET_KEY']
-DEPLOY_CSRF_COOKIE_SECURE = os.environ['DEPLOY_CSRF_COOKIE_SECURE']
-DEPLOY_SESSION_COOKIE_SECURE = os.environ['DEPLOY_SESSION_COOKIE_SECURE']
-KMI_PASSWORD = os.environ['KMI_PASSWORD']
-DEPLOY_USER = os.environ['DEPLOY_USER']
-DEPLOY_DB_NAME = os.environ['DEPLOY_DB_NAME']
-DEPLOY_DB_USER = os.environ['DEPLOY_DB_USER']
-DEPLOY_SUPERUSER_USERNAME = os.environ['DEPLOY_SUPERUSER_USERNAME']
-DEPLOY_SUPERUSER_EMAIL = os.environ['DEPLOY_SUPERUSER_EMAIL']
-DEPLOY_SUPERUSER_PASSWORD = os.environ['DEPLOY_SUPERUSER_PASSWORD']
-DEPLOY_SUPERVISOR_NAME = os.environ['DEPLOY_SUPERVISOR_NAME']
-
+confy.read_environment_file()
+e = os.environ
 
 def _get_latest_source():
-    run('mkdir -p {}'.format(DEPLOY_TARGET))
-    if exists(os.path.join(DEPLOY_TARGET, '.git')):
-        run('cd {} && git pull'.format(DEPLOY_TARGET))
+    run('mkdir -p {DEPLOY_TARGET}'.format(**e))
+    if exists(os.path.join(e["DEPLOY_TARGET"], '.git')):
+        run('cd {DEPLOY_TARGET} && git pull'.format(**e))
     else:
-        run('git clone {} {}'.format(DEPLOY_REPO_URL, DEPLOY_TARGET))
-        run('cd {} && git checkout master'.format(DEPLOY_TARGET))
+        run('git clone {DEPLOY_REPO_URL} {DEPLOY_TARGET}'.format(**e))
+        run('cd {DEPLOY_TARGET} && git checkout master'.format(**e))
 
 
 def _create_dirs():
     # Ensure that required directories exist.
-    with cd(DEPLOY_TARGET):
+    with cd(e["DEPLOY_TARGET"]):
         run('mkdir -p log && mkdir -p media')
 
 
 def _update_venv():
     # Assumes that virtualenv is installed system-wide.
-    with cd(DEPLOY_VENV_PATH):
-        if not exists('{}/bin/pip'.format(DEPLOY_VENV_NAME)):
-            run('virtualenv {}'.format(DEPLOY_VENV_NAME))
-        run('{}/bin/pip install -r requirements/base.txt'.format(DEPLOY_VENV_NAME))
+    with cd(e["DEPLOY_VENV_PATH"]):
+        if not exists('DEPLOY_VENV_NAME{}/bin/pip'.format(**e)):
+            run('virtualenv {DEPLOY_VENV_NAME}'.format(**e))
+        run('{DEPLOY_VENV_NAME}/bin/pip install -r {DEPLOY_TARGET}/requirements.txt'.format(**e))
 
 
 def _setup_env():
-    with cd(DEPLOY_TARGET):
-        context = {
-            'DEPLOY_DEBUG': DEPLOY_DEBUG,
-            'DEPLOY_PORT': DEPLOY_PORT,
-            'DEPLOY_DATABASE_URL': DEPLOY_DATABASE_URL,
-            'DEPLOY_SECRET_KEY': DEPLOY_SECRET_KEY,
-            'DEPLOY_CSRF_COOKIE_SECURE': DEPLOY_CSRF_COOKIE_SECURE,
-            'DEPLOY_SESSION_COOKIE_SECURE': DEPLOY_SESSION_COOKIE_SECURE,
-            'KMI_PASSWORD': KMI_PASSWORD,
-        }
-        upload_template('biosys/templates/env.jinja', '.env', context, use_jinja=True, backup=False)
+    with cd(e["DEPLOY_TARGET"]):
+        if exists('.env'):
+            print(yellow("The existing .env file will be used."))
+        else:
+            upload_template('biosys/templates/env.jinja', '.env', e, use_jinja=True, backup=False)
 
 
 def _setup_supervisor_conf():
-    with cd(DEPLOY_TARGET):
-        context = {
-            'DEPLOY_SUPERVISOR_NAME': DEPLOY_SUPERVISOR_NAME,
-            'DEPLOY_USER': DEPLOY_USER,
-            'DEPLOY_TARGET': DEPLOY_TARGET,
-            'DEPLOY_VENV_PATH': DEPLOY_VENV_PATH,
-            'DEPLOY_VENV_NAME': DEPLOY_VENV_NAME,
-        }
-        upload_template(
-            'biosys/templates/supervisor.jinja', '{}.conf'.format(DEPLOY_SUPERVISOR_NAME),
-            context, use_jinja=True, backup=False)
+    with cd(e["DEPLOY_TARGET"]):
+        if exists('{DEPLOY_TARGET}/{DEPLOY_SUPERVISOR_NAME}.conf'.format(**e)):
+            print(yellow("The existing supervisor config file"+\
+                    " {DEPLOY_TARGET}/{DEPLOY_SUPERVISOR_NAME}.conf will be used.".format(**e)))
+        else:
+            upload_template(
+                'biosys/templates/supervisor.jinja',
+                '{DEPLOY_TARGET}/{DEPLOY_SUPERVISOR_NAME}.conf'.format(**e),
+                context, use_jinja=True, backup=False)
 
 
 def _chown():
     # Assumes that the DEPLOY_USER user exists on the target server.
-    run('chown -R {0}:{0} {1}'.format(DEPLOY_USER, DEPLOY_TARGET))
+    sudo('chown -R {DEPLOY_USER}:{DEPLOY_USER} {DEPLOY_TARGET}'.format(**e))
 
 
 def _collectstatic():
-    with cd(DEPLOY_TARGET):
-        run_str = 'source {}/{}/bin/activate && honcho run python manage.py collectstatic --noinput'
-        run(run_str.format(DEPLOY_VENV_PATH, DEPLOY_VENV_NAME), shell='/bin/bash')
+    with cd(e["DEPLOY_TARGET"]):
+        run("source {DEPLOY_VENV_PATH}/{DEPLOY_VENV_NAME}/bin/activate".format(**e) +\
+            " && honcho run python manage.py collectstatic --noinput", shell='/bin/bash')
 
 
 def _create_db():
     # This script assumes that PGHOST and PGUSER are set.
-    db = {
-        'NAME': os.environ['DEPLOY_DB_NAME'],
-        'USER': os.environ['DEPLOY_DB_USER'],
-    }
-    sql = '''CREATE DATABASE {NAME} OWNER {USER};
-        \c {NAME}'''.format(**db)
+    sql = '''CREATE DATABASE {DEPLOY_DB_NAME} OWNER {DEPLOY_DB_USER};
+    \c {DEPLOY_DB_NAME}'''.format(**e)
     run('echo "{}" | psql -d postgres'.format(sql))
 
 
 def _migrate():
-    with cd(DEPLOY_TARGET):
-        run_str = 'source {}/{}/bin/activate && honcho run python manage.py migrate'
-        run(run_str.format(DEPLOY_VENV_PATH, DEPLOY_VENV_NAME), shell='/bin/bash')
+    with cd(e["DEPLOY_TARGET"]):
+        run("source {DEPLOY_VENV_PATH}/{DEPLOY_VENV_NAME}".format(**e) +\
+            "/bin/activate && honcho run python manage.py migrate", shell="/bin/bash")
 
 
 def _create_superuser():
-    un = os.environ['DEPLOY_SUPERUSER_USERNAME']
-    em = os.environ['DEPLOY_SUPERUSER_EMAIL']
-    pw = os.environ['DEPLOY_SUPERUSER_PASSWORD']
     script = """from django.contrib.auth.models import User;
-User.objects.create_superuser('{}', '{}', '{}')""".format(un, em, pw)
-    with cd(DEPLOY_TARGET):
-        run_str = 'source {}/{}/bin/activate && echo "{}" | honcho run python manage.py shell'
-        run(run_str.format(DEPLOY_VENV_PATH, DEPLOY_VENV_NAME, script), shell='/bin/bash')
+User.objects.create_superuser('{DEPLOY_SUPERUSER_USERNAME}',
+'{DEPLOY_SUPERUSER_EMAIL}', '{DEPLOY_SUPERUSER_PASSWORD}')""".format(**e)
+    with cd(["DEPLOY_TARGET"]):
+        run('source {DEPLOY_VENV_PATH}/{DEPLOY_VENV_NAME}/bin/activate &&'.format(**e) +\
+            ' echo "{script}" | honcho run python manage.py shell'.format(**e), shell='/bin/bash')
 
 
 # --------------------------------------------------
@@ -123,9 +94,9 @@ def _load_fixtures():
         'animals/fixtures/animals-lookups.json',
         'vegetation/fixtures/vegetation-lookups.json']
     for f in fixtures:
-        with cd(DEPLOY_TARGET):
-            run_str = 'source {}/{}/bin/activate && honcho run python manage.py loaddata biosys/apps/{}'
-            run(run_str.format(DEPLOY_VENV_PATH, DEPLOY_VENV_NAME, f), shell='/bin/bash')
+        with cd(e["DEPLOY_TARGET"]):
+            run("source {DEPLOY_VENV_PATH}/{DEPLOY_VENV_NAME}/bin/activate".format(**e) +\
+            " && honcho run python manage.py loaddata biosys/apps/{f}".format(f), shell='/bin/bash')
 
 
 def deploy_env():

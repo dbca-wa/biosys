@@ -254,7 +254,7 @@ class SiteVisit(models.Model):
     def is_approved(self):
         return self.data_status == self.DATA_STATUS_APPROVED
 
-    @ property
+    @property
     def is_quarantined(self):
         return self.data_status == self.DATA_STATUS_QUAR
 

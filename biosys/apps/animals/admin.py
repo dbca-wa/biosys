@@ -1,12 +1,12 @@
 from django.contrib import admin
 from django.utils.text import Truncator
-import reversion
+from reversion.admin import VersionAdmin
 from models import *
 from main.admin import AbstractLookupAdmin
 
 
 @admin.register(Trap)
-class TrapAdmin(reversion.VersionAdmin):
+class TrapAdmin(VersionAdmin):
     list_display = [
         'trapline_ID', 'trap_type', 'site_visit', 'open_date', 'close_date',
         'comments_display']
@@ -20,7 +20,7 @@ class TrapAdmin(reversion.VersionAdmin):
 
 
 @admin.register(AnimalObservation)
-class AnimalObservationAdmin(reversion.VersionAdmin):
+class AnimalObservationAdmin(VersionAdmin):
     list_display = [
         'site_visit', 'collector', 'date', 'trap_no', 'trap_type', 'species',
         'microchip_id',  'comments_display']
@@ -35,7 +35,7 @@ class AnimalObservationAdmin(reversion.VersionAdmin):
 
 
 @admin.register(OpportunisticObservation)
-class OpportunisticObservationAdmin(reversion.VersionAdmin):
+class OpportunisticObservationAdmin(VersionAdmin):
     list_display = ['site_visit', 'date', 'observer', 'species', 'comments_display']
     list_filter = ['site_visit', 'species']
     date_hierarchy = 'date'
