@@ -53,7 +53,6 @@ INSTALLED_APPS = (
     'reversion',
     'tastypie',
     'webtemplate_dpaw',
-    'django_wsgiserver',
 )
 
 PROJECT_APPS = (
