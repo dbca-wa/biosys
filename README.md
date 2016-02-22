@@ -8,7 +8,7 @@ Confluence URL:
 
 ## Getting Started
 
-Biosys is build on Django, the Python web framework and also requires a PostgreSQL database server
+Biosys is built on Django, the Python web framework and also requires a PostgreSQL database server
 (9.3+) with the PostGIS extension.
 
 It is recommended that the system is run in a Python virtual environment to allow the dependent
