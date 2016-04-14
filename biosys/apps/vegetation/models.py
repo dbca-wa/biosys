@@ -4,8 +4,18 @@ from django.db import models
 from main.models import AbstractLookup, SpeciesObservation, AbstractSiteVisitObservation
 
 
+class VegetationVisit(AbstractSiteVisitObservation):
+    collector = models.CharField(max_length=150, blank=True,
+                                 verbose_name="Vegetation collector", help_text="")
+    date = models.DateField(null=True, blank=True,
+                            verbose_name="Visit Date", help_text="")
+
+    def __unicode__(self):
+        return 'Date: {} ({})'.format(self.date, self.site_visit)
+
+
 class AbstractVegetationObservation(models.Model):
-    vegetation_visit = models.ForeignKey('VegetationVisit', null=False, blank=False,
+    vegetation_visit = models.ForeignKey(VegetationVisit, null=False, blank=False,
                                          verbose_name="Vegetation Visit", help_text="")
 
     class Meta:
@@ -32,16 +42,6 @@ class AbstractGroundCoverObservation(AbstractVegetationObservation):
 
     class Meta:
         abstract = True
-
-
-class VegetationVisit(AbstractSiteVisitObservation):
-    collector = models.CharField(max_length=150, blank=True,
-                                 verbose_name="Vegetation collector", help_text="")
-    date = models.DateField(null=True, blank=True,
-                            verbose_name="Visit Date", help_text="")
-
-    def __unicode__(self):
-        return 'Date: {} ({})'.format(self.date, self.site_visit)
 
 
 class StratumSpecies(AbstractVegetationObservation):
