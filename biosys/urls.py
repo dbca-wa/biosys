@@ -5,6 +5,7 @@ from django.conf.urls import include, url
 from django.contrib import admin
 from django.shortcuts import redirect
 from django.views.generic import TemplateView
+from django.contrib.auth import views as auth_views
 
 from main.views import DashboardView, FeedbackView
 
@@ -32,13 +33,13 @@ urlpatterns = [
     # API URLs
     url(r'^api/', include(v1_api.urls)),
     # Authentication URLs
-    url(r'^logout/$', 'django.contrib.auth.views.logout', {'next_page': '/login/'}),
+    url(r'^logout/$', auth_views.logout, {'next_page': '/login/'}),
     url('^', include('django.contrib.auth.urls')),
     # Application URLs
     url(r'^main/', include('main.urls')),
     url(r'^species/', include('species.urls')),
     url(r'^grappelli/', include('grappelli.urls')),  # Grappelli URLS
-    url(r'^admin/logout/$', 'django.contrib.auth.views.logout', {'next_page': '/'}),
+    url(r'^admin/logout/$', auth_views.logout, {'next_page': '/'}),
     # use a function to determine where admin/ will resolve to, based on the user
     url(r'^admin/$', admin_view_selection_view),
     url(r'^admin/', include(admin.site.urls)),

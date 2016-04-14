@@ -189,7 +189,7 @@ class Site(models.Model):
 class Visit(models.Model):
     project = models.ForeignKey('Project', null=False, blank=False,
                                 verbose_name="Project", help_text="")
-    sites = models.ManyToManyField('Site', null=False, blank=False,
+    sites = models.ManyToManyField('Site', blank=False,
                                    verbose_name="Sites", help_text="")
     name = models.CharField(max_length=150, blank=False,
                             verbose_name="Visit Name",

@@ -286,7 +286,8 @@ class VisitAdmin(MainAppAdmin):
             'save_as': False,
             'form': form,
         }
-        return TemplateResponse(request, "main/visit_upload_datasheet.html", context, current_app='main')
+        request.current_app = 'main'
+        return TemplateResponse(request, "main/visit_upload_datasheet.html", context)
 
 
     def confirm_datasheet_upload(self, request, visit_id, sitevisitfile_id):
