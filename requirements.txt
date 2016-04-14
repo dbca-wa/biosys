@@ -17,5 +17,5 @@ dj-static==0.0.6
 # Testing requirements
 coverage==3.7.1
 flake8==2.4.0
-mixer==5.1.2
+mixer>=5.4.1,<6.0
 Unipath==1.1

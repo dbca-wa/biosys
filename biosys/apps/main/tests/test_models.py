@@ -25,7 +25,7 @@ class TestGlobalAppModels(TestCase):
         Test that all the lookups foreign keys are set on_delete=PROTECTED
         """
         lookups_fields = [f for f in self.project_fields if is_lookup_field(f)]
-        not_protected = [f for f in lookups_fields if f.related.on_delete != models.PROTECT]
+        not_protected = [f for f in lookups_fields if f.remote_field.on_delete != models.PROTECT]
         self.assertTrue(len(not_protected) == 0,
                         msg="{} not protected on delete lookup field(s)."
                             " Should be 0. {}".format(len(not_protected),
