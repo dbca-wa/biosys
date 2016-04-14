@@ -166,6 +166,23 @@ class TableData():
         """
         return [zip(self.column_headers, row) for row in self.rows]
 
+    def rows_as_dict_it(self):
+        """
+        An iterator of rows in a dictionary format. The dictionary is not ordered by column number.
+        :return:
+                {
+                    ....
+                    'col_header1': row_n_col1
+                    'col_header2': row_n-col2
+                    .......
+                },
+        """
+        for row in self.rows:
+            data = {}
+            for i, col_header in enumerate(self.column_headers):
+                data[col_header] = row[i]
+            yield data
+
     def _parse_column_headers(self):
         headers = []
         cell = self.top_left_cell

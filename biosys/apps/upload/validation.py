@@ -15,7 +15,6 @@ from models import SiteVisitDataFileError
 from utils import is_blank
 from upload.validator_functions import ground_cover_validate, lat_lon_validate
 
-
 logger = logging.getLogger(__name__)
 
 ERRORS = [
@@ -557,6 +556,7 @@ class SpeciesObservationManager():
     """
     For BIOSYS-117: add extra column validation status and uncertainty for every species field.
     """
+
     def __init__(self, species, row_data=None):
         self.model = SpeciesObservation
         self.species = species
@@ -723,6 +723,17 @@ def to_choice_raise(field, value):
         return field.default
     value = str(value)
     choices = util_model.get_field_choices(field)
+    return to_model_choice(choices, value)
+
+
+def to_model_choice(choices, value):
+    """
+    Rules:
+        validate only against the display_name, the second part of a Django choice (internal, display_name)
+        case insensitive
+        :param choices: a model choice as an array of tuples
+        :param value:
+    """
     choice = next((c[0] for c in choices if c[1].lower() == value.lower()), None)
     if choice is None:
         message = "{value} not an authorized choice. Should be one of: {values}" \
