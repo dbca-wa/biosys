@@ -539,11 +539,6 @@ class VegetationGroupAdmin(AbstractLookupAdmin):
     pass
 
 
-# @admin.register(SoilColourLookup)
-# class SoilColourLookupAdmin(AbstractLookupAdmin):
-#     pass
-
-
 @admin.register(SoilSurfaceTextureLookup)
 class SoilSurfaceTextureLookupAdmin(AbstractLookupAdmin):
     pass
