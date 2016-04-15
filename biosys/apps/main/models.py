@@ -436,7 +436,7 @@ class SoilColourLookup(AbstractLookup):
 
 
 class SoilSurfaceTextureLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class LandformElementLookup(AbstractLookup):
@@ -448,7 +448,7 @@ class LandformPatternLookup(AbstractLookup):
 
 
 class WaterTypeLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class GeologyLookup(AbstractLookup):
