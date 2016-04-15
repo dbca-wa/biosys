@@ -52,12 +52,24 @@ def get_cell_neighbour(cell, direction='down'):
         raise Exception("Invalid Direction: " + direction + ". Should be [down|up|right|left]")
 
 
+def is_blank_value(value):
+    return value is None or is_empty_string(value)
+
+
+def is_empty_string(value):
+    return isinstance(value, basestring) and len(value.strip()) == 0
+
+
 def is_cell_blank(cell):
-    return cell.value is None
+    return is_blank_value(cell.value)
 
 
 def is_all_blanks(cells):
     return len([c for c in cells if not is_cell_blank(c)]) == 0
+
+
+def strip(value):
+    return value.strip() if isinstance(value, basestring) else value
 
 
 def get_value_for_key(ws, key, direction='down'):
@@ -130,7 +142,7 @@ def _build_list_formula(values):
     return '"{}"'.format(csv_values)
 
 
-class TableData():
+class TableData:
     """
     Parse a square portion of a spreadsheet.
     It supports two modes: normal or transpose where columns are rows and rows are columns
@@ -211,7 +223,7 @@ class TableData():
             if is_all_blanks(row_cells):
                 blank_row = True
             else:
-                rows.append([c.value for c in row_cells])
+                rows.append([strip(c.value) for c in row_cells])
                 if self.transpose:
                     col_index += 1
                     row_index = start_row
