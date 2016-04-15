@@ -768,8 +768,8 @@ def to_lookup_raise(field, value, commit=True, default=None):
                 .format(value=value, field=field.verbose_name, values=accepted_values)
             raise FieldErrorException(message)
         elif value is not None and len(value.strip()) > 0:
-            # if not strict we add a new lookup in the value.
-            lookup = lookup_model(value=value)
+            # if not strict we add the new value (capitalized) in the lookup table.
+            lookup = lookup_model(value=value.title())
             if commit:
                 lookup.save()
     elif lookup.deprecated:
