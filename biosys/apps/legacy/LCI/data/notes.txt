@@ -1,0 +1,4 @@
+Sites:
+ * parent_site created but without information
+ * col: 'Landform element code' doesn't exists in db
+ * there are two columns 'Type of closest water', renamed the second and ignored data
