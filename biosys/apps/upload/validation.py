@@ -530,7 +530,7 @@ def to_field_value_raise(field, value, commit=True, site_visit=None, row_data=No
     return value
 
 
-def to_species_observation_raise(value, site_visit, commit=True, row_data=None):
+def to_species_observation_raise(value, site_visit=None, commit=True, row_data=None):
     """
     Validate the supplied species name value. Rules:
     *
@@ -552,7 +552,7 @@ def to_species_observation_raise(value, site_visit, commit=True, row_data=None):
     return manager.create(site_visit=site_visit, commit=commit)
 
 
-class SpeciesObservationManager():
+class SpeciesObservationManager:
     """
     For BIOSYS-117: add extra column validation status and uncertainty for every species field.
     """

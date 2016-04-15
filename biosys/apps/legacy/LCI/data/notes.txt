@@ -2,3 +2,7 @@ Sites:
  * parent_site created but without information
  * col: 'Landform element code' doesn't exists in db
  * there are two columns 'Type of closest water', renamed the second and ignored data
+
+Stratum Species:
+ *avg_height: sometime nothing -> relaxed the not null constraint
+ *species: lots of them doesn't validate -> forced the not validate for all

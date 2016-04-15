@@ -14,7 +14,7 @@ from vegetation.models import *
 from main.utils import get_field
 from upload.utils_openpyxl import TableData
 from upload.validation import to_integer_raise, to_float_raise, to_model_choice, \
-    to_lookup_raise, to_string, to_date_raise
+    to_lookup_raise, to_string, to_date_raise, to_species_observation_raise, to_boolean_raise, to_species_name_id
 
 logger = logging.getLogger('import_lci')
 
@@ -57,6 +57,12 @@ def build_model_arguments(row_data, mapping):
                 # logger.warning(msg)
                 errors.append(msg)
     return kwargs, defaults, errors
+
+
+def get_or_create_model(model, row_data, mapping):
+    kwargs, defaults, errors = build_model_arguments(row_data, mapping)
+    obj, created = model.objects.update_or_create(defaults=defaults, **kwargs)
+    return obj, created, errors
 
 
 def get_or_create_project(row_data):
@@ -344,8 +350,129 @@ def load_site_characteristics(ws):
     row_count = 2
     for row_data in list(table_reader.rows_as_dict_it()):
         try:
-            # get site visit
             obj, created, errors = get_or_create_site_characteristic(row_data)
+            if errors:
+                logger.warning('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+        except Exception as e:
+            logger.exception('{} Row# {}: {}'.format(ws.title, row_count, e))
+        finally:
+            row_count += 1
+
+
+def get_or_create_vegetation_visit(row_data):
+    model = VegetationVisit
+    mapping = {
+        'Site Code': {
+            'field': 'site_visit',
+            'map': lambda v, r: get_or_create_site_visit(r)[0],
+            'reference': True,
+        },
+        'Vegetation Collector': {
+            'field': 'collector',
+            'map': lambda v, r: to_string(v),
+        },
+        'Visit Date': {
+            'field': 'date',
+            'map': lambda v, r: to_date_raise(v),
+        },
+    }
+    kwargs, defaults, errors = build_model_arguments(row_data, mapping)
+    obj, created = model.objects.update_or_create(defaults=defaults, **kwargs)
+    return obj, created, errors
+
+
+def get_or_create_species_observation(species, site_visit):
+    return to_species_observation_raise(species, site_visit=site_visit)
+
+
+def get_or_create_stratum_species(row_data):
+    model = StratumSpecies
+    vegetation_visit = get_or_create_vegetation_visit(row_data)[0]
+    mapping = {
+        'Site Code': {
+            'field': 'vegetation_visit',
+            'map': lambda v, r: vegetation_visit,
+            'reference': True,
+        },
+        'Significance': {
+            'field': 'significance',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'significance'), v),
+        },
+        'Stratum': {
+            'field': 'stratum',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'stratum'), v),
+        },
+        'Species': {
+            'field': 'species',
+            'map': lambda v, r: get_or_create_species_observation(v, vegetation_visit.site_visit),
+        },
+        'Collector No': {
+            'field': 'collector_no',
+            'map': lambda v, r: to_string(v),
+        },
+        'Average Height (m)': {
+            'field': 'avg_height',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+        'Cover    %': {
+            'field': 'cover',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+        'Basal Area': {
+            'field': 'basal_area',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+        'Bitterlich % cover': {
+            'field': 'bitterlich_cover',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+        'Juvenile <2m': {
+            'field': 'juv_lt_2m',
+            'map': lambda v, r: to_boolean_raise(v),
+        },
+        'Juvenile >2m': {
+            'field': 'juv_mt_2m',
+            'map': lambda v, r: to_boolean_raise(v),
+        },
+        'Adult': {
+            'field': 'adult',
+            'map': lambda v, r: to_boolean_raise(v),
+        },
+        'Mature (at peak of prod.)': {
+            'field': 'mature',
+            'map': lambda v, r: to_boolean_raise(v),
+        },
+        'Condition': {
+            'field': 'condition',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'condition'), v),
+        },
+        'flowering': {
+            'field': 'flowering',
+            'map': lambda v, r: to_boolean_raise(v),
+        },
+        'fruiting': {
+            'field': 'fruiting',
+            'map': lambda v, r: to_boolean_raise(v),
+        },
+        'seeding': {
+            'field': 'seeding',
+            'map': lambda v, r: to_boolean_raise(v),
+        },
+        'Comments': {
+            'field': 'comments',
+            'map': lambda v, r: to_string(v)
+        },
+    }
+    return get_or_create_model(model, row_data, mapping)
+
+
+def load_stratum_species(ws):
+    table_reader = TableData(ws)
+    row_count = 2
+    for row_data in list(table_reader.rows_as_dict_it()):
+        try:
+            # get site visit
+            obj, created, errors = get_or_create_stratum_species(row_data)
             if errors:
                 logger.warning('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
         except Exception as e:
@@ -369,9 +496,13 @@ def load_data(file_path=None):
     # # Sites datasheet
     # load_visits(wb.get_sheet_by_name('Visit'))
 
-    logger.info('Parse Site Characteristics')
+    # logger.info('Parse Site Characteristics')
+    # # Sites datasheet
+    # load_site_characteristics(wb.get_sheet_by_name('Site Characteristics'))
+
+    logger.info('Parse Stratum Species')
     # Sites datasheet
-    load_site_characteristics(wb.get_sheet_by_name('Site Characteristics'))
+    load_stratum_species(wb.get_sheet_by_name('Stratum Species'))
 
     logger.info('Import Done')
 

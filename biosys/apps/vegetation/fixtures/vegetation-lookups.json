@@ -29,8 +29,8 @@
 {
     "fields": {
         "deprecated": false,
-        "code": "",
-        "value": "G"
+        "code": "G",
+        "value": "Ground"
     },
     "model": "vegetation.stratumlookup",
     "pk": 4
@@ -38,8 +38,8 @@
 {
     "fields": {
         "deprecated": false,
-        "code": "",
-        "value": "M1"
+        "code": "M1",
+        "value": "Mid 1"
     },
     "model": "vegetation.stratumlookup",
     "pk": 2
@@ -47,8 +47,8 @@
 {
     "fields": {
         "deprecated": false,
-        "code": "",
-        "value": "M2"
+        "code": "M2",
+        "value": "Mid 2"
     },
     "model": "vegetation.stratumlookup",
     "pk": 3
@@ -56,8 +56,8 @@
 {
     "fields": {
         "deprecated": false,
-        "code": "",
-        "value": "U"
+        "code": "U",
+        "value": "Upper"
     },
     "model": "vegetation.stratumlookup",
     "pk": 1
