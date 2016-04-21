@@ -94,7 +94,7 @@ class UserResource(ModelResource):
 
 class ProjectResource(ModelResource):
     class Meta(BaseMetaClass):
-        queryset = models.Project.objects.all()
+        queryset = models.Project.objects.all().order_by('title')
         filtering = {
             'id': ALL,
             'title': ALL,
@@ -161,7 +161,7 @@ class SiteResource(ModelResource):
         readonly=True, null=True, full=True)
 
     class Meta(BaseMetaClass):
-        queryset = models.Site.objects.all()
+        queryset = models.Site.objects.all().order_by('site_code')
         filtering = {
             'id': ALL,
             'project': ALL_WITH_RELATIONS,
@@ -204,7 +204,7 @@ class VisitResource(ModelResource):
     validation_error_count = fields.IntegerField(readonly=True)
 
     class Meta(BaseMetaClass):
-        queryset = models.Visit.objects.all()
+        queryset = models.Visit.objects.all().order_by('name')
         filtering = {
             'id': ALL,
             'project': ALL_WITH_RELATIONS,
@@ -248,7 +248,7 @@ class SiteVisitResource(ModelResource):
     visit = fields.ToOneField(
         VisitResource, attribute='visit', readonly=True, full=True)
     data_file = fields.ToOneField(
-        SiteVisitDataFileResource, attribute='data_file', readonly=True, full=True)
+        SiteVisitDataFileResource, attribute='data_file', readonly=True, full=True, null=True)
 
     class Meta(BaseMetaClass):
         queryset = models.SiteVisit.objects.all()

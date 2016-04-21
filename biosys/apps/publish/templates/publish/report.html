@@ -172,12 +172,12 @@
                 schemaDeferred.then(function (schema) {
                     var models = schema['models'];
                     _.each(models, function (model) {
-{#                        var template = _.template(#}
-{#                                "<button type='button' class='btn btn-default view-selector' " +#}
-{#                                "id='id-button-<%= name %>' " +#}
-{#                                "data-view=<%= name %>><%= title %></button>");#}
-{#                        var button = template({name: model['name'], title: model['name_plural']});#}
-{#                        buttonPanel.append(button);#}
+                        {#                        var template = _.template(#}
+                        {#                                "<button type='button' class='btn btn-default view-selector' " +#}
+                        {#                                "id='id-button-<%= name %>' " +#}
+                        {#                                "data-view=<%= name %>><%= title %></button>");#}
+                        {#                        var button = template({name: model['name'], title: model['name_plural']});#}
+                        {#                        buttonPanel.append(button);#}
                         var nav = navTemplate({name: model['name'], title: model['name_plural']});
                         navPanel.append(nav);
                     });
@@ -381,9 +381,14 @@
                             },
                             {
                                 title: 'Data file',
-                                data: "data_file", render: function (data) {
-                                return '<a href="' + window.location.origin + data.file + '">Download</a>';
-                            }
+                                data: "data_file",
+                                render: function (data) {
+                                    if (data && data.file) {
+                                        return '<a href="' + window.location.origin + data.file + '">Download</a>';
+                                    } else {
+                                        return '';
+                                    }
+                                }
                             },
                             {
                                 title: "Upload data",
@@ -473,7 +478,7 @@
                             data = field['name'];
                             render = renderSpecies;
                         } else if (field['is_extra_species_attribute']) {
-                            data = 'species.'+ field['name']
+                            data = 'species.' + field['name']
                         }
                         return {
                             title: title,
@@ -570,8 +575,8 @@
                 var navPanel = $('#id-div-nav-panel');
                 navPanel.children("li").removeClass('active');
                 navPanel.children('#id-nav-' + view).addClass('active');
-{#                $('#id-div-button-panel').children("button.view-selector").removeClass('active');#}
-{#                $('#id-button-' + view).addClass('active');#}
+                {#                $('#id-div-button-panel').children("button.view-selector").removeClass('active');#}
+                {#                $('#id-button-' + view).addClass('active');#}
             }
 
             function redrawTable(view, viewTitle) {
@@ -644,11 +649,11 @@
             });
             // Click event for view selector buttons.
             biosys.report_page.initModelButtons(function (buttons) {
-{#                $(buttonPanel).children("button.view-selector").click(function () {#}
-{#                    selectedView = $(this).data("view");#}
-{#                    viewTitle = $(this).text();#}
-{#                    biosys.report_page.redrawTable(selectedView, viewTitle);#}
-{#                });#}
+                {#                $(buttonPanel).children("button.view-selector").click(function () {#}
+                {#                    selectedView = $(this).data("view");#}
+                {#                    viewTitle = $(this).text();#}
+                {#                    biosys.report_page.redrawTable(selectedView, viewTitle);#}
+                {#                });#}
                 buttons.click(function () {
                     selectedView = $(this).data("view");
                     viewTitle = $(this).text();
@@ -661,7 +666,7 @@
                 biosys.report_page.downloadData();
             });
             // Register a click event listener for "Approve" and "Quarantine" links.
-            $(document).on("click", "a.api-data-status", function(event) {
+            $(document).on("click", "a.api-data-status", function (event) {
                 var td = $(this).parent();
                 var new_status = $(this).data("new-status");
                 var api_status_url = $(this).data("api-status-url");
