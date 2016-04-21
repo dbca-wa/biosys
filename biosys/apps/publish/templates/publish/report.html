@@ -459,7 +459,11 @@
 
             function buildDataSheetColumnDefinitions(model, success) {
                 function renderSpecies(data) {
-                    return data['input_name'];
+                    if (data) {
+                        return data['input_name'];
+                    } else {
+                        return ''
+                    }
                 }
 
                 // get the model schema

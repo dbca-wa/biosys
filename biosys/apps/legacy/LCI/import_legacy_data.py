@@ -61,8 +61,11 @@ def build_model_arguments(row_data, mapping):
 
 def get_or_create_model(model, row_data, mapping):
     kwargs, defaults, errors = build_model_arguments(row_data, mapping)
-    obj, created = model.objects.update_or_create(defaults=defaults, **kwargs)
-    return obj, created, errors
+    if not errors:
+        obj, created = model.objects.update_or_create(defaults=defaults, **kwargs)
+        return obj, created, errors
+    else:
+        raise Exception(*errors)
 
 
 def get_or_create_project(row_data):
@@ -81,7 +84,7 @@ def get_or_create_project(row_data):
 
 
 def only_digit(x):
-    return re.sub('\D', '', str(x))
+    return re.sub('[^0-9\.]', '', str(x))
 
 
 def get_or_create_site(project, row_data):
@@ -307,9 +310,9 @@ def get_or_create_site_characteristic(row_data):
             'map': lambda v, r: get_or_create_site_visit(r)[0],
             'reference': True,
         },
-        'Underlaying geology ': {
+        'Underlaying geology': {
             'field': 'underlaying_geology',
-            'map': lambda x, r: to_lookup_raise(get_field(Site, 'underlaying_geology'), x)
+            'map': lambda x, r: to_lookup_raise(get_field(model, 'underlaying_geology'), x)
         },
         'Distance to closest water (m)': {
             'field': 'closest_water_distance',
@@ -317,19 +320,19 @@ def get_or_create_site_characteristic(row_data):
         },
         'Type of closest water': {
             'field': 'closest_water_type',
-            'map': lambda x, r: to_lookup_raise(get_field(Site, 'closest_water_type'), x)
+            'map': lambda x, r: to_lookup_raise(get_field(model, 'closest_water_type'), x)
         },
         'Landform pattern (300m radius)': {
             'field': 'landform_pattern',
-            'map': lambda x, r: to_lookup_raise(get_field(Site, 'landform_pattern'), x)
+            'map': lambda x, r: to_lookup_raise(get_field(model, 'landform_pattern'), x)
         },
         'Landform element (20m radius)': {
             'field': 'landform_element',
-            'map': lambda x, r: to_lookup_raise(get_field(Site, 'landform_element'), x)
+            'map': lambda x, r: to_lookup_raise(get_field(model, 'landform_element'), x)
         },
         'Soil surface texture': {
             'field': 'soil_surface_texture',
-            'map': lambda x, r: to_lookup_raise(get_field(Site, 'soil_surface_texture'), x)
+            'map': lambda x, r: to_lookup_raise(get_field(model, 'soil_surface_texture'), x)
         },
         'Soil colour': {
             'field': 'soil_colour',
@@ -381,8 +384,23 @@ def get_or_create_vegetation_visit(row_data):
     return obj, created, errors
 
 
-def get_or_create_species_observation(species, site_visit):
-    return to_species_observation_raise(species, site_visit=site_visit)
+def get_or_create_species_observation(species, site_visit, row_data):
+    sp_obs = SpeciesObservation.objects.filter(site_visit=site_visit).filter(input_name=species).first()
+    data = {
+        'Species validation status': row_data.get('Species Validation', ''),
+        'Species uncertainty': row_data.get('Species Uncertainty', '')
+    }
+    if sp_obs is None:
+        try:
+            sp_obs = to_species_observation_raise(species, site_visit=site_visit, row_data=data)
+        except Exception as e:
+            # probably didn't validate
+            data = {
+                'Species validation status': 'do not validate',
+            }
+            sp_obs = to_species_observation_raise(species, site_visit=site_visit, row_data=data)
+            logger.warning(e)
+    return sp_obs
 
 
 def get_or_create_stratum_species(row_data):
@@ -401,10 +419,12 @@ def get_or_create_stratum_species(row_data):
         'Stratum': {
             'field': 'stratum',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'stratum'), v),
+            'reference': True
         },
         'Species': {
             'field': 'species',
-            'map': lambda v, r: get_or_create_species_observation(v, vegetation_visit.site_visit),
+            'map': lambda v, r: get_or_create_species_observation(v, vegetation_visit.site_visit, r),
+            'reference': True
         },
         'Collector No': {
             'field': 'collector_no',
@@ -488,16 +508,16 @@ def load_data(file_path=None):
     wb = load_workbook(file_path)
     logger.info('Load workbook done')
 
-    # logger.info('Parse Sites worksheet')
-    # # Sites datasheet
+    logger.info('Parse Sites worksheet')
+    # Sites datasheet
     # load_sites(wb.get_sheet_by_name('Sites'))
 
-    # logger.info('Parse Visit worksheet')
-    # # Sites datasheet
+    logger.info('Parse Visit worksheet')
+    # Sites datasheet
     # load_visits(wb.get_sheet_by_name('Visit'))
 
-    # logger.info('Parse Site Characteristics')
-    # # Sites datasheet
+    logger.info('Parse Site Characteristics')
+    # Sites datasheet
     # load_site_characteristics(wb.get_sheet_by_name('Site Characteristics'))
 
     logger.info('Parse Stratum Species')

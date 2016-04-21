@@ -51,7 +51,7 @@ class StratumSpecies(AbstractVegetationObservation):
                                 verbose_name="Stratum", help_text="")
     species = models.ForeignKey(SpeciesObservation, null=True, blank=True,
                                 verbose_name="Species", help_text="")
-    collector_no = models.CharField(max_length=30, blank=True,
+    collector_no = models.CharField(max_length=200, blank=True,
                                     verbose_name="Collector No", help_text="")
     avg_height = models.FloatField(null=True, blank=True,
                                    verbose_name="Average Height (m)", help_text="")
@@ -303,7 +303,7 @@ class BiodiversityIndicator(AbstractVegetationObservation):
 #########################
 
 class ConditionLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class StratumLookup(AbstractLookup):

@@ -633,12 +633,10 @@ class SpeciesObservationManager:
         field = self.model._meta.get_field(field_name)
         return self._get_value(util_model.get_datasheet_field_name(field))
 
-    def _get_value(self, key):
-        result = None
-        if self.row_data:
-            for k, v in self.row_data:
-                if k == key:
-                    return v
+    def _get_value(self, key, default=None):
+        result = default
+        if self.row_data and isinstance(self.row_data, dict):
+            return self.row_data.get(key, default)
         return result
 
 

@@ -3,6 +3,15 @@ Sites:
  * col: 'Landform element code' doesn't exists in db
  * there are two columns 'Type of closest water', renamed the second and ignored data
 
+Site Characteristics:
+ * Two columns 'Distance to closest water (m)' and 'Type of closest water'. The second columns are ignored.
+ * Columns 'Photos taken' and 'Historical information' are not part of the SiteCharacteristics model but the Site model.
+   They look like copy of the Site datasheet.
+ * lots of species doesn't validate.
+ * row 2763 'Collector no' exceed the 30 max char. Extend to 200
+ * condition lookup didn't have 'dead'
+
 Stratum Species:
+ * Stratum lookups were letters 'U', 'M1',... instead of the 'Upper', 'Mid 1', ... Updated the lookup fixture.
  *avg_height: sometime nothing -> relaxed the not null constraint
  *species: lots of them doesn't validate -> forced the not validate for all

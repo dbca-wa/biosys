@@ -192,7 +192,9 @@ class TableData:
         for row in self.rows:
             data = {}
             for i, col_header in enumerate(self.column_headers):
-                data[col_header] = row[i]
+                # if they are two columns with the same header we ignore the second one
+                if col_header not in data:
+                    data[col_header] = row[i]
             yield data
 
     def _parse_column_headers(self):
