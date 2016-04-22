@@ -201,7 +201,7 @@ class TableData:
         headers = []
         cell = self.top_left_cell
         while not is_cell_blank(cell):
-            headers.append(cell.value)
+            headers.append(strip(cell.value))
             direction = 'down' if self.transpose else 'right'
             cell = get_cell_neighbour(cell, direction)
         return headers
