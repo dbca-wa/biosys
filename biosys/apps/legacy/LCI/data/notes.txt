@@ -15,3 +15,30 @@ Stratum Species:
  * Stratum lookups were letters 'U', 'M1',... instead of the 'Upper', 'Mid 1', ... Updated the lookup fixture.
  *avg_height: sometime nothing -> relaxed the not null constraint
  *species: lots of them doesn't validate -> forced the not validate for all
+ ERROR!!!
+ * !!!!! They are a few sites code that doesn't exist in the site datasheet ex row#2672: LCI 305 (only LCI 305 R), same for rows 2818 ,...
+   I can't create the site by default without a project.
+
+Vegetation:
+* This datasheet contains:
+    GroundCoverSummary: col E to N
+    TransectObservation: col O to Y (same column name!!!!)
+    TransectDistinctChanges: col Z to AH with 3 rows as repeated columns !!!!!
+    BasalBitterlichObservation: col AI to AK
+    ErosionPeg: col AL to AW with tree rows as repeated columns (peg A,B and C)
+    PegObservation: col AX to BR (7 cols per peg) and a last column not in db for comment!!
+* Missing Peg IDon numerous row (ex #336)!!! Assumes A,B,C
+* lots of missing transect y_direction assumes 0
+MODIF!! Add column name
+* The col BS (comment for peg observation) was not in the model. Added a field comment, value is repeated for all 3 pegs. A column header must be added.
+ERRORS!!!
+* Missing sites.
+{17:01:00.588}  Vegetation Row# 385: Col: 'Site Code' Value 'LCI 314': Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:01:00.601}  Vegetation Row# 387: Col: 'Site Code' Value 'LCI 313': Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:01:00.624}  Vegetation Row# 389: Col: 'Site Code' Value 'LCI 317': Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:01:00.652}  Vegetation Row# 392: Col: 'Site Code' Value 'LCI 305': Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:01:00.858}  Vegetation Row# 405: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+!!! I DON't UNDERSTAND!!!
+Duplicate rows for same site visit??
+ex row# 336 row#362 same sivte visit (KLRCR_20115/LCI 201/ on 11/05/2015) with two different GroundCoverSummary !! and
+

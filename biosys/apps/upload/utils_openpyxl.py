@@ -1,6 +1,7 @@
 import logging
 from collections import defaultdict
 from openpyxl.worksheet.datavalidation import DataValidation
+from openpyxl.utils import get_column_letter
 from django.utils.text import Truncator
 
 logger = logging.getLogger(__name__)
@@ -153,7 +154,7 @@ class TableData:
     :param transpose: if true the the table is a transposed one. Columns are rows and rows are columns
     """
 
-    def __init__(self, worksheet, top_left_row=1, top_left_column=1, transpose=False):
+    def __init__(self, worksheet, top_left_row=1, top_left_column=1, nb_cols=None, nb_rows=None, transpose=False):
         self.worksheet = worksheet
         self.top_left_row = top_left_row
         self.top_left_column = top_left_column
@@ -178,10 +179,10 @@ class TableData:
         """
         return [zip(self.column_headers, row) for row in self.rows]
 
-    def rows_as_dict_it(self):
+    def rows_by_col_header(self):
         """
-        An iterator of rows in a dictionary format. The dictionary is not ordered by column number.
-        :return:
+        A row iterator
+        :return: a dict like. Warning the dict is not ordered
                 {
                     ....
                     'col_header1': row_n_col1
@@ -192,9 +193,31 @@ class TableData:
         for row in self.rows:
             data = {}
             for i, col_header in enumerate(self.column_headers):
-                # if they are two columns with the same header we ignore the second one
                 if col_header not in data:
                     data[col_header] = row[i]
+                else:
+                    # if they are two columns with the same header we store it with with a appended _i
+                    count = 1
+                    key = col_header + '_' + str(count)
+                    while key in data:
+                        count += 1
+                        key = col_header + '_' + str(count)
+                    data[key] = row[i]
+            yield data
+
+    def rows_by_col_letter_it(self):
+        """
+        A row iterator
+        :return: a dict like:
+         {'A': value1,
+          'B': value2,
+          .....
+        }
+        """
+        for row in self.rows:
+            data = {}
+            for i, value in enumerate(row):
+                data[get_column_letter(i+1)] = value
             yield data
 
     def _parse_column_headers(self):

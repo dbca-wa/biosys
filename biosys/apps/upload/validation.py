@@ -657,7 +657,7 @@ def to_string(value):
     :param value:
     :return:
     """
-    return str(value) if value is not None else ""
+    return unicode(value) if value is not None else ""
 
 
 def to_date_raise(value, default=None):

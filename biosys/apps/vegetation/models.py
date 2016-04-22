@@ -153,7 +153,8 @@ class PegObservation(AbstractVegetationObservation):
     organic = models.FloatField(null=True, blank=True, default=0.0,
                                 verbose_name="Organic mineral layer", help_text="")
     erosion = models.FloatField(null=True, blank=True, default=0.0,
-                                verbose_name="Erosion pegs", help_text="")
+                                verbose_name="Erosion peg", help_text="")
+    comments = models.CharField(max_length=500, blank=True, verbose_name="Comments", help_text="")
 
     class Meta:
         pass
