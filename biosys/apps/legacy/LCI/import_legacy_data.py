@@ -914,6 +914,54 @@ def load_vegetation(ws):
             row_count += 1
 
 
+def update_or_create_stratum_summary(row_data):
+    model = StratumSpecies
+    vegetation_visit = update_or_create_vegetation_visit(row_data)[0]
+    mapping = {
+        'Site Code': {
+            'field': 'vegetation_visit',
+            'map': lambda v, r: vegetation_visit,
+        },
+        'Stratum': {
+            'field': 'stratum',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'stratum'), v),
+        },
+        'Growth Form': {
+            'field': 'growth_form',
+            'map': lambda v, r: to_string(v),
+        },
+        'Crown Cover   %': {
+            'field': 'crown_cover',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+        'Average Height (m)': {
+            'field': 'avg_height',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+        'Maximum Height    m': {
+            'field': 'max_height',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+    }
+    return update_or_create_model(model, row_data, mapping)
+
+
+def load_stratum_summary(ws):
+    global row_count
+    table_reader = TableData(ws)
+    row_count = 2
+    for row_data in list(table_reader.rows_by_col_header()):
+        try:
+            # get site visit
+            obj, created, errors = update_or_create_stratum_summary(row_data)
+            if errors:
+                logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+        except Exception as e:
+            logger.error('{} Row# {}: {}'.format(ws.title, row_count, e))
+        finally:
+            row_count += 1
+
+
 def load_data(file_path=None):
     global current_ws
     if not file_path:
@@ -922,25 +970,30 @@ def load_data(file_path=None):
     wb = load_workbook(file_path)
     logger.info('Load workbook done')
 
-    logger.info('Parse Sites worksheet')
+    logger.info('Sites worksheet')
     current_ws = 'Sites'
-    # load_sites(wb.get_sheet_by_name(current_ws))
+    load_sites(wb.get_sheet_by_name(current_ws))
 
-    logger.info('Parse Visit worksheet')
+    logger.info('Visit worksheet')
     current_ws = 'Visit'
-    # load_visits(wb.get_sheet_by_name(current_ws))
+    load_visits(wb.get_sheet_by_name(current_ws))
 
-    logger.info('Parse Site Characteristics')
+    logger.info('Site Characteristics')
     current_ws = 'Site Characteristics'
-    # load_site_characteristics(wb.get_sheet_by_name(current_ws))
+    load_site_characteristics(wb.get_sheet_by_name(current_ws))
 
-    logger.info('Parse Stratum Species')
+    logger.info('Stratum Species')
     current_ws = 'Stratum Species'
-    # load_stratum_species(wb.get_sheet_by_name(current_ws))
+    load_stratum_species(wb.get_sheet_by_name(current_ws))
 
-    logger.info('Parse Vegetation')
+    logger.info('Vegetation')
     current_ws = 'Vegetation'
     load_vegetation(wb.get_sheet_by_name(current_ws))
+
+    current_ws = 'Stratum Summary'
+    logger.info(current_ws)
+    StratumSummary.objects.all().delete()
+    load_stratum_summary(wb.get_sheet_by_name(current_ws))
 
     logger.info('Import Done')
 
