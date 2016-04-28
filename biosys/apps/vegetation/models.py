@@ -191,9 +191,9 @@ class DisturbanceIndicator(AbstractVegetationObservation):
     fire_intensity = models.ForeignKey('FireIntensityLookup', on_delete=models.PROTECT,
                                        null=True, blank=True,
                                        verbose_name="Fire Intensity", help_text="")
-    recently_burned_percent = models.IntegerField(default=0, null=True, blank=True,
+    recently_burned_percent = models.FloatField(default=0, null=True, blank=True,
                                                   verbose_name="Recently Burned Veg in %", help_text="")
-    scorch_height = models.IntegerField(default=0, null=True, blank=True,
+    scorch_height = models.FloatField(default=0, null=True, blank=True,
                                         verbose_name="Scorch Height m", help_text="")
     cattle_sighted = models.ForeignKey('CattleSightedLookup', on_delete=models.PROTECT,
                                        null=True, blank=True,
@@ -207,7 +207,7 @@ class DisturbanceIndicator(AbstractVegetationObservation):
     cattle_dung = models.ForeignKey('CattleDungLookup', on_delete=models.PROTECT,
                                     null=True, blank=True,
                                     verbose_name="Cattle Dung", help_text="")
-    signs_damage_percent = models.IntegerField(default=0, null=True, blank=True,
+    signs_damage_percent = models.FloatField(default=0, null=True, blank=True,
                                                verbose_name="Veg affected within Site %", help_text="")
     pigs = models.ForeignKey('FeralEvidenceLookup', related_name='pigs_evidence', on_delete=models.PROTECT,
                              null=True, blank=True,
@@ -308,7 +308,7 @@ class ConditionLookup(AbstractLookup):
 
 
 class StratumLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class SignificanceLookup(AbstractLookup):
@@ -316,32 +316,32 @@ class SignificanceLookup(AbstractLookup):
 
 
 class EvidenceRecentFireLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class FireIntensityLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class CattleSightedLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class GrazingLevelLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class TracksTramplingLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class CattleDungLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class FeralEvidenceLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class BiodiversityIndicatorLookup(AbstractLookup):
-    strict = True
+    strict = False

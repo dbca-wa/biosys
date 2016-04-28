@@ -136,11 +136,11 @@ class CaptureTypeLookup(AbstractLookup):
 
 
 class SexLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class AgeLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class TrapTypeLookup(AbstractLookup):

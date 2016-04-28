@@ -40,5 +40,59 @@ ERRORS!!!
 {17:01:00.858}  Vegetation Row# 405: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
 !!! I DON't UNDERSTAND!!!
 Duplicate rows for same site visit??
-ex row# 336 row#362 same sivte visit (KLRCR_20115/LCI 201/ on 11/05/2015) with two different GroundCoverSummary !! and
+ex row# 336 row#362 same sivte visit (KLRCR_20115/LCI 201/ on 11/05/2015) with two different GroundCoverSummary !!
 
+Stratum Summary:
+* missing sites
+{12:09:54.431}  Stratum Summary Row# 1364: Col: 'Site Code' Value 'LCI 314': Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.432}  Stratum Summary Row# 1365: Col: 'Site Code' Value 'LCI 314': Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.434}  Stratum Summary Row# 1366: Col: 'Site Code' Value 'LCI 314': Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.435}  Stratum Summary Row# 1367: Col: 'Site Code' Value 'LCI 314': Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.436}  Stratum Summary Row# 1368: Col: 'Site Code' Value 'LCI 313': Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.438}  Stratum Summary Row# 1369: Col: 'Site Code' Value 'LCI 313': Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.439}  Stratum Summary Row# 1370: Col: 'Site Code' Value 'LCI 313': Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.467}  Stratum Summary Row# 1375: Col: 'Site Code' Value 'LCI 317': Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.469}  Stratum Summary Row# 1376: Col: 'Site Code' Value 'LCI 317': Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.470}  Stratum Summary Row# 1377: Col: 'Site Code' Value 'LCI 317': Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.529}  Stratum Summary Row# 1386: Col: 'Site Code' Value 'LCI 305': Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.531}  Stratum Summary Row# 1387: Col: 'Site Code' Value 'LCI 305': Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.533}  Stratum Summary Row# 1388: Col: 'Site Code' Value 'LCI 305': Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.820}  Stratum Summary Row# 1432: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.821}  Stratum Summary Row# 1433: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.822}  Stratum Summary Row# 1434: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.824}  Stratum Summary Row# 1435: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+
+DisturbanceIndicator
+* col 'Scorch Height m' model updated from integer to float
+* same for 'Weed percent'.
+* actually all Integer fields upgraded to Float
+* missing sites
+{14:07:38.264}  Disturbance Indicators Row# 386: Col: 'Site Code' Value 'LCI 314': Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{14:07:38.266}  Disturbance Indicators Row# 387: Col: 'Site Code' Value 'LCI 313': Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{14:07:38.283}  Disturbance Indicators Row# 389: Col: 'Site Code' Value 'LCI 317': Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{14:07:38.316}  Disturbance Indicators Row# 392: Col: 'Site Code' Value 'LCI 305': Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{14:07:38.485}  Disturbance Indicators Row# 405: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+
+Plant Observation
+Errors:
+ *missing sites
+{14:36:21.320}  Plant Observation Row# 89: Col: 'Site Code' Value 'LCI 317': Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{14:36:21.352}  Plant Observation Row# 93: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+ * 104 records instead of 109!! + 2 missing sites = 105. Still 4 missing
+  Pb: ex Row#20 and Row#81 rows differ only by the Collector!! Same site/date/data !!
+
+Warning:
+* species mismatch
+{14:36:20.732}  Plant Observation Row# 25: Species mismatch: "Stylosanthes sp" (input "sp." if species is unknown). [WARNING import_lci]
+{14:36:21.439}  Plant Observation Row# 101: Species mismatch: "Sida caudifolia" (input "sp." if species is unknown). [WARNING import_lci]
+
+Biodiversity Indicators:
+Errors:
+* missing sites
+{15:11:09.581}  Biodiversity Indicators Row# 386: Col: 'Site Code' Value 'LCI 314': Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{15:11:09.582}  Biodiversity Indicators Row# 387: Col: 'Site Code' Value 'LCI 313': Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{15:11:09.605}  Biodiversity Indicators Row# 389: Col: 'Site Code' Value 'LCI 317': Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{15:11:09.628}  Biodiversity Indicators Row# 391: Col: 'Site Code' Value 'LCI 305': Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{15:11:09.864}  Biodiversity Indicators Row# 404: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+* Row# 403 no data
+{15:11:09.862}  Biodiversity Indicators Row# 403: Cannot assign None: "BiodiversityIndicator.fauna_habitat" does not allow null values. [ERROR import_lci]

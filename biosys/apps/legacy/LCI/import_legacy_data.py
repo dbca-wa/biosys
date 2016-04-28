@@ -18,7 +18,6 @@ from vegetation.models import *
 
 logger = logging.getLogger('import_lci')
 
-# DATA_FILE = 'LCI_NC_MonSiteData_15Jan2016.xlsx'
 DATA_FILE = 'working.xlsx'
 # some global variables
 current_ws = None
@@ -914,39 +913,433 @@ def load_vegetation(ws):
             row_count += 1
 
 
+def load_stratum_summary(ws):
+    global row_count
+    table_reader = TableData(ws)
+    row_count = 2
+    # don't work with the column header her, too many columns with same name
+    for row_data in list(table_reader.rows_by_col_letter_it()):
+        try:
+            # get site visit
+            vegetation_visit_data = {
+                'Visit Name': row_data.get('A'),
+                'Site Code': row_data.get('B'),
+                'Vegetation Collector': row_data.get('C'),
+                'Visit Date': row_data.get('D'),
+            }
+            vegetation_visit, created, errors = update_or_create_vegetation_visit(vegetation_visit_data)
+            if not errors:
+                obj, created, errors = update_or_create_stratum_summary(vegetation_visit, row_data)
+                if errors:
+                    logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+            else:
+                logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+        except Exception as e:
+            logger.error('{} Row# {}: {}'.format(ws.title, row_count, e))
+        finally:
+            row_count += 1
+
+
+def update_or_create_stratum_summary(vegetation_visit, row_data):
+    # expect row_data to be by col_letter
+    model = StratumSummary
+    mapping = {
+        'A': {
+            'field': 'vegetation_visit',
+            'map': lambda v, r: vegetation_visit,
+            'reference': True
+        },
+        'E': {
+            'field': 'stratum',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'stratum'), v),
+            'reference': True
+        },
+        'F': {
+            'field': 'growth_form',
+            'map': lambda v, r: to_string(v),
+        },
+        'G': {
+            'field': 'crown_cover',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+        'H': {
+            'field': 'avg_height',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+        'I': {
+            'field': 'max_height',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+    }
+    return update_or_create_model(model, row_data, mapping)
+
+
+def load_disturbance_indicators(ws):
+    global row_count
+    table_reader = TableData(ws)
+    row_count = 2
+    # don't work with the column header her, too many columns with same name
+    for row_data in list(table_reader.rows_by_col_letter_it()):
+        try:
+            # get site visit
+            vegetation_visit_data = {
+                'Visit Name': row_data.get('A'),
+                'Site Code': row_data.get('B'),
+                'Vegetation Collector': row_data.get('C'),
+                'Visit Date': row_data.get('D'),
+            }
+            vegetation_visit, created, errors = update_or_create_vegetation_visit(vegetation_visit_data)
+            if not errors:
+                obj, created, errors = update_or_create_disturbance_indicator(vegetation_visit, row_data)
+                if errors:
+                    logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+            else:
+                logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+        except Exception as e:
+            logger.error('{} Row# {}: {}'.format(ws.title, row_count, e))
+        finally:
+            row_count += 1
+
+
+def update_or_create_disturbance_indicator(vegetation_visit, row_data):
+    # expect row_data to be by col_letter
+    model = DisturbanceIndicator
+    mapping = {
+        'A': {
+            'field': 'vegetation_visit',
+            'map': lambda v, r: vegetation_visit,
+            'reference': True
+        },
+        'E': {
+            'field': 'evidence_recent_fire',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'evidence_recent_fire'), v),
+            'reference': True
+        },
+        'F': {
+            'field': 'fire_intensity',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'fire_intensity'), v),
+        },
+        'G': {
+            'field': 'recently_burned_percent',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+        'H': {
+            'field': 'scorch_height',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+        'I': {
+            'field': 'cattle_sighted',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'cattle_sighted'), v),
+        },
+        'J': {
+            'field': 'grazing_level',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'grazing_level'), v),
+        },
+        'K': {
+            'field': 'tracks_trampling',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'tracks_trampling'), v),
+        },
+        'L': {
+            'field': 'cattle_dung',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'cattle_dung'), v),
+        },
+        'M': {
+            'field': 'signs_damage_percent',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+        'N': {
+            'field': 'pigs',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'pigs'), v),
+        },
+        'O': {
+            'field': 'cats',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'cats'), v),
+        },
+        'P': {
+            'field': 'horses_donkeys',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'horses_donkeys'), v),
+        },
+        'Q': {
+            'field': 'camels',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'camels'), v),
+        },
+        'R': {
+            'field': 'weed_percent',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+        'S': {
+            'field': 'comments',
+            'map': lambda v, r: to_string(v),
+        },
+    }
+    return update_or_create_model(model, row_data, mapping)
+
+
+def load_plant_observation(ws):
+    global row_count
+    table_reader = TableData(ws)
+    row_count = 2
+    # don't work with the column header her, too many columns with same name
+    for row_data in list(table_reader.rows_by_col_letter_it()):
+        try:
+            # get site visit
+            vegetation_visit_data = {
+                'Visit Name': row_data.get('A'),
+                'Site Code': row_data.get('B'),
+                'Vegetation Collector': row_data.get('C'),
+                'Visit Date': row_data.get('D'),
+            }
+            vegetation_visit, created, errors = update_or_create_vegetation_visit(vegetation_visit_data)
+            if not errors:
+                obj, created, errors = update_or_create_plant_observation(vegetation_visit, row_data)
+                if errors:
+                    logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+            else:
+                logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+        except Exception as e:
+            logger.error('{} Row# {}: {}'.format(ws.title, row_count, e))
+        finally:
+            row_count += 1
+
+
+def update_or_create_plant_observation(vegetation_visit, row_data):
+    # expect row_data to be by col_letter
+    model = PlantObservation
+    mapping = {
+        'A': {
+            'field': 'vegetation_visit',
+            'map': lambda v, r: vegetation_visit,
+            'reference': True
+        },
+        'E': {
+            'field': 'species',
+            'map': lambda v, r: update_or_create_species_observation(v, vegetation_visit.site_visit, r),
+            'reference': True
+        },
+        'F': {
+            'field': 'introduced',
+            'map': lambda v, r: to_boolean_raise(v),
+        },
+        'G': {
+            'field': 'extent',
+            'map': lambda v, r: to_string(v),
+        },
+        'H': {
+            'field': 'density',
+            'map': lambda v, r: to_string(v),
+        },
+        'I': {
+            'field': 'invasiveness',
+            'map': lambda v, r: to_string(v),
+        },
+    }
+    return update_or_create_model(model, row_data, mapping)
+
+
+def load_bio_indicator(ws):
+    global row_count
+    table_reader = TableData(ws)
+    row_count = 2
+    # don't work with the column header her, too many columns with same name
+    for row_data in list(table_reader.rows_by_col_letter_it()):
+        try:
+            # get site visit
+            vegetation_visit_data = {
+                'Visit Name': row_data.get('A'),
+                'Site Code': row_data.get('B'),
+                'Vegetation Collector': row_data.get('C'),
+                'Visit Date': row_data.get('D'),
+            }
+            vegetation_visit, created, errors = update_or_create_vegetation_visit(vegetation_visit_data)
+            if not errors:
+                obj, created, errors = update_or_create_bio_indicator(vegetation_visit, row_data)
+                if errors:
+                    logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+            else:
+                logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+        except Exception as e:
+            logger.error('{} Row# {}: {}'.format(ws.title, row_count, e))
+        finally:
+            row_count += 1
+
+
+def update_or_create_bio_indicator(vegetation_visit, row_data):
+    # expect row_data to be by col_letter
+    model = BiodiversityIndicator
+    mapping = {
+        'A': {
+            'field': 'vegetation_visit',
+            'map': lambda v, r: vegetation_visit,
+            'reference': True
+        },
+        'E': {
+            'field': 'fauna_habitat',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'fauna_habitat'), v),
+            'reference': True
+        },
+        'F': {
+            'field': 'veg_cover',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'veg_cover'), v),
+            'reference': True
+        },
+        'G': {
+            'field': 'crevices',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'crevices'), v),
+            'reference': True
+        },
+        'H': {
+            'field': 'tree_hollows',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'tree_hollows'), v),
+            'reference': True
+        },
+        'I': {
+            'field': 'logs',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'logs'), v),
+            'reference': True
+        },
+        'J': {
+            'field': 'food_avail',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'food_avail'), v),
+            'reference': True
+        },
+        'K': {
+            'field': 'fruiting',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'fruiting'), v),
+            'reference': True
+        },
+        'L': {
+            'field': 'flowering',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'flowering'), v),
+            'reference': True
+        },
+        'M': {
+            'field': 'seeding',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'seeding'), v),
+            'reference': True
+        },
+        'N': {
+            'field': 'termites',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'termites'), v),
+            'reference': True
+        },
+        'O': {
+            'field': 'traces',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'traces'), v),
+            'reference': True
+        },
+        'P': {
+            'field': 'sightings',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'sightings'), v),
+            'reference': True
+        },
+        'Q': {
+            'field': 'tracks',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'tracks'), v),
+            'reference': True
+        },
+        'R': {
+            'field': 'scats',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'scats'), v),
+            'reference': True
+        },
+        'S': {
+            'field': 'others',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'others'), v),
+            'reference': True
+        },
+        'T': {
+            'field': 'comments',
+            'map': lambda v, r: to_string(v),
+            'reference': True
+        },
+    }
+    return update_or_create_model(model, row_data, mapping)
+
+
 def load_data(file_path=None):
     global current_ws
     if not file_path:
         file_path = path.join(path.dirname(__file__), 'data', DATA_FILE)
     logger.info('Load workbook {}'.format(file_path))
     wb = load_workbook(file_path)
+    sheets = wb.get_sheet_names()
     logger.info('Load workbook done')
 
-    logger.info('Parse Sites worksheet')
     current_ws = 'Sites'
-    # load_sites(wb.get_sheet_by_name(current_ws))
+    if current_ws in sheets:
+        logger.info('Load ' + current_ws + '  worksheet')
+        load_sites(wb.get_sheet_by_name(current_ws))
+    else:
+        logger.warning("No '" + current_ws + "' datasheet.")
 
-    logger.info('Parse Visit worksheet')
     current_ws = 'Visit'
-    # load_visits(wb.get_sheet_by_name(current_ws))
+    if current_ws in sheets:
+        logger.info('Load ' + current_ws + '  worksheet')
+        load_visits(wb.get_sheet_by_name(current_ws))
+    else:
+        logger.warning("No '" + current_ws + "' datasheet.")
 
-    logger.info('Parse Site Characteristics')
     current_ws = 'Site Characteristics'
-    # load_site_characteristics(wb.get_sheet_by_name(current_ws))
+    if current_ws in sheets:
+        logger.info('Load ' + current_ws + '  worksheet')
+        load_site_characteristics(wb.get_sheet_by_name(current_ws))
+    else:
+        logger.warning("No '" + current_ws + "' datasheet.")
 
-    logger.info('Parse Stratum Species')
     current_ws = 'Stratum Species'
-    # load_stratum_species(wb.get_sheet_by_name(current_ws))
+    if current_ws in sheets:
+        logger.info('Load ' + current_ws + '  worksheet')
+        load_stratum_species(wb.get_sheet_by_name(current_ws))
+    else:
+        logger.warning("No '" + current_ws + "' datasheet.")
 
-    logger.info('Parse Vegetation')
     current_ws = 'Vegetation'
-    load_vegetation(wb.get_sheet_by_name(current_ws))
+    if current_ws in sheets:
+        logger.info('Load ' + current_ws + '  worksheet')
+        load_vegetation(wb.get_sheet_by_name(current_ws))
+    else:
+        logger.warning("No '" + current_ws + "' datasheet.")
+
+    current_ws = 'Stratum Summary'
+    if current_ws in sheets:
+        logger.info('Load ' + current_ws + '  worksheet')
+        load_stratum_summary(wb.get_sheet_by_name(current_ws))
+    else:
+        logger.warning("No '" + current_ws + "' datasheet.")
+
+    current_ws = 'Disturbance Indicators'
+    if current_ws in sheets:
+        logger.info('Load ' + current_ws + '  worksheet')
+        load_disturbance_indicators(wb.get_sheet_by_name(current_ws))
+    else:
+        logger.warning("No '" + current_ws + "' datasheet.")
+
+    current_ws = 'Plant Observation'
+    if current_ws in sheets:
+        logger.info('Load ' + current_ws + '  worksheet')
+        load_plant_observation(wb.get_sheet_by_name(current_ws))
+    else:
+        logger.warning("No '" + current_ws + "' datasheet.")
+
+    current_ws = 'Biodiversity Indicators'
+    if current_ws in sheets:
+        logger.info('Load ' + current_ws + '  worksheet')
+        load_bio_indicator(wb.get_sheet_by_name(current_ws))
+    else:
+        logger.warning("No '" + current_ws + "' datasheet.")
 
     logger.info('Import Done')
 
 
-def run():
+def delete_data():
+    # Deleting projects should cascade delete pretty much all tables
+    Project.objects.all().delete()
+
+
+def run(*args):
     """
     The method called by django-extension runscript
     """
+    if 'fresh' in args:
+        delete_data()
     load_data()
