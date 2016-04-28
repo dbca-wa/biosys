@@ -15,6 +15,7 @@ from upload.utils_openpyxl import TableData, is_blank_value
 from upload.validation import to_integer_raise, to_float_raise, to_model_choice, \
     to_lookup_raise, to_string, to_date_raise, to_species_observation_raise, to_boolean_raise
 from vegetation.models import *
+from animals.models import *
 
 logger = logging.getLogger('import_lci')
 
@@ -1175,82 +1176,305 @@ def update_or_create_bio_indicator(vegetation_visit, row_data):
         'E': {
             'field': 'fauna_habitat',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'fauna_habitat'), v),
-            'reference': True
         },
         'F': {
             'field': 'veg_cover',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'veg_cover'), v),
-            'reference': True
         },
         'G': {
             'field': 'crevices',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'crevices'), v),
-            'reference': True
         },
         'H': {
             'field': 'tree_hollows',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'tree_hollows'), v),
-            'reference': True
         },
         'I': {
             'field': 'logs',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'logs'), v),
-            'reference': True
         },
         'J': {
             'field': 'food_avail',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'food_avail'), v),
-            'reference': True
         },
         'K': {
             'field': 'fruiting',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'fruiting'), v),
-            'reference': True
         },
         'L': {
             'field': 'flowering',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'flowering'), v),
-            'reference': True
         },
         'M': {
             'field': 'seeding',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'seeding'), v),
-            'reference': True
         },
         'N': {
             'field': 'termites',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'termites'), v),
-            'reference': True
         },
         'O': {
             'field': 'traces',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'traces'), v),
-            'reference': True
         },
         'P': {
             'field': 'sightings',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'sightings'), v),
-            'reference': True
         },
         'Q': {
             'field': 'tracks',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'tracks'), v),
-            'reference': True
         },
         'R': {
             'field': 'scats',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'scats'), v),
-            'reference': True
         },
         'S': {
             'field': 'others',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'others'), v),
-            'reference': True
         },
         'T': {
             'field': 'comments',
             'map': lambda v, r: to_string(v),
+        },
+    }
+    return update_or_create_model(model, row_data, mapping)
+
+
+def load_trap(ws):
+    global row_count
+    table_reader = TableData(ws)
+    row_count = 2
+    # don't work with the column header her, too many columns with same name
+    for row_data in list(table_reader.rows_by_col_letter_it()):
+        try:
+            # get site visit
+            site_visit_data = {
+                'Visit Name': row_data.get('A'),
+                'Site Code': row_data.get('B'),
+            }
+            site_visit, created, errors = update_or_create_site_visit(site_visit_data)
+            if not errors:
+                obj, created, errors = update_or_create_trap(site_visit, row_data)
+                if errors:
+                    logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+            else:
+                logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+        except Exception as e:
+            logger.error('{} Row# {}: {}'.format(ws.title, row_count, e))
+        finally:
+            row_count += 1
+
+
+def update_or_create_trap(site_visit, row_data):
+    # expect row_data to be by col_letter
+    model = Trap
+    mapping = {
+        'A': {
+            'field': 'site_visit',
+            'map': lambda v, r: site_visit,
             'reference': True
+        },
+        'C': {
+            'field': 'trapline_ID',
+            'map': lambda v, r: to_string(v),
+            'reference': True
+        },
+        'D': {
+            'field': 'trap_type',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'trap_type'), v),
+            'reference': True
+        },
+        'E': {
+            'field': 'open_date',
+            'map': lambda v, r: to_date_raise(v),
+            'reference': True
+        },
+        'F': {
+            'field': 'close_date',
+            'map': lambda v, r: to_date_raise(v),
+            'reference': True
+        },
+        'G': {
+            'field': 'datum',
+            'map': lambda x, r: to_model_choice(DATUM_CHOICES, x) if x else None
+        },
+        'H': {
+            'field': 'start_latitude',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+            'reference': True
+        },
+        'I': {
+            'field': 'start_longitude',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+            'reference': True
+        },
+        'J': {
+            'field': 'stop_latitude',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+            'reference': True
+        },
+        'K': {
+            'field': 'stop_longitude',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+            'reference': True
+        },
+        'L': {
+            'field': 'accuracy',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+            'reference': True
+        },
+        'M': {
+            'field': 'traps_number',
+            'map': lambda v, r: to_integer_raise(only_digit(v)),
+            'reference': True
+        },
+        'N': {
+            'field': 'comments',
+            'map': lambda v, r: to_string(v),
+            'reference': True
+        },
+    }
+    return update_or_create_model(model, row_data, mapping)
+
+
+def load_animal_observations(ws):
+    global row_count
+    table_reader = TableData(ws)
+    row_count = 2
+    # don't work with the column header her, too many columns with same name
+    for row_data in list(table_reader.rows_by_col_letter_it()):
+        try:
+            # get site visit
+            site_visit_data = {
+                'Visit Name': row_data.get('A'),
+                'Site Code': row_data.get('B'),
+            }
+            site_visit, created, errors = update_or_create_site_visit(site_visit_data)
+            if not errors:
+                obj, created, errors = update_or_create_animal_observation(site_visit, row_data)
+                if errors:
+                    logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+            else:
+                logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+        except Exception as e:
+            logger.error('{} Row# {}: {}'.format(ws.title, row_count, e))
+        finally:
+            row_count += 1
+
+
+def update_or_create_animal_observation(site_visit, row_data):
+    # expect row_data to be by col_letter
+    model = AnimalObservation
+    mapping = {
+        'A': {
+            'field': 'site_visit',
+            'map': lambda v, r: site_visit,
+            'reference': True
+        },
+        'C': {
+            'field': 'collector',
+            'map': lambda v, r: to_string(v),
+            'reference': True
+        },
+        'D': {
+            'field': 'date',
+            'map': lambda v, r: to_date_raise(v),
+            'reference': True
+        },
+        'E': {
+            'field': 'trap_no',
+            'map': lambda v, r: to_string(v),
+            'reference': True
+        },
+        'F': {
+            'field': 'trap_type',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'trap_type'), v),
+        },
+        'G': {
+            'field': 'capture_type',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'capture_type'), v),
+        },
+        'H': {
+            'field': 'species',
+            'map': lambda v, r: update_or_create_species_observation(v, site_visit, r),
+            'reference': True
+        },
+        'K': {
+            'field': 'sex',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'sex'), v),
+        },
+        'L': {
+            'field': 'microchip_id',
+            'map': lambda v, r: to_string(v),
+        },
+        'M': {
+            'field': 'tissue_number',
+            'map': lambda v, r: to_string(v),
+        },
+        'N': {
+            'field': 'tissue_type',
+            'map': lambda v, r: to_string(v),
+        },
+        'O': {
+            'field': 'fate',
+            'map': lambda v, r: to_string(v),
+        },
+        'P': {
+            'field': 'gross_weight',
+            'map': lambda v, r: to_float_raise(only_digit(v))
+        },
+        'Q': {
+            'field': 'bag_weight',
+            'map': lambda v, r: to_float_raise(only_digit(v))
+        },
+        'R': {
+            'field': 'net_weight',
+            'map': lambda v, r: to_float_raise(only_digit(v))
+        },
+        'S': {
+            'field': 'age',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'age'), v),
+        },
+        'T': {
+            'field': 'head_length',
+            'map': lambda v, r: to_float_raise(only_digit(v))
+        },
+        'U': {
+            'field': 'pes_length',
+            'map': lambda v, r: to_float_raise(only_digit(v))
+        },
+        'V': {
+            'field': 'reproductive_condition',
+            'map': lambda v, r: to_string(v)
+        },
+        'W': {
+            'field': 'pouch',
+            'map': lambda v, r: to_string(v)
+        },
+        'X': {
+            'field': 'test_length',
+            'map': lambda v, r: to_float_raise(only_digit(v))
+        },
+        'Y': {
+            'field': 'test_width',
+            'map': lambda v, r: to_float_raise(only_digit(v))
+        },
+        'Z': {
+            'field': 'svl',
+            'map': lambda v, r: to_float_raise(only_digit(v))
+        },
+        'AA': {
+            'field': 'tail_length',
+            'map': lambda v, r: to_float_raise(only_digit(v))
+        },
+        'AB': {
+            'field': 'tail_condition',
+            'map': lambda v, r: to_string(v)
+        },
+        'AC': {
+            'field': 'comments',
+            'map': lambda v, r: to_string(v)
         },
     }
     return update_or_create_model(model, row_data, mapping)
@@ -1325,6 +1549,20 @@ def load_data(file_path=None):
     if current_ws in sheets:
         logger.info('Load ' + current_ws + '  worksheet')
         load_bio_indicator(wb.get_sheet_by_name(current_ws))
+    else:
+        logger.warning("No '" + current_ws + "' datasheet.")
+
+    current_ws = 'Trap'
+    if current_ws in sheets:
+        logger.info('Load ' + current_ws + '  worksheet')
+        load_trap(wb.get_sheet_by_name(current_ws))
+    else:
+        logger.warning("No '" + current_ws + "' datasheet.")
+
+    current_ws = 'Animal Observations'
+    if current_ws in sheets:
+        logger.info('Load ' + current_ws + '  worksheet')
+        load_animal_observations(wb.get_sheet_by_name(current_ws))
     else:
         logger.warning("No '" + current_ws + "' datasheet.")
 
