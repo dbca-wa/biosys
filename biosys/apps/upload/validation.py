@@ -587,7 +587,7 @@ class SpeciesObservationManager:
                 # found!
                 name_id = sp.name_id
             except Species.MultipleObjectsReturned:  # Should never happen.
-                raise FieldErrorException('Species matches multiple records: {}'.format(value))
+                raise FieldErrorException('Species matches multiple records: "{}"'.format(value))
             except Species.DoesNotExist:
                 sp = None
             if sp is None:
@@ -595,7 +595,7 @@ class SpeciesObservationManager:
                 sp = value.split(' ', 2)
                 # At this point, we have uncertainty about species (but still might match genus).
                 if sp and len(sp) == 1:  # Only supplied genus.
-                    raise FieldErrorException('No species supplied: {} (input "sp." if unknown).'.format(value))
+                    raise FieldErrorException('No species supplied: "{}" (input "sp." if unknown).'.format(value))
                 else:
                     # No match on exact species name; try "Genus sp."
                     genus = sp[0]
@@ -607,7 +607,7 @@ class SpeciesObservationManager:
                     qs = Species.objects.filter(species_name__istartswith=genus + '')
                     qs = list(qs)
                     if len(qs) == 0:  # No match for genus.
-                        msg = 'Unknown genus: {} in {}'.format(genus, value)
+                        msg = 'Unknown genus: {} in "{}"'.format(genus, value)
                         raise FieldErrorException(msg)
                     else:  # At least one matching genus was found.
                         # At this point we allow the value; should be: Genus sp. <OPTIONAL EXTRAS>
