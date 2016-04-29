@@ -200,7 +200,7 @@ LOGGING = {
             'formatter': 'precise',
         },
         'import_lci': {
-            'level': 'INFO',
+            'level': env('LOG_LCI_LEVEL', 'ERROR'),
             'class': 'logging.FileHandler',
             'filename': os.path.join(LOG_FOLDER, 'import_lci.log'),
             'mode': 'w',

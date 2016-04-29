@@ -21,7 +21,7 @@ from animals.models import *
 
 logger = logging.getLogger('import_lci')
 
-DATA_FILE = 'working.xlsx'
+DATA_FILE = 'LCI_NC_MonSiteData_15Jan2016.xlsx'
 # some global variables
 current_ws = None
 row_count = None
@@ -1711,8 +1711,11 @@ def load_data(file_path=None):
 
 
 def delete_data():
-    # Deleting projects should cascade delete pretty much all tables
+    # Deleting projects should cascade delete pretty much all the tables
     Project.objects.all().delete()
+    # There are some tables without link to project
+    OpportunisticObservation.objects.all().delete()
+    SpeciesObservation.objects.all().delete()
 
 
 def run(*args):
@@ -1721,4 +1724,8 @@ def run(*args):
     """
     if 'fresh' in args:
         delete_data()
-    load_data()
+    file_path = None
+    file_ = [arg.split('file=')[1] for arg in args if arg.startswith('file=')]
+    if file_:
+        file_path = file_[0]
+    load_data(file_path=file_path)
