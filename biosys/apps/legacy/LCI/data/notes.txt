@@ -107,8 +107,12 @@ Trap
 
 Animal Observations
 * column 'check'???
-* fields fate and reproductive_condition becomes free text instead of hard coded choices.
-* lots of mandatory fields become non mandatory
+Model changes:
+* trap_type: becomes a lookup like in Trap model
+* fate, reproductive_condition, pouch and tail conditions become charField instead of hard coded choices.
+* test_length, test_width, svl, tail_length: Float instead of Char
+* relaxed the mandatory for: capture_tye, sex, age.
+Errors:
 # missing sites
 {17:26:20.517}  Animal Observations Row# 3345: Col: 'Site Code' Value 'LCI 608': Site matching query does not exist. [ERROR import_lci]
 {17:26:20.519}  Animal Observations Row# 3346: Col: 'Site Code' Value 'LCI 608': Site matching query does not exist. [ERROR import_lci]
@@ -215,3 +219,21 @@ Animal Observations
 {17:26:26.59}  Animal Observations Row# 3929: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
 {17:26:26.202}  Animal Observations Row# 3942: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
 {17:26:26.204}  Animal Observations Row# 3943: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+
+
+Opportunistic Observations
+Model changes:
+* No site_visit in the data just a location.
+  No more site_visit FK but add a location lookup and also add observation_type lookup to capture the type on obs. E.g: bird
+* Problem: SpeciesObservation needed a mandatory site_visit FK. Made the site_visit not mandatory.
+
+* Why they are multiple rows for the same species at the same date and same location. What that means? See the species 5 times?
+Should we create one record for each?
+
+# Are lat/long/accuracy/datum actually used?
+
+Birds:
+* No Bird model
+* Create an OpportunisticObservation with observation_type='Bird'
+ERRORS!!:
+ * need to delete empty col 'L'

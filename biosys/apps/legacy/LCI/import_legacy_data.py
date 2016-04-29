@@ -9,6 +9,8 @@ import re
 
 from openpyxl import load_workbook
 
+from django.db.models.query import Q
+
 from main.models import *
 from main.utils import get_field
 from upload.utils_openpyxl import TableData, is_blank_value
@@ -31,7 +33,8 @@ def build_model_arguments(row_data, mapping):
         'Project': {
             'field': 'project',
             'map': lambda x: str(x),
-            'reference': True,
+            'primary': True, if True the field is used a a lookup field when updating a record instead of creating a new
+             one
         },
         'Parent Site': {
             'field': 'parent_site',
@@ -51,7 +54,7 @@ def build_model_arguments(row_data, mapping):
             try:
                 map_func = map_desc.get('map', None)
                 field_value = map_func(col_value, row_data) if callable(map_func) else col_value
-                if map_desc.get('reference', False):
+                if map_desc.get('primary', False):
                     kwargs[field] = field_value
                 else:
                     defaults[field] = field_value
@@ -86,7 +89,7 @@ def update_or_create_project(row_data):
     mapping = {
         'Project': {
             'field': 'title',
-            'reference': True,
+            'primary': True,
         },
         'Datum': {
             'field': 'datum',
@@ -113,7 +116,7 @@ def update_or_create_site(project, row_data):
         },
         'Site Code': {
             'field': 'site_code',
-            'reference': True,
+            'primary': True,
             'map': None
         },
         'Site Name': {
@@ -128,15 +131,17 @@ def update_or_create_site(project, row_data):
             'map': lambda x, r: to_model_choice(DATUM_CHOICES, x) if x else None
         },
         'Latitude': {
-            'field': 'latitude'
+            'field': 'latitude',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
         },
         'Longitude': {
-            'field': 'longitude'
+            'field': 'longitude',
+            'map': lambda v, r: to_float_raise(only_digit(v))
         },
         'Accuracy': {
             'field': 'accuracy',
             # turn '50m' into 50.0
-            'map': lambda v, r: only_digit(v)
+            'map': lambda v, r: to_float_raise(only_digit(v))
         },
         'Collector': {
             'field': 'established_by',
@@ -230,7 +235,7 @@ def load_sites(ws):
     global row_count
     table_reader = TableData(ws)
     row_count = 2
-    for row in list(table_reader.rows_by_col_header()):
+    for row in list(table_reader.rows_by_col_header_it()):
         try:
             project, created, errors = update_or_create_project(row)
             if errors:
@@ -255,7 +260,7 @@ def update_or_create_visit(project, site, row_data):
         'Visit Name': {
             'field': 'name',
             'map': lambda v, r: to_string(v),
-            'reference': True,
+            'primary': True,
         },
         'Start Date': {
             'field': 'start_date',
@@ -286,7 +291,7 @@ def load_visits(ws):
     global row_count
     table_reader = TableData(ws)
     row_count = 2
-    for row_data in list(table_reader.rows_by_col_header()):
+    for row_data in list(table_reader.rows_by_col_header_it()):
         try:
             project_title = row_data.get('Project', None)
             project = Project.objects.get(title=project_title)
@@ -308,12 +313,12 @@ def update_or_create_site_visit(row_data):
         'Visit Name': {
             'field': 'visit',
             'map': lambda v, r: Visit.objects.get(name=v),
-            'reference': True,
+            'primary': True,
         },
         'Site Code': {
             'field': 'site',
             'map': lambda v, r: Site.objects.get(site_code=v),
-            'reference': True,
+            'primary': True,
         },
     }
     return update_or_create_model(model, row_data, mapping)
@@ -325,7 +330,7 @@ def update_or_create_site_characteristic(row_data):
         'Visit Name': {
             'field': 'site_visit',
             'map': lambda v, r: update_or_create_site_visit(r)[0],
-            'reference': True,
+            'primary': True,
         },
         'Underlaying geology': {
             'field': 'underlaying_geology',
@@ -369,7 +374,7 @@ def load_site_characteristics(ws):
     global row_count
     table_reader = TableData(ws)
     row_count = 2
-    for row_data in list(table_reader.rows_by_col_header()):
+    for row_data in list(table_reader.rows_by_col_header_it()):
         try:
             obj, created, errors = update_or_create_site_characteristic(row_data)
             if errors:
@@ -386,7 +391,7 @@ def update_or_create_vegetation_visit(row_data):
         'Site Code': {
             'field': 'site_visit',
             'map': lambda v, r: update_or_create_site_visit(r)[0],
-            'reference': True,
+            'primary': True,
         },
         'Vegetation Collector': {
             'field': 'collector',
@@ -400,8 +405,11 @@ def update_or_create_vegetation_visit(row_data):
     return update_or_create_model(model, row_data, mapping)
 
 
-def update_or_create_species_observation(species, site_visit, row_data):
-    sp_obs = SpeciesObservation.objects.filter(site_visit=site_visit).filter(input_name=species).first()
+def get_or_create_species_observation(species, site_visit, row_data):
+    query = Q(input_name=species)
+    if site_visit is not None:
+        query &= Q(site_visit=site_visit)
+    sp_obs = SpeciesObservation.objects.filter(query).first()
     data = {
         'Species validation status': row_data.get('Species Validation', ''),
         'Species uncertainty': row_data.get('Species Uncertainty', '')
@@ -426,7 +434,7 @@ def update_or_create_stratum_species(row_data):
         'Site Code': {
             'field': 'vegetation_visit',
             'map': lambda v, r: vegetation_visit,
-            'reference': True,
+            'primary': True,
         },
         'Significance': {
             'field': 'significance',
@@ -435,12 +443,12 @@ def update_or_create_stratum_species(row_data):
         'Stratum': {
             'field': 'stratum',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'stratum'), v),
-            'reference': True
+            'primary': True
         },
         'Species': {
             'field': 'species',
-            'map': lambda v, r: update_or_create_species_observation(v, vegetation_visit.site_visit, r),
-            'reference': True
+            'map': lambda v, r: get_or_create_species_observation(v, vegetation_visit.site_visit, r),
+            'primary': True
         },
         'Collector No': {
             'field': 'collector_no',
@@ -506,7 +514,7 @@ def load_stratum_species(ws):
     global row_count
     table_reader = TableData(ws)
     row_count = 2
-    for row_data in list(table_reader.rows_by_col_header()):
+    for row_data in list(table_reader.rows_by_col_header_it()):
         try:
             # get site visit
             obj, created, errors = update_or_create_stratum_species(row_data)
@@ -524,7 +532,7 @@ def update_or_create_ground_cover_summary(vegetation_visit, row_data):
         'A': {
             'field': 'vegetation_visit',
             'map': lambda v, r: vegetation_visit,
-            'reference': True
+            'primary': True
         },
         'E': {
             'field': 'perennial_grass',
@@ -572,7 +580,7 @@ def update_or_create_transect_observation(vegetation_visit, row_data):
         'A': {
             'field': 'vegetation_visit',
             'map': lambda v, r: vegetation_visit,
-            'reference': True
+            'primary': True
         },
         'O': {
             'field': 'perennial_grass',
@@ -651,7 +659,7 @@ def update_or_create_basal_bitterlich_observation(vegetation_visit, row_data):
         'A': {
             'field': 'vegetation_visit',
             'map': lambda v, r: vegetation_visit,
-            'reference': True
+            'primary': True
         },
         'AI': {
             'field': 'basal_area',
@@ -675,12 +683,12 @@ def update_or_create_erosion_peg(vegetation_visit, data):
         'vegetation_visit': {
             'field': 'vegetation_visit',
             'map': lambda v, r: vegetation_visit,
-            'reference': True
+            'primary': True
         },
         'peg_ID': {
             'field': 'peg_ID',
             'map': lambda v, r: to_string(v),
-            'reference': True
+            'primary': True
         },
         'transect_x': {
             'field': 'transect_x',
@@ -704,12 +712,12 @@ def update_or_create_peg_observation(vegetation_visit, data):
         'vegetation_visit': {
             'field': 'vegetation_visit',
             'map': lambda v, r: vegetation_visit,
-            'reference': True
+            'primary': True
         },
         'peg_ID': {
             'field': 'peg_ID',
             'map': lambda v, r: to_string(v),
-            'reference': True
+            'primary': True
         },
         'intact_litter': {
             'field': 'intact_litter',
@@ -948,12 +956,12 @@ def update_or_create_stratum_summary(vegetation_visit, row_data):
         'A': {
             'field': 'vegetation_visit',
             'map': lambda v, r: vegetation_visit,
-            'reference': True
+            'primary': True
         },
         'E': {
             'field': 'stratum',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'stratum'), v),
-            'reference': True
+            'primary': True
         },
         'F': {
             'field': 'growth_form',
@@ -1009,12 +1017,12 @@ def update_or_create_disturbance_indicator(vegetation_visit, row_data):
         'A': {
             'field': 'vegetation_visit',
             'map': lambda v, r: vegetation_visit,
-            'reference': True
+            'primary': True
         },
         'E': {
             'field': 'evidence_recent_fire',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'evidence_recent_fire'), v),
-            'reference': True
+            'primary': True
         },
         'F': {
             'field': 'fire_intensity',
@@ -1110,12 +1118,12 @@ def update_or_create_plant_observation(vegetation_visit, row_data):
         'A': {
             'field': 'vegetation_visit',
             'map': lambda v, r: vegetation_visit,
-            'reference': True
+            'primary': True
         },
         'E': {
             'field': 'species',
-            'map': lambda v, r: update_or_create_species_observation(v, vegetation_visit.site_visit, r),
-            'reference': True
+            'map': lambda v, r: get_or_create_species_observation(v, vegetation_visit.site_visit, r),
+            'primary': True
         },
         'F': {
             'field': 'introduced',
@@ -1171,7 +1179,7 @@ def update_or_create_bio_indicator(vegetation_visit, row_data):
         'A': {
             'field': 'vegetation_visit',
             'map': lambda v, r: vegetation_visit,
-            'reference': True
+            'primary': True
         },
         'E': {
             'field': 'fauna_habitat',
@@ -1242,10 +1250,11 @@ def update_or_create_bio_indicator(vegetation_visit, row_data):
 
 
 def load_trap(ws):
+    model = Trap
     global row_count
     table_reader = TableData(ws)
     row_count = 2
-    # don't work with the column header her, too many columns with same name
+    site_visit_pks = []
     for row_data in list(table_reader.rows_by_col_letter_it()):
         try:
             # get site visit
@@ -1255,7 +1264,11 @@ def load_trap(ws):
             }
             site_visit, created, errors = update_or_create_site_visit(site_visit_data)
             if not errors:
-                obj, created, errors = update_or_create_trap(site_visit, row_data)
+                # delete all records
+                if site_visit.pk not in site_visit_pks:
+                    model.objects.filter(site_visit=site_visit).delete()
+                    site_visit_pks.append(site_visit.pk)
+                obj, created, errors = create_trap(site_visit, row_data)
                 if errors:
                     logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
             else:
@@ -1266,34 +1279,29 @@ def load_trap(ws):
             row_count += 1
 
 
-def update_or_create_trap(site_visit, row_data):
+def create_trap(site_visit, row_data):
     # expect row_data to be by col_letter
     model = Trap
     mapping = {
         'A': {
             'field': 'site_visit',
             'map': lambda v, r: site_visit,
-            'reference': True
         },
         'C': {
             'field': 'trapline_ID',
             'map': lambda v, r: to_string(v),
-            'reference': True
         },
         'D': {
             'field': 'trap_type',
             'map': lambda v, r: to_lookup_raise(get_field(model, 'trap_type'), v),
-            'reference': True
         },
         'E': {
             'field': 'open_date',
             'map': lambda v, r: to_date_raise(v),
-            'reference': True
         },
         'F': {
             'field': 'close_date',
             'map': lambda v, r: to_date_raise(v),
-            'reference': True
         },
         'G': {
             'field': 'datum',
@@ -1302,47 +1310,41 @@ def update_or_create_trap(site_visit, row_data):
         'H': {
             'field': 'start_latitude',
             'map': lambda v, r: to_float_raise(only_digit(v)),
-            'reference': True
         },
         'I': {
             'field': 'start_longitude',
             'map': lambda v, r: to_float_raise(only_digit(v)),
-            'reference': True
         },
         'J': {
             'field': 'stop_latitude',
             'map': lambda v, r: to_float_raise(only_digit(v)),
-            'reference': True
         },
         'K': {
             'field': 'stop_longitude',
             'map': lambda v, r: to_float_raise(only_digit(v)),
-            'reference': True
         },
         'L': {
             'field': 'accuracy',
             'map': lambda v, r: to_float_raise(only_digit(v)),
-            'reference': True
         },
         'M': {
             'field': 'traps_number',
             'map': lambda v, r: to_integer_raise(only_digit(v)),
-            'reference': True
         },
         'N': {
             'field': 'comments',
             'map': lambda v, r: to_string(v),
-            'reference': True
         },
     }
-    return update_or_create_model(model, row_data, mapping)
+    return create_model(model, row_data, mapping)
 
 
 def load_animal_observations(ws):
+    model = AnimalObservation
     global row_count
     table_reader = TableData(ws)
     row_count = 2
-    # don't work with the column header her, too many columns with same name
+    site_visit_pks = []
     for row_data in list(table_reader.rows_by_col_letter_it()):
         try:
             # get site visit
@@ -1352,7 +1354,11 @@ def load_animal_observations(ws):
             }
             site_visit, created, errors = update_or_create_site_visit(site_visit_data)
             if not errors:
-                obj, created, errors = update_or_create_animal_observation(site_visit, row_data)
+                # delete all records
+                if site_visit.pk not in site_visit_pks:
+                    model.objects.filter(site_visit=site_visit).delete()
+                    site_visit_pks.append(site_visit.pk)
+                obj, created, errors = create_animal_observation(site_visit, row_data)
                 if errors:
                     logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
             else:
@@ -1363,29 +1369,25 @@ def load_animal_observations(ws):
             row_count += 1
 
 
-def update_or_create_animal_observation(site_visit, row_data):
+def create_animal_observation(site_visit, row_data):
     # expect row_data to be by col_letter
     model = AnimalObservation
     mapping = {
         'A': {
             'field': 'site_visit',
             'map': lambda v, r: site_visit,
-            'reference': True
         },
         'C': {
             'field': 'collector',
             'map': lambda v, r: to_string(v),
-            'reference': True
         },
         'D': {
             'field': 'date',
             'map': lambda v, r: to_date_raise(v),
-            'reference': True
         },
         'E': {
             'field': 'trap_no',
             'map': lambda v, r: to_string(v),
-            'reference': True
         },
         'F': {
             'field': 'trap_type',
@@ -1397,8 +1399,7 @@ def update_or_create_animal_observation(site_visit, row_data):
         },
         'H': {
             'field': 'species',
-            'map': lambda v, r: update_or_create_species_observation(v, site_visit, r),
-            'reference': True
+            'map': lambda v, r: get_or_create_species_observation(v, site_visit, r),
         },
         'K': {
             'field': 'sex',
@@ -1477,7 +1478,133 @@ def update_or_create_animal_observation(site_visit, row_data):
             'map': lambda v, r: to_string(v)
         },
     }
-    return update_or_create_model(model, row_data, mapping)
+    return create_model(model, row_data, mapping)
+
+
+def load_opportunistic_observations(ws):
+    global row_count
+    table_reader = TableData(ws)
+    row_count = 2
+    for row_data in list(table_reader.rows_by_col_header_it()):
+        try:
+            obj, created, errors = create_opportunistic_observation(row_data)
+            if errors:
+                logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+        except Exception as e:
+            logger.error('{} Row# {}: {}'.format(ws.title, row_count, e))
+        finally:
+            row_count += 1
+
+
+def create_opportunistic_observation(row_data):
+    model = OpportunisticObservation
+    mapping = {
+        'Date': {
+            'field': 'date',
+            'map': lambda v, r: to_date_raise(v)
+        },
+        'Observer': {
+            'field': 'observer',
+            'map': lambda v, r: to_string(v)
+        },
+        'Species': {
+            'field': 'species',
+            'map': lambda v, r: get_or_create_species_observation(v, None, r)
+        },
+        'Location': {
+            'field': 'location',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'location'), v)
+        },
+        'Observation Type': {
+            'field': 'observation_type',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'observation_type'), v)
+        },
+        'Datum': {
+            'field': 'datum',
+            'map': lambda x, r: to_model_choice(DATUM_CHOICES, x) if x else None
+        },
+        'Latitude': {
+            'field': 'latitude',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+        'Longitude': {
+            'field': 'longitude',
+            'map': lambda v, r: to_float_raise(only_digit(v))
+        },
+        'Accuracy': {
+            'field': 'accuracy',
+            # turn '50m' into 50.0
+            'map': lambda v, r: to_float_raise(only_digit(v))
+        },
+        'Comments': {
+            'field': 'comments',
+            'map': lambda v, r: to_string(v)
+        }
+    }
+    return create_model(model, row_data, mapping)
+
+
+def load_birds_observations(ws):
+    global row_count
+    table_reader = TableData(ws)
+    row_count = 2
+    for row_data in list(table_reader.rows_by_col_header_it()):
+        try:
+            obj, created, errors = create_bird_observation(row_data)
+            if errors:
+                logger.error('{} Row# {}: {}'.format(ws.title, row_count, "\n\t".join(errors)))
+        except Exception as e:
+            logger.error('{} Row# {}: {}'.format(ws.title, row_count, e))
+        finally:
+            row_count += 1
+
+
+def create_bird_observation(row_data):
+    model = OpportunisticObservation
+    mapping = {
+        'Date': {
+            'field': 'date',
+            'map': lambda v, r: to_date_raise(v)
+        },
+        'Collector': {
+            'field': 'observer',
+            'map': lambda v, r: to_string(v)
+        },
+        'Species': {
+            'field': 'species',
+            'map': lambda v, r: get_or_create_species_observation(v, None, r)
+        },
+        'Location': {
+            'field': 'location',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'location'), v)
+        },
+        'Veg': {  # use this column to generate the observation_type='Bird'
+            'field': 'observation_type',
+            'map': lambda v, r: to_lookup_raise(get_field(model, 'observation_type'), 'Bird')
+        },
+        'Datum': {
+            'field': 'datum',
+            'map': lambda x, r: to_model_choice(DATUM_CHOICES, x) if x else None
+        },
+        'Lat': {
+            'field': 'latitude',
+            'map': lambda v, r: to_float_raise(only_digit(v)),
+        },
+        'Long': {
+            'field': 'longitude',
+            'map': lambda v, r: to_float_raise(only_digit(v))
+        },
+        'Accuracy': {
+            'field': 'accuracy',
+            # turn '50m' into 50.0
+            'map': lambda v, r: to_float_raise(only_digit(v))
+        },
+        'Comments': {
+            'field': 'comments',
+            'map': lambda v, r: to_string(v)
+        }
+    }
+    return create_model(model, row_data, mapping)
 
 
 def load_data(file_path=None):
@@ -1563,6 +1690,20 @@ def load_data(file_path=None):
     if current_ws in sheets:
         logger.info('Load ' + current_ws + '  worksheet')
         load_animal_observations(wb.get_sheet_by_name(current_ws))
+    else:
+        logger.warning("No '" + current_ws + "' datasheet.")
+
+    current_ws = 'Opportunistic Observations'
+    if current_ws in sheets:
+        logger.info('Load ' + current_ws + '  worksheet')
+        load_opportunistic_observations(wb.get_sheet_by_name(current_ws))
+    else:
+        logger.warning("No '" + current_ws + "' datasheet.")
+
+    current_ws = 'Birds'
+    if current_ws in sheets:
+        logger.info('Load ' + current_ws + '  worksheet')
+        load_birds_observations(wb.get_sheet_by_name(current_ws))
     else:
         logger.warning("No '" + current_ws + "' datasheet.")
 

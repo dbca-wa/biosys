@@ -287,7 +287,7 @@ class AbstractSiteVisitObservation(models.Model):
     """
     This should be the base class of every model in the datasheet
     """
-    site_visit = models.ForeignKey(SiteVisit, null=False, blank=False,
+    site_visit = models.ForeignKey(SiteVisit, null=True, blank=True,
                                    verbose_name="Site Visit", help_text="")
 
     class Meta:
