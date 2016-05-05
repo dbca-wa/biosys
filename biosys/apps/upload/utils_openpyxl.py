@@ -1,6 +1,7 @@
 import logging
 from collections import defaultdict
 from openpyxl.worksheet.datavalidation import DataValidation
+from openpyxl.utils import get_column_letter
 from django.utils.text import Truncator
 
 logger = logging.getLogger(__name__)
@@ -52,12 +53,24 @@ def get_cell_neighbour(cell, direction='down'):
         raise Exception("Invalid Direction: " + direction + ". Should be [down|up|right|left]")
 
 
+def is_blank_value(value):
+    return value is None or is_empty_string(value)
+
+
+def is_empty_string(value):
+    return isinstance(value, basestring) and len(value.strip()) == 0
+
+
 def is_cell_blank(cell):
-    return cell.value is None
+    return is_blank_value(cell.value)
 
 
 def is_all_blanks(cells):
     return len([c for c in cells if not is_cell_blank(c)]) == 0
+
+
+def strip(value):
+    return value.strip() if isinstance(value, basestring) else value
 
 
 def get_value_for_key(ws, key, direction='down'):
@@ -130,7 +143,7 @@ def _build_list_formula(values):
     return '"{}"'.format(csv_values)
 
 
-class TableData():
+class TableData:
     """
     Parse a square portion of a spreadsheet.
     It supports two modes: normal or transpose where columns are rows and rows are columns
@@ -141,7 +154,7 @@ class TableData():
     :param transpose: if true the the table is a transposed one. Columns are rows and rows are columns
     """
 
-    def __init__(self, worksheet, top_left_row=1, top_left_column=1, transpose=False):
+    def __init__(self, worksheet, top_left_row=1, top_left_column=1, nb_cols=None, nb_rows=None, transpose=False):
         self.worksheet = worksheet
         self.top_left_row = top_left_row
         self.top_left_column = top_left_column
@@ -166,11 +179,52 @@ class TableData():
         """
         return [zip(self.column_headers, row) for row in self.rows]
 
+    def rows_by_col_header_it(self):
+        """
+        A row iterator
+        :return: a dict like. Warning the dict is not ordered
+                {
+                    ....
+                    'col_header1': row_n_col1
+                    'col_header2': row_n-col2
+                    .......
+                },
+        """
+        for row in self.rows:
+            data = {}
+            for i, col_header in enumerate(self.column_headers):
+                if col_header not in data:
+                    data[col_header] = row[i]
+                else:
+                    # if they are two columns with the same header we store it with with a appended _i
+                    count = 1
+                    key = col_header + '_' + str(count)
+                    while key in data:
+                        count += 1
+                        key = col_header + '_' + str(count)
+                    data[key] = row[i]
+            yield data
+
+    def rows_by_col_letter_it(self):
+        """
+        A row iterator
+        :return: a dict like:
+         {'A': value1,
+          'B': value2,
+          .....
+        }
+        """
+        for row in self.rows:
+            data = {}
+            for i, value in enumerate(row):
+                data[get_column_letter(i+1)] = value
+            yield data
+
     def _parse_column_headers(self):
         headers = []
         cell = self.top_left_cell
         while not is_cell_blank(cell):
-            headers.append(cell.value)
+            headers.append(strip(cell.value))
             direction = 'down' if self.transpose else 'right'
             cell = get_cell_neighbour(cell, direction)
         return headers
@@ -194,7 +248,7 @@ class TableData():
             if is_all_blanks(row_cells):
                 blank_row = True
             else:
-                rows.append([c.value for c in row_cells])
+                rows.append([strip(c.value) for c in row_cells])
                 if self.transpose:
                     col_index += 1
                     row_index = start_row

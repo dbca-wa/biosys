@@ -51,9 +51,9 @@ class StratumSpecies(AbstractVegetationObservation):
                                 verbose_name="Stratum", help_text="")
     species = models.ForeignKey(SpeciesObservation, null=True, blank=True,
                                 verbose_name="Species", help_text="")
-    collector_no = models.CharField(max_length=30, blank=True,
+    collector_no = models.CharField(max_length=200, blank=True,
                                     verbose_name="Collector No", help_text="")
-    avg_height = models.FloatField(null=False, blank=False,
+    avg_height = models.FloatField(null=True, blank=True,
                                    verbose_name="Average Height (m)", help_text="")
     cover = models.FloatField(null=True, blank=True,
                               verbose_name="Cover %", help_text="")
@@ -153,7 +153,8 @@ class PegObservation(AbstractVegetationObservation):
     organic = models.FloatField(null=True, blank=True, default=0.0,
                                 verbose_name="Organic mineral layer", help_text="")
     erosion = models.FloatField(null=True, blank=True, default=0.0,
-                                verbose_name="Erosion pegs", help_text="")
+                                verbose_name="Erosion peg", help_text="")
+    comments = models.CharField(max_length=500, blank=True, verbose_name="Comments", help_text="")
 
     class Meta:
         pass
@@ -190,9 +191,9 @@ class DisturbanceIndicator(AbstractVegetationObservation):
     fire_intensity = models.ForeignKey('FireIntensityLookup', on_delete=models.PROTECT,
                                        null=True, blank=True,
                                        verbose_name="Fire Intensity", help_text="")
-    recently_burned_percent = models.IntegerField(default=0, null=True, blank=True,
+    recently_burned_percent = models.FloatField(default=0, null=True, blank=True,
                                                   verbose_name="Recently Burned Veg in %", help_text="")
-    scorch_height = models.IntegerField(default=0, null=True, blank=True,
+    scorch_height = models.FloatField(default=0, null=True, blank=True,
                                         verbose_name="Scorch Height m", help_text="")
     cattle_sighted = models.ForeignKey('CattleSightedLookup', on_delete=models.PROTECT,
                                        null=True, blank=True,
@@ -206,7 +207,7 @@ class DisturbanceIndicator(AbstractVegetationObservation):
     cattle_dung = models.ForeignKey('CattleDungLookup', on_delete=models.PROTECT,
                                     null=True, blank=True,
                                     verbose_name="Cattle Dung", help_text="")
-    signs_damage_percent = models.IntegerField(default=0, null=True, blank=True,
+    signs_damage_percent = models.FloatField(default=0, null=True, blank=True,
                                                verbose_name="Veg affected within Site %", help_text="")
     pigs = models.ForeignKey('FeralEvidenceLookup', related_name='pigs_evidence', on_delete=models.PROTECT,
                              null=True, blank=True,
@@ -303,11 +304,11 @@ class BiodiversityIndicator(AbstractVegetationObservation):
 #########################
 
 class ConditionLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class StratumLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class SignificanceLookup(AbstractLookup):
@@ -315,32 +316,32 @@ class SignificanceLookup(AbstractLookup):
 
 
 class EvidenceRecentFireLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class FireIntensityLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class CattleSightedLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class GrazingLevelLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class TracksTramplingLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class CattleDungLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class FeralEvidenceLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class BiodiversityIndicatorLookup(AbstractLookup):
-    strict = True
+    strict = False

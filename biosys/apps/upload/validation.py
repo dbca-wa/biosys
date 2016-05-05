@@ -15,7 +15,6 @@ from models import SiteVisitDataFileError
 from utils import is_blank
 from upload.validator_functions import ground_cover_validate, lat_lon_validate
 
-
 logger = logging.getLogger(__name__)
 
 ERRORS = [
@@ -531,7 +530,7 @@ def to_field_value_raise(field, value, commit=True, site_visit=None, row_data=No
     return value
 
 
-def to_species_observation_raise(value, site_visit, commit=True, row_data=None):
+def to_species_observation_raise(value, site_visit=None, commit=True, row_data=None):
     """
     Validate the supplied species name value. Rules:
     *
@@ -553,10 +552,11 @@ def to_species_observation_raise(value, site_visit, commit=True, row_data=None):
     return manager.create(site_visit=site_visit, commit=commit)
 
 
-class SpeciesObservationManager():
+class SpeciesObservationManager:
     """
     For BIOSYS-117: add extra column validation status and uncertainty for every species field.
     """
+
     def __init__(self, species, row_data=None):
         self.model = SpeciesObservation
         self.species = species
@@ -587,7 +587,7 @@ class SpeciesObservationManager():
                 # found!
                 name_id = sp.name_id
             except Species.MultipleObjectsReturned:  # Should never happen.
-                raise FieldErrorException('Species matches multiple records.')
+                raise FieldErrorException('Species matches multiple records: "{}"'.format(value))
             except Species.DoesNotExist:
                 sp = None
             if sp is None:
@@ -595,18 +595,19 @@ class SpeciesObservationManager():
                 sp = value.split(' ', 2)
                 # At this point, we have uncertainty about species (but still might match genus).
                 if sp and len(sp) == 1:  # Only supplied genus.
-                    raise FieldErrorException('No species supplied (input "sp." if unknown).')
+                    raise FieldErrorException('No species supplied: "{}" (input "sp." if unknown).'.format(value))
                 else:
                     # No match on exact species name; try "Genus sp."
                     genus = sp[0]
                     species = sp[1]
-                    if species != 'sp.':
+                    if species != 'sp.' and species != 'sp':
                         msg = 'Species mismatch: "{}" (input "sp." if species is unknown).'.format(value)
                         raise FieldErrorException(msg)
-                    qs = Species.objects.similar_name(genus, similarity=0.55)  # NOTE: may require adjustment.
+                    # qs = Species.objects.similar_name(genus, similarity=0.55)  # NOTE: may require adjustment.
+                    qs = Species.objects.filter(species_name__istartswith=genus + '')
                     qs = list(qs)
                     if len(qs) == 0:  # No match for genus.
-                        msg = 'Unknown genus: {} (input "sp." if species is unknown)'.format(genus)
+                        msg = 'Unknown genus: {} in "{}"'.format(genus, value)
                         raise FieldErrorException(msg)
                     else:  # At least one matching genus was found.
                         # At this point we allow the value; should be: Genus sp. <OPTIONAL EXTRAS>
@@ -633,12 +634,10 @@ class SpeciesObservationManager():
         field = self.model._meta.get_field(field_name)
         return self._get_value(util_model.get_datasheet_field_name(field))
 
-    def _get_value(self, key):
-        result = None
-        if self.row_data:
-            for k, v in self.row_data:
-                if k == key:
-                    return v
+    def _get_value(self, key, default=None):
+        result = default
+        if self.row_data and isinstance(self.row_data, dict):
+            return self.row_data.get(key, default)
         return result
 
 
@@ -659,7 +658,7 @@ def to_string(value):
     :param value:
     :return:
     """
-    return str(value) if value is not None else ""
+    return unicode(value) if value is not None else ""
 
 
 def to_date_raise(value, default=None):
@@ -723,6 +722,17 @@ def to_choice_raise(field, value):
         return field.default
     value = str(value)
     choices = util_model.get_field_choices(field)
+    return to_model_choice(choices, value)
+
+
+def to_model_choice(choices, value):
+    """
+    Rules:
+        validate only against the display_name, the second part of a Django choice (internal, display_name)
+        case insensitive
+        :param choices: a model choice as an array of tuples
+        :param value:
+    """
     choice = next((c[0] for c in choices if c[1].lower() == value.lower()), None)
     if choice is None:
         message = "{value} not an authorized choice. Should be one of: {values}" \
@@ -757,8 +767,8 @@ def to_lookup_raise(field, value, commit=True, default=None):
                 .format(value=value, field=field.verbose_name, values=accepted_values)
             raise FieldErrorException(message)
         elif value is not None and len(value.strip()) > 0:
-            # if not strict we add a new lookup in the value.
-            lookup = lookup_model(value=value)
+            # if not strict we add the new value (capitalized) in the lookup table.
+            lookup = lookup_model(value=value.title())
             if commit:
                 lookup.save()
     elif lookup.deprecated:

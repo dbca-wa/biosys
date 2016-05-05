@@ -230,7 +230,7 @@ class SiteVisit(models.Model):
                               verbose_name="Visit", help_text="")
     site = models.ForeignKey('Site', null=False, blank=False,
                              verbose_name="Site", help_text="")
-    data_file = models.ForeignKey('SiteVisitDataFile', null=False, blank=False,
+    data_file = models.ForeignKey('SiteVisitDataFile', null=True, blank=False,
                                   verbose_name="Data File", help_text="")
     DATA_STATUS_CHOICES = [
         ('quarantined', 'Quarantined'),  # Uploader has imported data, work in progress.
@@ -287,7 +287,7 @@ class AbstractSiteVisitObservation(models.Model):
     """
     This should be the base class of every model in the datasheet
     """
-    site_visit = models.ForeignKey(SiteVisit, null=False, blank=False,
+    site_visit = models.ForeignKey(SiteVisit, null=True, blank=True,
                                    verbose_name="Site Visit", help_text="")
 
     class Meta:
@@ -436,7 +436,7 @@ class SoilColourLookup(AbstractLookup):
 
 
 class SoilSurfaceTextureLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class LandformElementLookup(AbstractLookup):
@@ -448,7 +448,7 @@ class LandformPatternLookup(AbstractLookup):
 
 
 class WaterTypeLookup(AbstractLookup):
-    strict = True
+    strict = False
 
 
 class GeologyLookup(AbstractLookup):

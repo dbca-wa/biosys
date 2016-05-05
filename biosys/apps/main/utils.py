@@ -119,7 +119,11 @@ def get_app_lookup_models(app_name):
 
 
 def get_field_verbose_name(model, field_name):
-    return model._meta.get_field(field_name).verbose_name
+    return get_field(model, field_name).verbose_name
+
+
+def get_field(model, field_name):
+    return model._meta.get_field(field_name)
 
 
 def is_template_field(field):

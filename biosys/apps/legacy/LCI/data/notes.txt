@@ -1,0 +1,238 @@
+Sites:
+ * parent_site created but without information
+ * col: 'Landform element code' doesn't exists in db
+ * there are two columns 'Type of closest water', renamed the second and ignored data
+
+Site Characteristics:
+ * Two columns 'Distance to closest water (m)' and 'Type of closest water'. The second columns are ignored.
+ * Columns 'Photos taken' and 'Historical information' are not part of the SiteCharacteristics model but the Site model.
+   They look like copy of the Site datasheet.
+ * lots of species doesn't validate.
+ * row 2763 'Collector no' exceed the 30 max char. Extend to 200
+ * condition lookup didn't have 'dead'
+
+Stratum Species:
+ * Stratum lookups were letters 'U', 'M1',... instead of the 'Upper', 'Mid 1', ... Updated the lookup fixture.
+ *avg_height: sometime nothing -> relaxed the not null constraint
+ *species: lots of them doesn't validate -> forced the not validate for all
+ ERROR!!!
+ * !!!!! They are a few sites code that doesn't exist in the site datasheet ex row#2672: LCI 305 (only LCI 305 R), same for rows 2818 ,...
+   I can't create the site by default without a project.
+
+Vegetation:
+* This datasheet contains:
+    GroundCoverSummary: col E to N
+    TransectObservation: col O to Y (same column name!!!!)
+    TransectDistinctChanges: col Z to AH with 3 rows as repeated columns !!!!!
+    BasalBitterlichObservation: col AI to AK
+    ErosionPeg: col AL to AW with tree rows as repeated columns (peg A,B and C)
+    PegObservation: col AX to BR (7 cols per peg) and a last column not in db for comment!!
+* lots of missing transect y_direction assumes 0
+MODIF!! Add column name
+* The col BS (comment for peg observation) was not in the model. Added a field comment, value is repeated for all 3 pegs. A column header must be added.
+ERRORS!!!
+* Missing sites.
+{17:01:00.588}  Vegetation Row# 385: Col: 'Site Code' Value 'LCI 314': Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:01:00.601}  Vegetation Row# 387: Col: 'Site Code' Value 'LCI 313': Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:01:00.624}  Vegetation Row# 389: Col: 'Site Code' Value 'LCI 317': Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:01:00.652}  Vegetation Row# 392: Col: 'Site Code' Value 'LCI 305': Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:01:00.858}  Vegetation Row# 405: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+!!! I DON't UNDERSTAND!!!
+Duplicate rows for same site visit??
+ex row# 336 row#362 same sivte visit (KLRCR_20115/LCI 201/ on 11/05/2015) with two different GroundCoverSummary !!
+
+Stratum Summary:
+* missing sites
+{12:09:54.431}  Stratum Summary Row# 1364: Col: 'Site Code' Value 'LCI 314': Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.432}  Stratum Summary Row# 1365: Col: 'Site Code' Value 'LCI 314': Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.434}  Stratum Summary Row# 1366: Col: 'Site Code' Value 'LCI 314': Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.435}  Stratum Summary Row# 1367: Col: 'Site Code' Value 'LCI 314': Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.436}  Stratum Summary Row# 1368: Col: 'Site Code' Value 'LCI 313': Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.438}  Stratum Summary Row# 1369: Col: 'Site Code' Value 'LCI 313': Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.439}  Stratum Summary Row# 1370: Col: 'Site Code' Value 'LCI 313': Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.467}  Stratum Summary Row# 1375: Col: 'Site Code' Value 'LCI 317': Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.469}  Stratum Summary Row# 1376: Col: 'Site Code' Value 'LCI 317': Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.470}  Stratum Summary Row# 1377: Col: 'Site Code' Value 'LCI 317': Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.529}  Stratum Summary Row# 1386: Col: 'Site Code' Value 'LCI 305': Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.531}  Stratum Summary Row# 1387: Col: 'Site Code' Value 'LCI 305': Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.533}  Stratum Summary Row# 1388: Col: 'Site Code' Value 'LCI 305': Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.820}  Stratum Summary Row# 1432: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.821}  Stratum Summary Row# 1433: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.822}  Stratum Summary Row# 1434: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+{12:09:54.824}  Stratum Summary Row# 1435: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+
+DisturbanceIndicator
+* col 'Scorch Height m' model updated from integer to float
+* same for 'Weed percent'.
+* actually all Integer fields upgraded to Float
+* missing sites
+{14:07:38.264}  Disturbance Indicators Row# 386: Col: 'Site Code' Value 'LCI 314': Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{14:07:38.266}  Disturbance Indicators Row# 387: Col: 'Site Code' Value 'LCI 313': Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{14:07:38.283}  Disturbance Indicators Row# 389: Col: 'Site Code' Value 'LCI 317': Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{14:07:38.316}  Disturbance Indicators Row# 392: Col: 'Site Code' Value 'LCI 305': Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{14:07:38.485}  Disturbance Indicators Row# 405: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+
+Plant Observation
+Errors:
+ *missing sites
+{14:36:21.320}  Plant Observation Row# 89: Col: 'Site Code' Value 'LCI 317': Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{14:36:21.352}  Plant Observation Row# 93: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+ * 104 records instead of 109!! + 2 missing sites = 105. Still 4 missing
+  Pb: ex Row#20 and Row#81 rows differ only by the Collector!! Same site/date/data !!
+
+Warning:
+* species mismatch
+{14:36:20.732}  Plant Observation Row# 25: Species mismatch: "Stylosanthes sp" (input "sp." if species is unknown). [WARNING import_lci]
+{14:36:21.439}  Plant Observation Row# 101: Species mismatch: "Sida caudifolia" (input "sp." if species is unknown). [WARNING import_lci]
+
+Biodiversity Indicators:
+Errors:
+* missing sites
+{15:11:09.581}  Biodiversity Indicators Row# 386: Col: 'Site Code' Value 'LCI 314': Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{15:11:09.582}  Biodiversity Indicators Row# 387: Col: 'Site Code' Value 'LCI 313': Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{15:11:09.605}  Biodiversity Indicators Row# 389: Col: 'Site Code' Value 'LCI 317': Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{15:11:09.628}  Biodiversity Indicators Row# 391: Col: 'Site Code' Value 'LCI 305': Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{15:11:09.864}  Biodiversity Indicators Row# 404: Col: 'Site Code' Value 'LCI 408': Col: 'Site Code' Value 'LCI 408': Site matching query does not exist. [ERROR import_lci]
+* Row# 403 no data
+{15:11:09.862}  Biodiversity Indicators Row# 403: Cannot assign None: "BiodiversityIndicator.fauna_habitat" does not allow null values. [ERROR import_lci]
+
+
+Trap
+* missing sites
+{15:42:33.597}  Trap Row# 838: Col: 'Site Code' Value 'LCI 608': Site matching query does not exist. [ERROR import_lci]
+{15:42:33.599}  Trap Row# 839: Col: 'Site Code' Value 'LCI 608': Site matching query does not exist. [ERROR import_lci]
+{15:42:33.600}  Trap Row# 840: Col: 'Site Code' Value 'LCI 608': Site matching query does not exist. [ERROR import_lci]
+{15:42:33.602}  Trap Row# 841: Col: 'Site Code' Value 'LCI 608': Site matching query does not exist. [ERROR import_lci]
+
+Animal Observations
+* column 'check'???
+Model changes:
+* trap_type: becomes a lookup like in Trap model
+* fate, reproductive_condition, pouch and tail conditions become charField instead of hard coded choices.
+* test_length, test_width, svl, tail_length: Float instead of Char
+* relaxed the mandatory for: capture_tye, sex, age.
+Errors:
+# missing sites
+{17:26:20.517}  Animal Observations Row# 3345: Col: 'Site Code' Value 'LCI 608': Site matching query does not exist. [ERROR import_lci]
+{17:26:20.519}  Animal Observations Row# 3346: Col: 'Site Code' Value 'LCI 608': Site matching query does not exist. [ERROR import_lci]
+{17:26:20.520}  Animal Observations Row# 3347: Col: 'Site Code' Value 'LCI 608': Site matching query does not exist. [ERROR import_lci]
+{17:26:20.522}  Animal Observations Row# 3348: Col: 'Site Code' Value 'LCI 608': Site matching query does not exist. [ERROR import_lci]
+{17:26:20.523}  Animal Observations Row# 3349: Col: 'Site Code' Value 'LCI 608': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.122}  Animal Observations Row# 3681: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.124}  Animal Observations Row# 3682: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.126}  Animal Observations Row# 3683: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.128}  Animal Observations Row# 3684: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.129}  Animal Observations Row# 3685: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.131}  Animal Observations Row# 3686: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.133}  Animal Observations Row# 3687: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.134}  Animal Observations Row# 3688: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.136}  Animal Observations Row# 3689: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.138}  Animal Observations Row# 3690: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.140}  Animal Observations Row# 3691: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.239}  Animal Observations Row# 3700: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.241}  Animal Observations Row# 3701: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.243}  Animal Observations Row# 3702: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.245}  Animal Observations Row# 3703: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.247}  Animal Observations Row# 3704: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.248}  Animal Observations Row# 3705: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.250}  Animal Observations Row# 3706: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.301}  Animal Observations Row# 3711: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.303}  Animal Observations Row# 3712: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.304}  Animal Observations Row# 3713: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.306}  Animal Observations Row# 3714: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.308}  Animal Observations Row# 3715: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.310}  Animal Observations Row# 3716: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.311}  Animal Observations Row# 3717: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.313}  Animal Observations Row# 3718: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.315}  Animal Observations Row# 3719: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.316}  Animal Observations Row# 3720: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.318}  Animal Observations Row# 3721: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.380}  Animal Observations Row# 3727: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.503}  Animal Observations Row# 3739: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.505}  Animal Observations Row# 3740: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.506}  Animal Observations Row# 3741: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.508}  Animal Observations Row# 3742: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.509}  Animal Observations Row# 3743: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.511}  Animal Observations Row# 3744: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.512}  Animal Observations Row# 3745: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.514}  Animal Observations Row# 3746: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.515}  Animal Observations Row# 3747: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.517}  Animal Observations Row# 3748: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.518}  Animal Observations Row# 3749: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.520}  Animal Observations Row# 3750: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.578}  Animal Observations Row# 3756: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.579}  Animal Observations Row# 3757: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.737}  Animal Observations Row# 3772: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.739}  Animal Observations Row# 3773: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.741}  Animal Observations Row# 3774: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.744}  Animal Observations Row# 3775: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.746}  Animal Observations Row# 3776: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.748}  Animal Observations Row# 3777: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.749}  Animal Observations Row# 3778: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.752}  Animal Observations Row# 3779: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.754}  Animal Observations Row# 3780: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.755}  Animal Observations Row# 3781: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.757}  Animal Observations Row# 3782: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.759}  Animal Observations Row# 3783: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.762}  Animal Observations Row# 3784: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.764}  Animal Observations Row# 3785: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.766}  Animal Observations Row# 3786: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.768}  Animal Observations Row# 3787: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.770}  Animal Observations Row# 3788: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.772}  Animal Observations Row# 3789: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.898}  Animal Observations Row# 3801: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.900}  Animal Observations Row# 3802: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.902}  Animal Observations Row# 3803: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.904}  Animal Observations Row# 3804: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.905}  Animal Observations Row# 3805: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.907}  Animal Observations Row# 3806: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.909}  Animal Observations Row# 3807: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.911}  Animal Observations Row# 3808: Col: 'Site Code' Value 'LCI 313': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.912}  Animal Observations Row# 3809: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.914}  Animal Observations Row# 3810: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.916}  Animal Observations Row# 3811: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.917}  Animal Observations Row# 3812: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.919}  Animal Observations Row# 3813: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.922}  Animal Observations Row# 3814: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.924}  Animal Observations Row# 3815: Col: 'Site Code' Value 'LCI 314': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.926}  Animal Observations Row# 3816: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.928}  Animal Observations Row# 3817: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.929}  Animal Observations Row# 3818: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.931}  Animal Observations Row# 3819: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.932}  Animal Observations Row# 3820: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.934}  Animal Observations Row# 3821: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.936}  Animal Observations Row# 3822: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:24.937}  Animal Observations Row# 3823: Col: 'Site Code' Value 'LCI 317': Site matching query does not exist. [ERROR import_lci]
+{17:26:25.270}  Animal Observations Row# 3851: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:26:25.272}  Animal Observations Row# 3852: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:26:25.274}  Animal Observations Row# 3853: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:26:25.276}  Animal Observations Row# 3854: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:26:25.277}  Animal Observations Row# 3855: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:26:25.528}  Animal Observations Row# 3877: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:26:25.530}  Animal Observations Row# 3878: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:26:25.532}  Animal Observations Row# 3879: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:26:25.756}  Animal Observations Row# 3899: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:26:25.758}  Animal Observations Row# 3900: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:26:26.56}  Animal Observations Row# 3927: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:26:26.58}  Animal Observations Row# 3928: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:26:26.59}  Animal Observations Row# 3929: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:26:26.202}  Animal Observations Row# 3942: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+{17:26:26.204}  Animal Observations Row# 3943: Col: 'Site Code' Value 'LCI 305': Site matching query does not exist. [ERROR import_lci]
+
+
+Opportunistic Observations
+Model changes:
+* No site_visit in the data just a location.
+  No more site_visit FK but add a location lookup and also add observation_type lookup to capture the type on obs. E.g: bird
+* Problem: SpeciesObservation needed a mandatory site_visit FK. Made the site_visit not mandatory.
+
+* Why they are multiple rows for the same species at the same date and same location. What that means? See the species 5 times?
+Should we create one record for each?
+
+# Are lat/long/accuracy/datum actually used?
+
+Birds:
+* No Bird model
+* Create an OpportunisticObservation with observation_type='Bird'
+ERRORS!!:
+ * need to delete empty col 'L'

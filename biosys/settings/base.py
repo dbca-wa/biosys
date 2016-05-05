@@ -14,7 +14,6 @@ sys.path.insert(0, PROJECT_DIR)
 # Add PROJECT_DIR/apps to the system path.
 sys.path.insert(0, os.path.join(PROJECT_DIR, 'apps'))
 
-
 # Security settings
 DEBUG = env('DEBUG', False)
 SECRET_KEY = env('SECRET_KEY')
@@ -30,7 +29,6 @@ if not DEBUG:
         'biosys-uat.dpaw.wa.gov.au',
         'biosys-uat.dpaw.wa.gov.au.',
     ]
-
 
 # Application definition
 # The variables below are added to all responses in biosys/context_processors.py
@@ -76,6 +74,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
     'reversion.middleware.RevisionMiddleware',
     'dpaw_utils.middleware.SSOLoginMiddleware',
 )
@@ -107,7 +106,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'biosys.wsgi.application'
 
-
 # Database
 DATABASES = {'default': database.config()}
 
@@ -119,14 +117,13 @@ USE_L10N = True
 USE_TZ = True
 # Set the formats that will be displayed in date fields
 # If USE_L10N == True, then locale-dictated format has higher precedence.
-DATE_FORMAT = '%d/%m/%Y'      # O5/10/2006
+DATE_FORMAT = '%d/%m/%Y'  # O5/10/2006
 # Set the formats that will be accepted in date input fields
 DATE_INPUT_FORMATS = (
-    '%d/%m/%Y',             # '25/10/2006'
-    '%Y-%m-%d',             # '2006-10-25'
-    '%Y_%m_%d',             # '2006_10_25'
+    '%d/%m/%Y',  # '25/10/2006'
+    '%Y-%m-%d',  # '2006-10-25'
+    '%Y_%m_%d',  # '2006_10_25'
 )
-
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
@@ -140,7 +137,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
 MEDIA_URL = '/media/'
-
 
 # Additional locations of static files
 STATICFILES_DIRS = (
@@ -156,7 +152,6 @@ STATICFILES_FINDERS = (
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
-
 
 # Logging settings
 # Ensure that the logs directory exists:
@@ -174,6 +169,10 @@ LOGGING = {
         'default': {
             'format': '%(asctime)s %(levelname)-8s [%(name)-15s] %(message)s',
             'datefmt': '%Y/%m/%d %H:%M:%S',
+        },
+        'import_legacy': {
+            'format': '%(levelname)-8s %(message)s [%(asctime)s]',
+            'datefmt': '%Y/%m/%d %H:%M:%S',
         }
     },
     'filters': {
@@ -188,7 +187,7 @@ LOGGING = {
             'class': 'django.utils.log.AdminEmailHandler'
         },
         'file': {
-            'level': 'WARNING',
+            'level': env('LOG_FILE_LEVEL', 'WARNING'),
             'class': 'logging.handlers.TimedRotatingFileHandler',
             'filename': os.path.join(LOG_FOLDER, 'biosys.log'),
             'when': 'midnight',
@@ -196,10 +195,17 @@ LOGGING = {
             'formatter': 'default',
         },
         'console': {
-            'level': 'WARNING',
+            'level': env('LOG_CONSOLE_LEVEL', 'WARNING'),
             'class': 'logging.StreamHandler',
             'formatter': 'precise',
         },
+        'import_lci': {
+            'level': env('LOG_LCI_LEVEL', 'ERROR'),
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_FOLDER, 'import_lci.log'),
+            'mode': 'w',
+            'formatter': 'import_legacy',
+        }
     },
     'loggers': {
         '': {
@@ -210,11 +216,15 @@ LOGGING = {
         'django.request': {
             'handlers': ['mail_admins'],
             'level': 'ERROR',
-            'propagate': True,
+            'propagate': False,
         },
+        'import_lci': {
+            'handlers': ['import_lci', 'console'],
+            'level': 'INFO',
+            'propagate': False
+        }
     }
 }
-
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
@@ -226,7 +236,6 @@ try:
 except ImportError:
     pass
 
-
 # if len(sys.argv) > 1 and 'test' in sys.argv[1]:
 #     from .testing import *
 
@@ -235,7 +244,6 @@ TASTYPIE_ALLOW_MISSING_SLASH = True
 TASTYPIE_DATETIME_FORMATTING = 'iso-8601-strict'
 TASTYPIE_DEFAULT_FORMATS = ['json']
 API_LIMIT_PER_PAGE = 0
-
 
 # Grappelli settings
 GRAPPELLI_ADMIN_TITLE = SITE_TITLE + ' administration'
