@@ -16,6 +16,7 @@ class TrapAdmin(VersionAdmin):
 
     def comments_display(self, obj):
         return Truncator(obj.comments).words(12)
+
     comments_display.short_description = 'comments'
 
 
@@ -23,7 +24,7 @@ class TrapAdmin(VersionAdmin):
 class AnimalObservationAdmin(VersionAdmin):
     list_display = [
         'site_visit', 'collector', 'date', 'trap_no', 'trap_type', 'species',
-        'microchip_id',  'comments_display']
+        'microchip_id', 'comments_display']
     list_filter = ['site_visit', 'sex', 'capture_type', 'species']
     date_hierarchy = 'date'
     search_fields = [
@@ -31,19 +32,22 @@ class AnimalObservationAdmin(VersionAdmin):
 
     def comments_display(self, obj):
         return Truncator(obj.comments).words(12)
+
     comments_display.short_description = 'comments'
 
 
 @admin.register(OpportunisticObservation)
 class OpportunisticObservationAdmin(VersionAdmin):
-    list_display = ['site_visit', 'date', 'observer', 'species', 'comments_display']
-    list_filter = ['site_visit', 'species']
+    list_display = ['observation_type', 'location', 'date', 'observer', 'species', 'comments_display']
+    list_filter = ['observation_type', 'location', 'species']
     date_hierarchy = 'date'
     search_fields = ['observer', 'comments']
 
     def comments_display(self, obj):
         return Truncator(obj.comments).words(12)
+
     comments_display.short_description = 'comments'
+
 
 #########################
 # Lookups

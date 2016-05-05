@@ -179,7 +179,7 @@ class TableData:
         """
         return [zip(self.column_headers, row) for row in self.rows]
 
-    def rows_by_col_header(self):
+    def rows_by_col_header_it(self):
         """
         A row iterator
         :return: a dict like. Warning the dict is not ordered

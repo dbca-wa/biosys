@@ -171,7 +171,7 @@ LOGGING = {
             'datefmt': '%Y/%m/%d %H:%M:%S',
         },
         'import_legacy': {
-            'format': '%(asctime)s %(levelname)-8s %(message)s',
+            'format': '%(levelname)-8s %(message)s [%(asctime)s]',
             'datefmt': '%Y/%m/%d %H:%M:%S',
         }
     },
@@ -200,7 +200,7 @@ LOGGING = {
             'formatter': 'precise',
         },
         'import_lci': {
-            'level': 'INFO',
+            'level': env('LOG_LCI_LEVEL', 'ERROR'),
             'class': 'logging.FileHandler',
             'filename': os.path.join(LOG_FOLDER, 'import_lci.log'),
             'mode': 'w',
@@ -216,7 +216,7 @@ LOGGING = {
         'django.request': {
             'handlers': ['mail_admins'],
             'level': 'ERROR',
-            'propagate': True,
+            'propagate': False,
         },
         'import_lci': {
             'handlers': ['import_lci', 'console'],
