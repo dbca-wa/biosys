@@ -27,7 +27,6 @@ Vegetation:
     BasalBitterlichObservation: col AI to AK
     ErosionPeg: col AL to AW with tree rows as repeated columns (peg A,B and C)
     PegObservation: col AX to BR (7 cols per peg) and a last column not in db for comment!!
-* Missing Peg IDon numerous row (ex #336)!!! Assumes A,B,C
 * lots of missing transect y_direction assumes 0
 MODIF!! Add column name
 * The col BS (comment for peg observation) was not in the model. Added a field comment, value is repeated for all 3 pegs. A column header must be added.
