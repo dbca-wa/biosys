@@ -100,7 +100,7 @@ def update_or_create_project(row_data):
 
 
 def only_digit(x):
-    return re.sub('[^0-9\.]', '', str(x))
+    return re.sub('[^0-9\.-]', '', str(x))
 
 
 def update_or_create_site(project, row_data):
@@ -138,7 +138,7 @@ def update_or_create_site(project, row_data):
             'field': 'longitude',
             'map': lambda v, r: to_float_raise(only_digit(v))
         },
-        'Accuracy': {
+        'Accuracy (m)': {
             'field': 'accuracy',
             # turn '50m' into 50.0
             'map': lambda v, r: to_float_raise(only_digit(v))
@@ -151,13 +151,13 @@ def update_or_create_site(project, row_data):
             'field': 'bearing',
             'map': lambda v, r: to_float_raise(v)
         },
-        'Width': {
+        'Width (m)': {
             'field': 'width',
-            'map': lambda v, r: only_digit(v)
+            'map': lambda v, r: to_integer_raise(only_digit(v), None)
         },
-        'Hight': {
+        'Height (m)': {
             'field': 'height',
-            'map': lambda v, r: only_digit(v)
+            'map': lambda v, r: to_integer_raise(only_digit(v), None)
         },
         'Aspect': {
             'field': 'aspect',
@@ -165,7 +165,7 @@ def update_or_create_site(project, row_data):
         },
         'Slope (degree)': {
             'field': 'slope',
-            'map': lambda x, r: to_integer_raise(only_digit(x), None)
+            'map': lambda x, r: to_float_raise(only_digit(x), None)
         },
         'Altitude': {
             'field': 'altitude',
