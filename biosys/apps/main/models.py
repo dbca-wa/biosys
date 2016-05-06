@@ -128,7 +128,7 @@ class Site(models.Model):
     ]
     aspect = models.CharField(max_length=10, null=True, blank=True, choices=ASPECT_CHOICES,
                               verbose_name="Aspect", help_text="Compass bearing (e.g. N, SSE)")
-    slope = models.SmallIntegerField(null=True, blank=True,
+    slope = models.FloatField(null=True, blank=True,
                                      verbose_name="Slope", help_text="Degrees (0 - 90)")
     altitude = models.FloatField(null=True, blank=True,
                                  verbose_name="Altitude", help_text="Altitude, in metres")
