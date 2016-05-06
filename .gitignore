@@ -45,4 +45,4 @@ staticfiles/
 # generated Supervisor conf
 biosys.conf
 
-**/*.xlsx
+**/*.xlsx*
