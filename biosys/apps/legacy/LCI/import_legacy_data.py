@@ -21,7 +21,7 @@ from animals.models import *
 
 logger = logging.getLogger('import_lci')
 
-DATA_FILE = 'LCI_NC_MonSiteData_15Jan2016.xlsx'
+DATA_FILE = 'master.xlsx'
 # some global variables
 current_ws = None
 row_count = None
