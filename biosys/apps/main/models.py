@@ -6,10 +6,10 @@ from reversion import revisions as reversion
 
 from django.db.models import Max
 from django.contrib.gis.db import models
+from django.contrib.postgres.fields import JSONField
 from django.contrib.gis.geos import Point
 from django.contrib.auth.models import User
 from django.contrib.gis.geos.polygon import Polygon
-
 
 MODEL_SRID = 4326
 DATUM_CHOICES = [
@@ -21,7 +21,79 @@ DATUM_CHOICES = [
 DEFAULT_SITE_ID = 16120
 
 
-class Project(models.Model):
+class DataDescriptor(models.Model):
+    TYPE_PROJECT = 'project'
+    TYPE_SITE = 'site'
+    TYPE_DATASET = 'dataset'
+    TYPE_OBSERVATION = 'observation'
+    TYPE_SPECIES_OBSERVATION = 'species_observation'
+    TYPE_CHOICES = [(TYPE_PROJECT, TYPE_PROJECT.capitalize()),
+                    (TYPE_SITE, TYPE_SITE.capitalize()),
+                    (TYPE_DATASET, TYPE_DATASET.capitalize()),
+                    (TYPE_OBSERVATION, TYPE_OBSERVATION.capitalize()),
+                    (TYPE_SPECIES_OBSERVATION, 'Species observation')]
+    project = models.ForeignKey('Project', null=False, blank=False)
+    name = models.CharField(max_length=200, null=False, blank=False)
+    type = models.CharField(max_length=100, null=False, blank=False, choices=TYPE_CHOICES, default=TYPE_DATASET)
+    data_package = JSONField()
+
+
+class AbstractDataSet(models.Model):
+    data = JSONField()
+    data_descriptor = models.ForeignKey(DataDescriptor, null=False, blank=False)
+
+    class Meta:
+        abstract = True
+
+
+class SiteDataSet(AbstractDataSet):
+    site = models.ForeignKey('Site', null=False, blank=False)
+
+
+class Observation(AbstractDataSet):
+    site = models.ForeignKey('Site', null=False, blank=False)
+    date_time = models.DateTimeField(null=False, blank=False)
+    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
+
+
+class SpeciesObservation(AbstractDataSet):
+    """
+    If the input_name has been validated against the species database the name_id is populated with the value from the
+    database
+    """
+    site_visit = models.ForeignKey('SiteVisit', null=True, blank=True,
+                               verbose_name="Site Visit", help_text="")
+
+    site = models.ForeignKey('Site', null=False, blank=False)
+    date_time = models.DateTimeField(null=False, blank=False)
+    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
+
+    input_name = models.CharField(max_length=500, null=False, blank=False,
+                                  verbose_name="Species", help_text="")
+    name_id = models.IntegerField(default=-1,
+                                  verbose_name="Name ID", help_text="The unique ID from the herbarium database")
+    VALIDATION_STATUS_CHOICES = [
+        ('', ''),
+        ('do not validate', 'do not validate')
+    ]
+    validation_status = models.CharField(max_length=50, null=True, blank=True,
+                                         choices=VALIDATION_STATUS_CHOICES, default=VALIDATION_STATUS_CHOICES[0][0],
+                                         verbose_name="Species validation status")
+    uncertainty = models.CharField(max_length=50, blank=True,
+                                   verbose_name="Species uncertainty", help_text="")
+
+    def __str__(self):
+        return self.__unicode__()
+
+    def __unicode__(self):
+        return self.input_name
+
+    @property
+    def valid(self):
+        return self.name_id > 0
+
+
+class Project(AbstractDataSet):
     title = models.CharField(max_length=300, null=False, blank=False, unique=True,
                              verbose_name="Title", help_text="Enter a brief title for the project (required).")
     code = models.CharField(max_length=30, null=True, blank=True,
@@ -86,7 +158,7 @@ def _calculate_site_ID():  # @NoSelf
         return Site.objects.aggregate(Max('site_ID'))['site_ID__max'] + 1
 
 
-class Site(models.Model):
+class Site(AbstractDataSet):
     project = models.ForeignKey('Project', null=False, blank=False,
                                 verbose_name="Project", help_text="Select the project this site is part of (required)")
     site_ID = models.IntegerField(null=False, blank=False, unique=True, default=_calculate_site_ID,
@@ -129,7 +201,7 @@ class Site(models.Model):
     aspect = models.CharField(max_length=10, null=True, blank=True, choices=ASPECT_CHOICES,
                               verbose_name="Aspect", help_text="Compass bearing (e.g. N, SSE)")
     slope = models.FloatField(null=True, blank=True,
-                                     verbose_name="Slope", help_text="Degrees (0 - 90)")
+                              verbose_name="Slope", help_text="Degrees (0 - 90)")
     altitude = models.FloatField(null=True, blank=True,
                                  verbose_name="Altitude", help_text="Altitude, in metres")
     radius = models.FloatField(null=True, blank=True,
