@@ -62,7 +62,7 @@ class SpeciesObservation(AbstractDataSet):
     database
     """
     site_visit = models.ForeignKey('SiteVisit', null=True, blank=True,
-                               verbose_name="Site Visit", help_text="")
+                                   verbose_name="Site Visit", help_text="")
 
     site = models.ForeignKey('Site', null=False, blank=False)
     date_time = models.DateTimeField(null=False, blank=False)
@@ -93,7 +93,7 @@ class SpeciesObservation(AbstractDataSet):
         return self.name_id > 0
 
 
-class Project(AbstractDataSet):
+class Project(models.Model):
     title = models.CharField(max_length=300, null=False, blank=False, unique=True,
                              verbose_name="Title", help_text="Enter a brief title for the project (required).")
     code = models.CharField(max_length=30, null=True, blank=True,
@@ -131,7 +131,11 @@ class Project(AbstractDataSet):
                                 verbose_name="Comments", help_text="")
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Extent Geometry", help_text="")
-    objects = models.GeoManager()
+    # can't extend AbstractDataSet directly because we need to change the related name and possible null
+    data = JSONField(null=True)
+    data_descriptor = models.ForeignKey(DataDescriptor, null=True, blank=True,
+                                        related_name='descriptors',
+                                        related_query_name='descriptor')
 
     class Meta:
         pass
@@ -158,7 +162,7 @@ def _calculate_site_ID():  # @NoSelf
         return Site.objects.aggregate(Max('site_ID'))['site_ID__max'] + 1
 
 
-class Site(AbstractDataSet):
+class Site(models.Model):
     project = models.ForeignKey('Project', null=False, blank=False,
                                 verbose_name="Project", help_text="Select the project this site is part of (required)")
     site_ID = models.IntegerField(null=False, blank=False, unique=True, default=_calculate_site_ID,
@@ -236,7 +240,8 @@ class Site(AbstractDataSet):
                                 verbose_name="Comments", help_text="")
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Geometry", help_text="")
-    objects = models.GeoManager()
+    data = JSONField(null=True)
+    data_descriptor = models.ForeignKey(DataDescriptor, null=True, blank=True)
 
     class Meta:
         unique_together = ('project', 'site_code')
