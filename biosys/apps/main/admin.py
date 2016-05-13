@@ -510,7 +510,7 @@ class SiteVisitDataSheetTemplateAdmin(VersionAdmin):
     form = forms.SiteVisitDataSheetTemplateForm
 
 
-@admin.register(SpeciesObservation)
+@admin.register(OldSpeciesObservation)
 class SpeciesObservationAdmin(VersionAdmin):
     list_display = ['input_name', 'name_id', 'valid', 'site_visit']
     pass

@@ -290,7 +290,7 @@ class TestSpeciesValidation(TestCase):
 
     def test_to_species_observation_simple(self):
         """
-        Test that a valid species name return a SpeciesObservation with a valid name id
+        Test that a valid species name return a OldSpeciesObservation with a valid name id
         :return:
         """
         species = Species.objects.first()

@@ -335,7 +335,7 @@ class AbstractSiteVisitObservationResource(ModelResource):
 class SpeciesObservationResource(AbstractSiteVisitObservationResource):
 
     class Meta(BaseMetaClass):
-        queryset = models.SpeciesObservation.objects.all()
+        queryset = models.OldSpeciesObservation.objects.all()
         filtering = {
             'id': ALL,
             'site_visit': ALL_WITH_RELATIONS,

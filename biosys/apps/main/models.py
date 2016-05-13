@@ -56,41 +56,41 @@ class Observation(AbstractDataSet):
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
 
 
-class SpeciesObservation(AbstractDataSet):
-    """
-    If the input_name has been validated against the species database the name_id is populated with the value from the
-    database
-    """
-    site_visit = models.ForeignKey('SiteVisit', null=True, blank=True,
-                                   verbose_name="Site Visit", help_text="")
-
-    site = models.ForeignKey('Site', null=False, blank=False)
-    date_time = models.DateTimeField(null=False, blank=False)
-    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
-
-    input_name = models.CharField(max_length=500, null=False, blank=False,
-                                  verbose_name="Species", help_text="")
-    name_id = models.IntegerField(default=-1,
-                                  verbose_name="Name ID", help_text="The unique ID from the herbarium database")
-    VALIDATION_STATUS_CHOICES = [
-        ('', ''),
-        ('do not validate', 'do not validate')
-    ]
-    validation_status = models.CharField(max_length=50, null=True, blank=True,
-                                         choices=VALIDATION_STATUS_CHOICES, default=VALIDATION_STATUS_CHOICES[0][0],
-                                         verbose_name="Species validation status")
-    uncertainty = models.CharField(max_length=50, blank=True,
-                                   verbose_name="Species uncertainty", help_text="")
-
-    def __str__(self):
-        return self.__unicode__()
-
-    def __unicode__(self):
-        return self.input_name
-
-    @property
-    def valid(self):
-        return self.name_id > 0
+# class OldSpeciesObservation(AbstractDataSet):
+#     """
+#     If the input_name has been validated against the species database the name_id is populated with the value from the
+#     database
+#     """
+#     site_visit = models.ForeignKey('SiteVisit', null=True, blank=True,
+#                                    verbose_name="Site Visit", help_text="")
+#
+#     site = models.ForeignKey('Site', null=False, blank=False)
+#     date_time = models.DateTimeField(null=False, blank=False)
+#     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
+#
+#     input_name = models.CharField(max_length=500, null=False, blank=False,
+#                                   verbose_name="Species", help_text="")
+#     name_id = models.IntegerField(default=-1,
+#                                   verbose_name="Name ID", help_text="The unique ID from the herbarium database")
+#     VALIDATION_STATUS_CHOICES = [
+#         ('', ''),
+#         ('do not validate', 'do not validate')
+#     ]
+#     validation_status = models.CharField(max_length=50, null=True, blank=True,
+#                                          choices=VALIDATION_STATUS_CHOICES, default=VALIDATION_STATUS_CHOICES[0][0],
+#                                          verbose_name="Species validation status")
+#     uncertainty = models.CharField(max_length=50, blank=True,
+#                                    verbose_name="Species uncertainty", help_text="")
+#
+#     def __str__(self):
+#         return self.__unicode__()
+#
+#     def __unicode__(self):
+#         return self.input_name
+#
+#     @property
+#     def valid(self):
+#         return self.name_id > 0
 
 
 class Project(models.Model):
@@ -411,7 +411,7 @@ class SiteVisitDataSheetTemplate(AbstractDataFile):
     version = models.CharField(max_length=50, verbose_name="Template Version", default="1.0")
 
 
-class SpeciesObservation(AbstractSiteVisitObservation):
+class OldSpeciesObservation(AbstractSiteVisitObservation):
     """
     Species name as entered in the datasheet (input_name)
     If the input_name has been validated against the species database the name_id is populated with the value from the

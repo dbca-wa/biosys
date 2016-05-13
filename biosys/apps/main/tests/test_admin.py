@@ -5,7 +5,7 @@ from mixer.backend.django import mixer
 from django.contrib.auth.models import User
 from main.models import (Project, Site, Visit, SiteVisit,
                          SiteVisitDataFile, GeologyGroupLookup,
-                         SpeciesObservation, SiteCharacteristic)
+                         OldSpeciesObservation, SiteCharacteristic)
 
 
 class BaseTestCase(TestCase):
@@ -32,7 +32,7 @@ class BaseTestCase(TestCase):
         self.site = mixer.blend(Site, site_ID=mixer.RANDOM, project=mixer.SELECT)
         self.visit = mixer.blend(Visit, project=mixer.SELECT)
         self.site_visit = mixer.blend(SiteVisit, site=mixer.SELECT)
-        self.species_obs = mixer.blend(SpeciesObservation, site_visit=mixer.SELECT)
+        self.species_obs = mixer.blend(OldSpeciesObservation, site_visit=mixer.SELECT)
         self.site_char = mixer.blend(SiteCharacteristic, site_visit=mixer.SELECT)
 
 

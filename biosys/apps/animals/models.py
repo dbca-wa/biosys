@@ -1,7 +1,7 @@
 from __future__ import unicode_literals
 from django.db import models
 
-from main.models import AbstractSiteVisitObservation, AbstractLookup, SpeciesObservation, DATUM_CHOICES, MODEL_SRID, \
+from main.models import AbstractSiteVisitObservation, AbstractLookup, OldSpeciesObservation, DATUM_CHOICES, MODEL_SRID, \
     LocationLookup
 
 
@@ -46,7 +46,7 @@ class AnimalObservation(AbstractSiteVisitObservation):
                                   verbose_name="Trap Type")
     capture_type = models.ForeignKey('CaptureTypeLookup', null=True, blank=True, on_delete=models.PROTECT,
                                      verbose_name="Capture Type", help_text="")
-    species = models.ForeignKey(SpeciesObservation, null=False, blank=False,
+    species = models.ForeignKey(OldSpeciesObservation, null=False, blank=False,
                                 verbose_name="Species", help_text="")
     sex = models.ForeignKey('SexLookup', null=True, blank=True, on_delete=models.PROTECT,
                             verbose_name="Sex", help_text="")
@@ -99,7 +99,7 @@ class OpportunisticObservation(models.Model):
                             verbose_name="Date", help_text="")
     observer = models.CharField(max_length=100, blank=True,
                                 verbose_name="Observer", help_text="")
-    species = models.ForeignKey(SpeciesObservation, null=True, blank=True,
+    species = models.ForeignKey(OldSpeciesObservation, null=True, blank=True,
                                 verbose_name="Species", help_text="")
     latitude = models.FloatField(null=True, blank=True,
                                  verbose_name="Latitude", help_text="")
