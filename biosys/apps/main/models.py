@@ -4,6 +4,8 @@ from django.db import transaction
 from os import path
 from reversion import revisions as reversion
 
+from django.utils.encoding import python_2_unicode_compatible
+from django.utils.text import Truncator
 from django.db.models import Max
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import JSONField
@@ -21,6 +23,7 @@ DATUM_CHOICES = [
 DEFAULT_SITE_ID = 16120
 
 
+@python_2_unicode_compatible
 class DataDescriptor(models.Model):
     TYPE_PROJECT = 'project'
     TYPE_SITE = 'site'
@@ -37,31 +40,39 @@ class DataDescriptor(models.Model):
     type = models.CharField(max_length=100, null=False, blank=False, choices=TYPE_CHOICES, default=TYPE_DATASET)
     data_package = JSONField()
 
+    def __str__(self):
+        return self.name
 
+
+@python_2_unicode_compatible
 class AbstractDataSet(models.Model):
     data = JSONField()
     data_descriptor = models.ForeignKey(DataDescriptor, null=False, blank=False)
+
+    def __str__(self):
+        return "{0}: {1}".format(self.data_descriptor.name, Truncator(self.data).chars(100))
 
     class Meta:
         abstract = True
 
 
-class SiteDataSet(AbstractDataSet):
-    site = models.ForeignKey('Site', null=False, blank=False)
+class DataSet(AbstractDataSet):
+    site = models.ForeignKey('Site', null=True, blank=True)
 
 
 class Observation(AbstractDataSet):
-    site = models.ForeignKey('Site', null=False, blank=False)
+    site = models.ForeignKey('Site', null=True, blank=True)
     date_time = models.DateTimeField(null=False, blank=False)
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
 
 
+@python_2_unicode_compatible
 class SpeciesObservation(AbstractDataSet):
     """
     If the input_name has been validated against the species database the name_id is populated with the value from the
     database
     """
-    site = models.ForeignKey('Site', null=False, blank=False)
+    site = models.ForeignKey('Site', null=True, blank=True)
     date_time = models.DateTimeField(null=False, blank=False)
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
 
@@ -73,9 +84,6 @@ class SpeciesObservation(AbstractDataSet):
                                    verbose_name="Species uncertainty", help_text="")
 
     def __str__(self):
-        return self.__unicode__()
-
-    def __unicode__(self):
         return self.input_name
 
     @property

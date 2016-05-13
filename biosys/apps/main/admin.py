@@ -19,9 +19,8 @@ from upload.models import SiteVisitDataFileError
 from upload.validation import SiteDataFileValidator, SiteVisitDataBuilder
 from upload.utils import get_sitevisit_from_datasheet
 
-from .models import *
-from . import forms
-
+from main.models import *
+from main import forms
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +91,7 @@ class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
     readonly_fields = ['id']
     search_fields = ['title', 'code', 'custodian', 'objectives', 'methodology']
     modifiable = False
+    openlayers_url = '//static.dpaw.wa.gov.au/static/libs/openlayers/2.13.1/OpenLayers.js'
     form = forms.ProjectForm
 
     def get_fields(self, request, obj=None):
@@ -106,6 +106,7 @@ class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
 
         return fields
 
+
 @admin.register(Site)
 class SiteAdmin(MainAppAdmin, GeoModelAdmin):
     change_form_template = 'main/site_change_form.html'
@@ -116,8 +117,9 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
     readonly_fields = ['site_ID']
     fieldsets = [
         (None, {
-            'fields': ('project', 'site_ID', 'parent_site', 'site_code', 'site_name', 'date_established', 'established_by',
-                       'datum', 'latitude', 'longitude', 'accuracy')
+            'fields': (
+            'project', 'site_ID', 'parent_site', 'site_code', 'site_name', 'date_established', 'established_by',
+            'datum', 'latitude', 'longitude', 'accuracy')
         }),
         ('Plot orientation and size (for rectangular quadrats)', {
             'classes': ('grp-collapse',),
@@ -135,7 +137,7 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
             'fields': ('aspect', 'slope', 'altitude', 'location',
                        'geology_group', 'vegetation_group', 'tenure', 'underlaying_geology',
                        'closest_water_distance', 'closest_water_type', 'landform_pattern', 'landform_element',
-                       'soil_surface_texture', 'soil_colour', 'photos_taken', 'historical_info', 'comments' )
+                       'soil_surface_texture', 'soil_colour', 'photos_taken', 'historical_info', 'comments')
         }),
     ]
     date_hierarchy = 'date_established'
@@ -145,8 +147,25 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
     default_zoom = 6
     modifiable = False
 
+    openlayers_url = '//static.dpaw.wa.gov.au/static/libs/openlayers/2.13.1/OpenLayers.js'
+
     class Media:
         css = {'all': ('css/site_admin.css',)}
+
+
+@admin.register(DataSet)
+class DataSetAdmin(VersionAdmin):
+    pass
+
+
+@admin.register(Observation)
+class ObservationAdmin(VersionAdmin):
+    pass
+
+
+@admin.register(SpeciesObservation)
+class SpeciesObservationAdmin(VersionAdmin):
+    pass
 
 
 @admin.register(Visit)
@@ -171,17 +190,19 @@ class VisitAdmin(MainAppAdmin):
 
     def sites_display(self, obj):
         return ', '.join([s.site_code for s in obj.sites.all()])
+
     sites_display.short_description = 'sites'
 
     def validation_error_count(self, obj):
         return obj.get_errors().count()
+
     validation_error_count.short_description = 'validation errors'
 
     def data_files(self, obj):
-        url = reverse('admin:main_sitevisitdatafile_changelist')
-        url = url + '?' + urlencode({'visit__id__exact': obj.pk})
+        url_ = reverse('admin:main_sitevisitdatafile_changelist')
+        url_ = url_ + '?' + urlencode({'visit__id__exact': obj.pk})
         count = obj.sitevisitdatafile_set.count()
-        return '<a href="{}">Uploaded files: {}</a>'.format(url, count)
+        return '<a href="{}">Uploaded files: {}</a>'.format(url_, count)
 
     data_files.allow_tags = True
 
@@ -231,7 +252,7 @@ class VisitAdmin(MainAppAdmin):
             if request.POST.get('_cancel'):
                 self.message_user(request, 'Datasheet upload cancelled.'.format(obj), level=logging.WARNING)
                 return HttpResponseRedirect(reverse('publish_report'))
-                #return HttpResponseRedirect(reverse('admin:main_visit_change', args=[object_id]))
+                # return HttpResponseRedirect(reverse('admin:main_visit_change', args=[object_id]))
             if form.is_valid():
                 # create the SiteVisitDataFile
                 file_ = form.cleaned_data['file']
@@ -244,7 +265,7 @@ class VisitAdmin(MainAppAdmin):
                     self.message_user(request, """Datasheet for this site visit has already been uploaded and approved by the
                     curator, so cannot be overwritten.""".format(obj), level=logging.WARNING)
                     return HttpResponseRedirect(reverse('publish_report'))
-                    #return HttpResponseRedirect(reverse('admin:main_visit_change', args=[object_id]))
+                    # return HttpResponseRedirect(reverse('admin:main_visit_change', args=[object_id]))
 
                 validator = SiteDataFileValidator(sv_file)
                 error_obj = validator.validate()
@@ -258,7 +279,8 @@ class VisitAdmin(MainAppAdmin):
                 else:
                     if site_visit is not None:
                         # check if sitevisit already exists here and redirect to confirm page
-                        return HttpResponseRedirect(reverse('admin:main_visit_confirm_datasheet_upload', args=[object_id, sv_file.id]))
+                        return HttpResponseRedirect(
+                            reverse('admin:main_visit_confirm_datasheet_upload', args=[object_id, sv_file.id]))
 
                     # no error
                     # create the objects
@@ -268,7 +290,7 @@ class VisitAdmin(MainAppAdmin):
 
                     # Return to the publish/data view.
                     return HttpResponseRedirect(reverse('publish_report'))
-                    #return HttpResponseRedirect(reverse('admin:main_visit_change', args=[object_id]))
+                    # return HttpResponseRedirect(reverse('admin:main_visit_change', args=[object_id]))
 
         else:
             form = forms.UploadDatasheetForm()
@@ -288,7 +310,6 @@ class VisitAdmin(MainAppAdmin):
         }
         request.current_app = 'main'
         return TemplateResponse(request, "main/visit_upload_datasheet.html", context)
-
 
     def confirm_datasheet_upload(self, request, visit_id, sitevisitfile_id):
         # Read-only users cannot upload datasheets.
@@ -313,7 +334,7 @@ class VisitAdmin(MainAppAdmin):
                                   level=logging.WARNING)
 
             return HttpResponseRedirect(reverse('publish_report'))
-            #return HttpResponseRedirect(reverse('admin:main_visit_change', args=[visit_id]))
+            # return HttpResponseRedirect(reverse('admin:main_visit_change', args=[visit_id]))
 
         context = {
             'original': obj,
@@ -493,6 +514,7 @@ class SiteVisitDataFileAdmin(MainAppAdmin):
             return '{text} ...  <a href="{url}">details</a>' \
                 .format(text=str(error)[0:100],
                         url=url_)
+
     errors_link.allow_tags = True
     errors_link.short_description = "Errors"
 
@@ -511,7 +533,7 @@ class SiteVisitDataSheetTemplateAdmin(VersionAdmin):
 
 
 @admin.register(OldSpeciesObservation)
-class SpeciesObservationAdmin(VersionAdmin):
+class OldSpeciesObservationAdmin(VersionAdmin):
     list_display = ['input_name', 'name_id', 'valid', 'site_visit']
     pass
 
