@@ -118,8 +118,8 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
     fieldsets = [
         (None, {
             'fields': (
-            'project', 'site_ID', 'parent_site', 'site_code', 'site_name', 'date_established', 'established_by',
-            'datum', 'latitude', 'longitude', 'accuracy')
+                'project', 'site_ID', 'parent_site', 'site_code', 'site_name', 'date_established', 'established_by',
+                'datum', 'latitude', 'longitude', 'accuracy')
         }),
         ('Plot orientation and size (for rectangular quadrats)', {
             'classes': ('grp-collapse',),
@@ -151,6 +151,11 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
 
     class Media:
         css = {'all': ('css/site_admin.css',)}
+
+
+@admin.register(DataDescriptor)
+class DataDescriptorAdmin(MainAppAdmin):
+    list_display = ['name', 'project', 'type']
 
 
 @admin.register(DataSet)

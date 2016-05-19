@@ -19,3 +19,5 @@ coverage==3.7.1
 flake8==2.4.0
 mixer>=5.4.1,<6.0
 Unipath==1.1
+awesome-slugify==1.6.5
+jsontableschema==0.6.3

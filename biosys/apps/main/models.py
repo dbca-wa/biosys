@@ -43,6 +43,10 @@ class DataDescriptor(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def schema(self):
+        return self.data_package['resources'][0]['schema']
+
 
 @python_2_unicode_compatible
 class AbstractDataSet(models.Model):
