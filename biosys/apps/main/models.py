@@ -47,6 +47,9 @@ class DataDescriptor(models.Model):
     def schema(self):
         return self.data_package['resources'][0]['schema']
 
+    class Meta:
+        unique_together = ('project', 'name')
+
 
 @python_2_unicode_compatible
 class AbstractDataSet(models.Model):
@@ -247,7 +250,6 @@ class Site(models.Model):
 
     class Meta:
         unique_together = ('project', 'site_code')
-        pass
 
     def __str__(self):
         return self.__unicode__()
