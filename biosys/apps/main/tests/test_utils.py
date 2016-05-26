@@ -5,7 +5,7 @@ from openpyxl import load_workbook
 from django.test import TestCase
 
 from main.utils import create_lookups_book, is_species_observation_field
-from main.models import SpeciesObservation
+from main.models import OldSpeciesObservation
 from vegetation.models import StratumSpecies
 
 
@@ -33,7 +33,7 @@ class TestModelUtils(TestCase):
         self.assertEqual(1, len(species_name_fields),
                          msg="There should be only one species field in StratumSpecies model")
         field = species_name_fields[0]
-        self.assertTrue(field.related_model == SpeciesObservation)
+        self.assertTrue(field.related_model == OldSpeciesObservation)
 
 
 class TestLookup(TestCase):

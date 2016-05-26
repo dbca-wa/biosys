@@ -224,7 +224,7 @@ Opportunistic Observations
 Model changes:
 * No site_visit in the data just a location.
   No more site_visit FK but add a location lookup and also add observation_type lookup to capture the type on obs. E.g: bird
-* Problem: SpeciesObservation needed a mandatory site_visit FK. Made the site_visit not mandatory.
+* Problem: OldSpeciesObservation needed a mandatory site_visit FK. Made the site_visit not mandatory.
 
 * Why they are multiple rows for the same species at the same date and same location. What that means? See the species 5 times?
 Should we create one record for each?

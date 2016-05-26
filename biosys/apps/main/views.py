@@ -1,17 +1,21 @@
 import json
 import tempfile
 
-from django.http import HttpResponse, HttpResponseForbidden
-from django.views.generic import TemplateView
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.views.generic import TemplateView, View
+from django.shortcuts import get_object_or_404
 
 from braces.views import FormMessagesMixin
 from envelope.views import ContactView
 
 from upload.validation import DATASHEET_MODELS_MAPPING
 from main import utils as utils_model
-from .admin import readonly_user
-from .utils_zip import zip_dir_to_temp_zip, export_zip
-from .forms import FeedbackForm
+from main.admin import readonly_user
+from main.utils_zip import zip_dir_to_temp_zip, export_zip
+from main.forms import FeedbackForm
+from main.models import DataDescriptor
+from main.utils_descriptor import to_template_workbook
+from main.utils_http import WorkbookResponse
 
 
 class DashboardView(TemplateView):
@@ -38,8 +42,9 @@ def datasheet_schema():
     Current implementation only export fields that are in the datasheet.
     The order in the models and fields arrays respect the order in the datasheet
     """
+
     def get_model_data(model_):
-        return{
+        return {
             'name': model_._meta.model_name,
             'module': model_.__module__,
             'class_name': model_.__name__,
@@ -63,12 +68,13 @@ def datasheet_schema():
     def get_datasheet_mapping_data(mapping_):
         return {
             'sheet_name': mapping_.sheet_name,
-            'top_left_column': mapping_. top_left_column,
+            'top_left_column': mapping_.top_left_column,
             'top_left_row': mapping_.top_left_row,
             'transpose': mapping_.transpose,
             'mandatory': mapping_.mandatory,
             'unique': mapping_.unique
         }
+
     # The list of all the models are in the upload app
     datasheet_mappings = DATASHEET_MODELS_MAPPING
     result = {}
@@ -105,3 +111,11 @@ class FeedbackView(FormMessagesMixin, ContactView):
     form_class = FeedbackForm
     template_name = 'envelope/feedback.html'
     success_url = 'home'
+
+
+class DescriptorTemplate(View):
+    def get(self, request, *args, **kwargs):
+        dd = get_object_or_404(DataDescriptor, pk=kwargs.get('pk'))
+        wb = to_template_workbook(dd)
+        response = WorkbookResponse(wb, dd.name)
+        return response

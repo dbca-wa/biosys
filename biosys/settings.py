@@ -7,7 +7,7 @@ import sys
 from unipath import Path
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = Path(__file__).ancestor(3)
+BASE_DIR = Path(__file__).ancestor(2)
 PROJECT_DIR = os.path.join(BASE_DIR, 'biosys')
 # Add PROJECT_DIR to the system path.
 sys.path.insert(0, PROJECT_DIR)
@@ -230,14 +230,6 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 
-# .local.py overrides all the common settings.
-try:
-    from .local import *
-except ImportError:
-    pass
-
-# if len(sys.argv) > 1 and 'test' in sys.argv[1]:
-#     from .testing import *
 
 # django-tastypie settings
 TASTYPIE_ALLOW_MISSING_SLASH = True

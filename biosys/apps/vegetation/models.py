@@ -1,7 +1,7 @@
 from __future__ import unicode_literals
 from django.db import models
 
-from main.models import AbstractLookup, SpeciesObservation, AbstractSiteVisitObservation
+from main.models import AbstractLookup, OldSpeciesObservation, AbstractSiteVisitObservation
 
 
 class VegetationVisit(AbstractSiteVisitObservation):
@@ -49,7 +49,7 @@ class StratumSpecies(AbstractVegetationObservation):
                                      verbose_name='Significance', help_text="")
     stratum = models.ForeignKey('StratumLookup', null=False, blank=False, on_delete=models.PROTECT,
                                 verbose_name="Stratum", help_text="")
-    species = models.ForeignKey(SpeciesObservation, null=True, blank=True,
+    species = models.ForeignKey(OldSpeciesObservation, null=True, blank=True,
                                 verbose_name="Species", help_text="")
     collector_no = models.CharField(max_length=200, blank=True,
                                     verbose_name="Collector No", help_text="")
@@ -231,7 +231,7 @@ class DisturbanceIndicator(AbstractVegetationObservation):
 
 
 class PlantObservation(AbstractVegetationObservation):
-    species = models.ForeignKey(SpeciesObservation, null=True, blank=True,
+    species = models.ForeignKey(OldSpeciesObservation, null=True, blank=True,
                                 verbose_name="Species", help_text="")
     introduced = models.BooleanField(default=False,
                                      verbose_name="Introduced", help_text="")

@@ -5,7 +5,7 @@ import json
 
 from main.models import (Project, Site, Visit, SiteVisit,
                          SiteVisitDataFile, GeologyGroupLookup,
-                         SpeciesObservation, SiteCharacteristic)
+                         OldSpeciesObservation, SiteCharacteristic)
 from main.tests.test_admin import BaseTestCase
 
 
@@ -27,7 +27,7 @@ class MainAPITest(BaseTestCase):
         """
         for i in [
                 'project', 'site', 'visit', 'sitevisitdatafile', 'sitevisit',
-                'speciesobservation', 'sitecharacteristic']:
+                'oldspeciesobservation', 'sitecharacteristic']:
             url = reverse('api_dispatch_list', kwargs={'resource_name': i, 'api_name': 'v1'})
             url += '?' + urlencode({'format': 'json'})
             self.client.logout()
@@ -43,7 +43,7 @@ class MainAPITest(BaseTestCase):
         """Test access permission to resource details (JSON & CSV)
         """
         for i in [
-                Project, Site, Visit, SiteVisit, SpeciesObservation, SiteCharacteristic]:
+                Project, Site, Visit, SiteVisit, OldSpeciesObservation, SiteCharacteristic]:
             obj = i.objects.all()[0]
             url = reverse('api_dispatch_detail', kwargs={
                 'resource_name': i._meta.object_name.lower(),
@@ -151,7 +151,7 @@ class MainAPITest(BaseTestCase):
     def test_sitevisit_quarantined_children(self):
         """Test that child objects of the SiteVisit model return different data for normal & custodian users
         """
-        for i in ['speciesobservation', 'sitecharacteristic']:
+        for i in ['oldspeciesobservation', 'sitecharacteristic']:
             url = reverse('api_dispatch_list', kwargs={'resource_name': i, 'api_name': 'v1'})
             url += '?' + urlencode({'format': 'json'})
             self.client.login(username='normaluser', password='test')

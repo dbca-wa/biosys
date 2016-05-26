@@ -534,14 +534,14 @@ def to_species_observation_raise(value, site_visit=None, commit=True, row_data=N
     """
     Validate the supplied species name value. Rules:
     *
-    Create a SpeciesObservation object with an input_name = value
+    Create a OldSpeciesObservation object with an input_name = value
     This function also try to get a name_id reference from the species data reference
     If a no name_id is returned it means that the species name is probably invalid but we still create the object
     without raising an exception
     :param value:
     :param site_visit:
     :param commit: save the object if True
-    :return: the SpeciesObservation object
+    :return: the OldSpeciesObservation object
     """
     if is_blank(value):
         message = "Species is blank."
@@ -558,7 +558,7 @@ class SpeciesObservationManager:
     """
 
     def __init__(self, species, row_data=None):
-        self.model = SpeciesObservation
+        self.model = OldSpeciesObservation
         self.species = species
         self.row_data = row_data
 
@@ -617,7 +617,7 @@ class SpeciesObservationManager:
     def create(self, site_visit=None, commit=True):
         name_id = self.validate_raise()
         input_name = self.species
-        obj = SpeciesObservation(input_name=input_name)
+        obj = OldSpeciesObservation(input_name=input_name)
         if name_id:
             obj.name_id = name_id
         if self.uncertainty:

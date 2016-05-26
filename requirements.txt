@@ -3,7 +3,7 @@ https://static.dpaw.wa.gov.au/static/py/dpaw-utils/dist/dpaw-utils-0.3a7.tar.gz
 django-bootstrap3==7.0.1
 django-ldap-email-auth==0.1.2
 webtemplate-dpaw==0.4.2
-openpyxl==2.3.4
+openpyxl==2.3.5
 Werkzeug==0.10.4
 django-reversion==1.10.1
 Fabric==1.10.1
@@ -19,3 +19,5 @@ coverage==3.7.1
 flake8==2.4.0
 mixer>=5.4.1,<6.0
 Unipath==1.1
+awesome-slugify==1.6.5
+jsontableschema==0.6.3

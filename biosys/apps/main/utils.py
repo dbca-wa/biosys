@@ -24,7 +24,7 @@ def flatten(d, parent_key='', sep=' '):
 
 
 def is_species_observation_field(field):
-    return field.is_relation and field.related_model == SpeciesObservation
+    return field.is_relation and field.related_model == OldSpeciesObservation
 
 
 def is_species_observation_extra_attribute(field):
@@ -130,7 +130,7 @@ def is_template_field(field):
     is_pk = field.primary_key
     is_fk = field.is_relation
     is_lookup = is_lookup_field(field)
-    is_species = is_fk and field.related_model == SpeciesObservation
+    is_species = is_fk and field.related_model == OldSpeciesObservation
     return not is_pk and (not is_fk or is_lookup or is_species)
 
 
@@ -150,7 +150,7 @@ def get_datasheet_fields_for_model(model):
 
 
 def get_extra_species_fields():
-    meta = SpeciesObservation._meta
+    meta = OldSpeciesObservation._meta
     return [meta.get_field('validation_status'), meta.get_field('uncertainty')]
 
 

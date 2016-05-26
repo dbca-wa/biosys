@@ -4,12 +4,14 @@ from django.db import transaction
 from os import path
 from reversion import revisions as reversion
 
+from django.utils.encoding import python_2_unicode_compatible
+from django.utils.text import Truncator
 from django.db.models import Max
 from django.contrib.gis.db import models
+from django.contrib.postgres.fields import JSONField
 from django.contrib.gis.geos import Point
 from django.contrib.auth.models import User
 from django.contrib.gis.geos.polygon import Polygon
-
 
 MODEL_SRID = 4326
 DATUM_CHOICES = [
@@ -19,6 +21,81 @@ DATUM_CHOICES = [
     (4202, 'AGD66'),
 ]
 DEFAULT_SITE_ID = 16120
+
+
+@python_2_unicode_compatible
+class DataDescriptor(models.Model):
+    TYPE_PROJECT = 'project'
+    TYPE_SITE = 'site'
+    TYPE_DATASET = 'dataset'
+    TYPE_OBSERVATION = 'observation'
+    TYPE_SPECIES_OBSERVATION = 'species_observation'
+    TYPE_CHOICES = [(TYPE_PROJECT, TYPE_PROJECT.capitalize()),
+                    (TYPE_SITE, TYPE_SITE.capitalize()),
+                    (TYPE_DATASET, TYPE_DATASET.capitalize()),
+                    (TYPE_OBSERVATION, TYPE_OBSERVATION.capitalize()),
+                    (TYPE_SPECIES_OBSERVATION, 'Species observation')]
+    project = models.ForeignKey('Project', null=False, blank=False)
+    name = models.CharField(max_length=200, null=False, blank=False)
+    type = models.CharField(max_length=100, null=False, blank=False, choices=TYPE_CHOICES, default=TYPE_DATASET)
+    data_package = JSONField()
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def schema(self):
+        return self.data_package['resources'][0]['schema']
+
+    class Meta:
+        unique_together = ('project', 'name')
+
+
+@python_2_unicode_compatible
+class AbstractDataSet(models.Model):
+    data = JSONField()
+    data_descriptor = models.ForeignKey(DataDescriptor, null=False, blank=False)
+
+    def __str__(self):
+        return "{0}: {1}".format(self.data_descriptor.name, Truncator(self.data).chars(100))
+
+    class Meta:
+        abstract = True
+
+
+class DataSet(AbstractDataSet):
+    site = models.ForeignKey('Site', null=True, blank=True)
+
+
+class Observation(AbstractDataSet):
+    site = models.ForeignKey('Site', null=True, blank=True)
+    date_time = models.DateTimeField(null=False, blank=False)
+    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
+
+
+@python_2_unicode_compatible
+class SpeciesObservation(AbstractDataSet):
+    """
+    If the input_name has been validated against the species database the name_id is populated with the value from the
+    database
+    """
+    site = models.ForeignKey('Site', null=True, blank=True)
+    date_time = models.DateTimeField(null=False, blank=False)
+    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
+
+    input_name = models.CharField(max_length=500, null=False, blank=False,
+                                  verbose_name="Species", help_text="")
+    name_id = models.IntegerField(default=-1,
+                                  verbose_name="Name ID", help_text="The unique ID from the herbarium database")
+    uncertainty = models.CharField(max_length=50, blank=True,
+                                   verbose_name="Species uncertainty", help_text="")
+
+    def __str__(self):
+        return self.input_name
+
+    @property
+    def valid(self):
+        return self.name_id > 0
 
 
 class Project(models.Model):
@@ -59,7 +136,11 @@ class Project(models.Model):
                                 verbose_name="Comments", help_text="")
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Extent Geometry", help_text="")
-    objects = models.GeoManager()
+    # can't extend AbstractDataSet directly because we need to change the related name and possible null
+    data = JSONField(null=True)
+    data_descriptor = models.ForeignKey(DataDescriptor, null=True, blank=True,
+                                        related_name='descriptors',
+                                        related_query_name='descriptor')
 
     class Meta:
         pass
@@ -129,7 +210,7 @@ class Site(models.Model):
     aspect = models.CharField(max_length=10, null=True, blank=True, choices=ASPECT_CHOICES,
                               verbose_name="Aspect", help_text="Compass bearing (e.g. N, SSE)")
     slope = models.FloatField(null=True, blank=True,
-                                     verbose_name="Slope", help_text="Degrees (0 - 90)")
+                              verbose_name="Slope", help_text="Degrees (0 - 90)")
     altitude = models.FloatField(null=True, blank=True,
                                  verbose_name="Altitude", help_text="Altitude, in metres")
     radius = models.FloatField(null=True, blank=True,
@@ -164,11 +245,11 @@ class Site(models.Model):
                                 verbose_name="Comments", help_text="")
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Geometry", help_text="")
-    objects = models.GeoManager()
+    data = JSONField(null=True)
+    data_descriptor = models.ForeignKey(DataDescriptor, null=True, blank=True)
 
     class Meta:
         unique_together = ('project', 'site_code')
-        pass
 
     def __str__(self):
         return self.__unicode__()
@@ -334,7 +415,7 @@ class SiteVisitDataSheetTemplate(AbstractDataFile):
     version = models.CharField(max_length=50, verbose_name="Template Version", default="1.0")
 
 
-class SpeciesObservation(AbstractSiteVisitObservation):
+class OldSpeciesObservation(AbstractSiteVisitObservation):
     """
     Species name as entered in the datasheet (input_name)
     If the input_name has been validated against the species database the name_id is populated with the value from the

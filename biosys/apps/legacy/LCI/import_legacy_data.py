@@ -409,7 +409,7 @@ def get_or_create_species_observation(species, site_visit, row_data):
     query = Q(input_name=species)
     if site_visit is not None:
         query &= Q(site_visit=site_visit)
-    sp_obs = SpeciesObservation.objects.filter(query).first()
+    sp_obs = OldSpeciesObservation.objects.filter(query).first()
     data = {
         'Species validation status': row_data.get('Species Validation', ''),
         'Species uncertainty': row_data.get('Species Uncertainty', '')
@@ -1715,7 +1715,7 @@ def delete_data():
     Project.objects.all().delete()
     # There are some tables without link to project
     OpportunisticObservation.objects.all().delete()
-    SpeciesObservation.objects.all().delete()
+    OldSpeciesObservation.objects.all().delete()
 
 
 def run(*args):
