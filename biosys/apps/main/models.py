@@ -26,7 +26,7 @@ DEFAULT_SITE_ID = 16120
 
 
 @python_2_unicode_compatible
-class DataDescriptor(models.Model):
+class DataSet(models.Model):
     TYPE_PROJECT = 'project'
     TYPE_SITE = 'site'
     TYPE_GENERIC = 'generic'
@@ -74,7 +74,7 @@ class DataFile(models.Model):
 @python_2_unicode_compatible
 class AbstractRecord(models.Model):
     data = JSONField()
-    data_descriptor = models.ForeignKey(DataDescriptor, null=False, blank=False)
+    data_descriptor = models.ForeignKey(DataSet, null=False, blank=False)
 
     def __str__(self):
         return "{0}: {1}".format(self.data_descriptor.name, Truncator(self.data).chars(100))
@@ -159,7 +159,7 @@ class Project(models.Model):
                                     verbose_name="Extent Geometry", help_text="")
     # can't extend AbstractRecord directly because we need to change the related name and possible null
     data = JSONField(null=True)
-    data_descriptor = models.ForeignKey(DataDescriptor, null=True, blank=True,
+    data_descriptor = models.ForeignKey(DataSet, null=True, blank=True,
                                         related_name='descriptors',
                                         related_query_name='descriptor')
 
@@ -267,7 +267,7 @@ class Site(models.Model):
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Geometry", help_text="")
     data = JSONField(null=True)
-    data_descriptor = models.ForeignKey(DataDescriptor, null=True, blank=True)
+    data_descriptor = models.ForeignKey(DataSet, null=True, blank=True)
 
     class Meta:
         unique_together = ('project', 'site_code')

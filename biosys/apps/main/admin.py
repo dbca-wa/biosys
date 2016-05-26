@@ -153,7 +153,7 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
         css = {'all': ('css/site_admin.css',)}
 
 
-@admin.register(DataDescriptor)
+@admin.register(DataSet)
 class DataDescriptorAdmin(MainAppAdmin):
     change_form_template = 'main/data_descriptor_change_form.html'
     list_display = ['name', 'project', 'type']

@@ -13,7 +13,7 @@ from envelope.views import ContactView
 from main import utils as utils_model
 from main.admin import readonly_user
 from main.forms import FeedbackForm, UploadDataForm
-from main.models import DataDescriptor, DataFile, GenericRecord
+from main.models import DataSet, DataFile, GenericRecord
 from main.utils_descriptor import to_template_workbook
 from main.utils_http import WorkbookResponse
 from main.utils_zip import zip_dir_to_temp_zip, export_zip
@@ -117,7 +117,7 @@ class FeedbackView(FormMessagesMixin, ContactView):
 
 class DescriptorTemplateView(View):
     def get(self, request, *args, **kwargs):
-        dd = get_object_or_404(DataDescriptor, pk=kwargs.get('pk'))
+        dd = get_object_or_404(DataSet, pk=kwargs.get('pk'))
         wb = to_template_workbook(dd)
         response = WorkbookResponse(wb, dd.name)
         return response
@@ -129,13 +129,13 @@ class UploadDataView(FormView):
     success_url = reverse_lazy('admin:main_datadescriptor_changelist')
 
     def get_context_data(self, **kwargs):
-        kwargs['opts'] = DataDescriptor._meta
+        kwargs['opts'] = DataSet._meta
         return super(UploadDataView, self).get_context_data(**kwargs)
 
     def form_valid(self, form):
         pk = self.kwargs.get('pk')
-        descriptor = get_object_or_404(DataDescriptor, pk=pk)
-        if descriptor.type != DataDescriptor.TYPE_GENERIC:
+        descriptor = get_object_or_404(DataSet, pk=pk)
+        if descriptor.type != DataSet.TYPE_GENERIC:
             messages.error(self.request, 'Import of data set of type ' + descriptor.type + " is not yet implemented")
             return HttpResponseRedirect(reverse_lazy('admin:main_datadescriptor_change', args=[pk]))
         src_file = DataFile(file=self.request.FILES['file'])
