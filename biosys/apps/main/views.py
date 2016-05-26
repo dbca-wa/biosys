@@ -14,7 +14,7 @@ from main import utils as utils_model
 from main.admin import readonly_user
 from main.forms import FeedbackForm, UploadDataForm
 from main.models import DataSet, DataFile, GenericRecord
-from main.utils_descriptor import to_template_workbook
+from main.utils_data_package import to_template_workbook
 from main.utils_http import WorkbookResponse
 from main.utils_zip import zip_dir_to_temp_zip, export_zip
 from upload.validation import DATASHEET_MODELS_MAPPING
