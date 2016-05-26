@@ -3,6 +3,7 @@ import datetime
 from django.db import transaction
 from os import path
 from reversion import revisions as reversion
+import jsontableschema
 
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.text import Truncator
@@ -12,6 +13,7 @@ from django.contrib.postgres.fields import JSONField
 from django.contrib.gis.geos import Point
 from django.contrib.auth.models import User
 from django.contrib.gis.geos.polygon import Polygon
+from django.contrib import messages
 
 MODEL_SRID = 4326
 DATUM_CHOICES = [

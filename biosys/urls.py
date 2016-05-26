@@ -36,7 +36,7 @@ urlpatterns = [
     url(r'^logout/$', auth_views.logout, {'next_page': '/login/'}),
     url('^', include('django.contrib.auth.urls')),
     # Application URLs
-    url(r'^main/', include('main.urls')),
+    url(r'^main/', include('main.urls', namespace='main')),
     url(r'^species/', include('species.urls')),
     url(r'^grappelli/', include('grappelli.urls')),  # Grappelli URLS
     url(r'^admin/logout/$', auth_views.logout, {'next_page': '/'}),
