@@ -1,6 +1,6 @@
 Django>=1.9.4,<2.0.0
 https://static.dpaw.wa.gov.au/static/py/dpaw-utils/dist/dpaw-utils-0.3a7.tar.gz
-django-bootstrap3==7.0.1
+django-bootstrap3==6.2.2
 django-ldap-email-auth==0.1.2
 webtemplate-dpaw==0.4.2
 openpyxl==2.3.5
@@ -20,4 +20,4 @@ flake8==2.4.0
 mixer>=5.4.1,<6.0
 Unipath==1.1
 awesome-slugify==1.6.5
-jsontableschema==0.6.3
+jsontableschema>=0.6.3

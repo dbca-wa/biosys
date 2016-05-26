@@ -10,6 +10,7 @@ DATUM_BOUNDS = {
     4202: (129.0, -45.0, 155.0, -1.0)
 }
 
+
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
@@ -58,7 +59,7 @@ class ProjectForm(forms.ModelForm):
         extent_lat_max = self.cleaned_data.get('extent_lat_max')
 
         if extent_long_min is not None and extent_lat_min is not None and extent_long_max is not None and \
-                extent_lat_max is not None:
+                        extent_lat_max is not None:
             if extent_lat_min >= extent_lat_max:
                 raise forms.ValidationError('Extent latitude min must be less than Extent latitude max')
 
@@ -69,7 +70,6 @@ class ProjectForm(forms.ModelForm):
 
 
 class VisitForm(forms.ModelForm):
-
     class Meta:
         model = Visit
         exclude = []
@@ -98,12 +98,11 @@ class VisitForm(forms.ModelForm):
             for site in sites:
                 if site.project != project:
                     raise forms.ValidationError('Please Choose only sites that '
-                            'belong to project {}'.format(project))
+                                                'belong to project {}'.format(project))
         return self.cleaned_data
 
 
 class SiteForm(forms.ModelForm):
-
     class Meta:
         model = Site
         exclude = []
@@ -111,7 +110,8 @@ class SiteForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(SiteForm, self).__init__(*args, **kwargs)
         if self.instance.pk and self.instance.project:
-            self.fields['parent_site'].queryset = Site.objects.filter(project=self.instance.project).exclude(pk=self.instance.pk)
+            self.fields['parent_site'].queryset = Site.objects.filter(project=self.instance.project).exclude(
+                pk=self.instance.pk)
         else:
             self.fields['parent_site'].queryset = Site.objects.all()
 
@@ -171,9 +171,11 @@ class SiteForm(forms.ModelForm):
                 raise forms.ValidationError('Please Choose only parent site that belongs to project {}'.format(project))
         return self.cleaned_data
 
+
 class SiteVisitDataSheetTemplateForm(forms.ModelForm):
     """Upload form for local property register spreadsheets.
     """
+
     class Meta:
         model = SiteVisitDataSheetTemplate
         exclude = []
@@ -217,7 +219,24 @@ class UploadDatasheetForm(forms.Form):
             return self.cleaned_data
 
 
+class UploadDataForm(forms.Form):
+    file = forms.FileField(required=True, help_text='CSV files only')
+    append_mode = forms.BooleanField(required=False, initial=False,
+                                     help_text="If checked data will be added to the current set")
+
+    def clean(self):
+        if 'file' in self.cleaned_data and hasattr(self.cleaned_data['file'], 'content_type'):
+            # cvs only (possibly others in future).
+            mime = [
+                'text/csv',
+            ]
+            f = self.cleaned_data['file'].content_type
+            if f not in mime:
+                msg = '{} is not an allowed file type'.format(f)
+                self._errors['file'] = self.error_class([msg])
+            return self.cleaned_data
+
+
 class FeedbackForm(ContactForm):
     subject_intro = '[BioSys Feedback]  '
     template_name = 'envelope/email_body.txt'
-    

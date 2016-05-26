@@ -159,7 +159,7 @@ class DataDescriptorAdmin(MainAppAdmin):
     list_display = ['name', 'project', 'type']
 
 
-@admin.register(DataSet)
+@admin.register(GenericRecord)
 class DataSetAdmin(VersionAdmin):
     pass
 
