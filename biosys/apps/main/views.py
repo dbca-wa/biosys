@@ -123,14 +123,14 @@ class DescriptorTemplateView(View):
         return response
 
 
-class UploadDataView(FormView):
+class UploadDataSetView(FormView):
     template_name = 'main/data_upload.html'
     form_class = UploadDataForm
     success_url = reverse_lazy('admin:main_datadescriptor_changelist')
 
     def get_context_data(self, **kwargs):
         kwargs['opts'] = DataSet._meta
-        return super(UploadDataView, self).get_context_data(**kwargs)
+        return super(UploadDataSetView, self).get_context_data(**kwargs)
 
     def form_valid(self, form):
         pk = self.kwargs.get('pk')
@@ -154,4 +154,8 @@ class UploadDataView(FormView):
                 )
                 records.append(record)
             GenericRecord.objects.bulk_create(records)
-        return super(UploadDataView, self).form_valid(form)
+        return super(UploadDataSetView, self).form_valid(form)
+
+
+class ExportDataSetView(View):
+    pass
