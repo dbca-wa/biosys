@@ -37,13 +37,14 @@ class DataSet(models.Model):
                     (TYPE_GENERIC, TYPE_GENERIC.capitalize()),
                     (TYPE_OBSERVATION, TYPE_OBSERVATION.capitalize()),
                     (TYPE_SPECIES_OBSERVATION, 'Species observation')]
-    project = models.ForeignKey('Project', null=False, blank=False)
+    project = models.ForeignKey('Project', null=False, blank=False, related_name='projects',
+                                related_query_name='project')
     name = models.CharField(max_length=200, null=False, blank=False)
     type = models.CharField(max_length=100, null=False, blank=False, choices=TYPE_CHOICES, default=TYPE_GENERIC)
     data_package = JSONField()
 
     def __str__(self):
-        return self.name
+        return '{} - {}'.format(self.name, self.project)
 
     @property
     def schema(self):
@@ -74,10 +75,10 @@ class DataFile(models.Model):
 @python_2_unicode_compatible
 class AbstractRecord(models.Model):
     data = JSONField()
-    data_descriptor = models.ForeignKey(DataSet, null=False, blank=False)
+    dataset = models.ForeignKey(DataSet, null=False, blank=False)
 
     def __str__(self):
-        return "{0}: {1}".format(self.data_descriptor.name, Truncator(self.data).chars(100))
+        return "{0}: {1}".format(self.dataset.name, Truncator(self.data).chars(100))
 
     class Meta:
         abstract = True
@@ -159,9 +160,9 @@ class Project(models.Model):
                                     verbose_name="Extent Geometry", help_text="")
     # can't extend AbstractRecord directly because we need to change the related name and possible null
     data = JSONField(null=True)
-    data_descriptor = models.ForeignKey(DataSet, null=True, blank=True,
-                                        related_name='descriptors',
-                                        related_query_name='descriptor')
+    dataset = models.ForeignKey(DataSet, null=True, blank=True,
+                                related_name='data_sets',
+                                related_query_name='data_set')
 
     class Meta:
         pass
@@ -267,7 +268,7 @@ class Site(models.Model):
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Geometry", help_text="")
     data = JSONField(null=True)
-    data_descriptor = models.ForeignKey(DataSet, null=True, blank=True)
+    dataset = models.ForeignKey(DataSet, null=True, blank=True)
 
     class Meta:
         unique_together = ('project', 'site_code')

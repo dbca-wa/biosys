@@ -126,7 +126,7 @@ class DataSetTemplateView(View):
 class UploadDataSetView(FormView):
     template_name = 'main/data_upload.html'
     form_class = UploadDataForm
-    success_url = reverse_lazy('admin:main_datadescriptor_changelist')
+    success_url = reverse_lazy('admin:main_dataset_changelist')
 
     def get_context_data(self, **kwargs):
         kwargs['opts'] = DataSet._meta
@@ -134,21 +134,21 @@ class UploadDataSetView(FormView):
 
     def form_valid(self, form):
         pk = self.kwargs.get('pk')
-        descriptor = get_object_or_404(DataSet, pk=pk)
-        if descriptor.type != DataSet.TYPE_GENERIC:
-            messages.error(self.request, 'Import of data set of type ' + descriptor.type + " is not yet implemented")
-            return HttpResponseRedirect(reverse_lazy('admin:main_datadescriptor_change', args=[pk]))
+        dataset = get_object_or_404(DataSet, pk=pk)
+        if dataset.type != DataSet.TYPE_GENERIC:
+            messages.error(self.request, 'Import of data set of type ' + dataset.type + " is not yet implemented")
+            return HttpResponseRedirect(reverse_lazy('admin:main_dataset_change', args=[pk]))
         src_file = DataFile(file=self.request.FILES['file'])
         src_file.save()
         is_append = form.cleaned_data['append_mode']
         if not is_append:
-            GenericRecord.objects.filter(data_descriptor=descriptor).delete()
+            GenericRecord.objects.filter(dataset=dataset).delete()
         with open(src_file.path, 'rb') as csvfile:
             reader = csv.DictReader(csvfile)
             records = []
             for row in reader:
                 record = GenericRecord(
-                    data_descriptor=descriptor,
+                    dataset=dataset,
                     data=row,
                     src_file=src_file
                 )
