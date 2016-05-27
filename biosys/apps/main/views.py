@@ -1,21 +1,23 @@
 import json
 import tempfile
-
-from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
-from django.views.generic import TemplateView, View
-from django.shortcuts import get_object_or_404
+import csv
 
 from braces.views import FormMessagesMixin
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
+from django.shortcuts import get_object_or_404
+from django.views.generic import TemplateView, View, FormView
+from django.core.urlresolvers import reverse, reverse_lazy
+from django.contrib import messages
 from envelope.views import ContactView
 
-from upload.validation import DATASHEET_MODELS_MAPPING
 from main import utils as utils_model
 from main.admin import readonly_user
-from main.utils_zip import zip_dir_to_temp_zip, export_zip
-from main.forms import FeedbackForm
-from main.models import DataDescriptor
-from main.utils_descriptor import to_template_workbook
+from main.forms import FeedbackForm, UploadDataForm
+from main.models import DataSet, DataFile, GenericRecord
+from main.utils_data_package import to_template_workbook
 from main.utils_http import WorkbookResponse
+from main.utils_zip import zip_dir_to_temp_zip, export_zip
+from upload.validation import DATASHEET_MODELS_MAPPING
 
 
 class DashboardView(TemplateView):
@@ -113,9 +115,47 @@ class FeedbackView(FormMessagesMixin, ContactView):
     success_url = 'home'
 
 
-class DescriptorTemplateView(View):
+class DataSetTemplateView(View):
     def get(self, request, *args, **kwargs):
-        dd = get_object_or_404(DataDescriptor, pk=kwargs.get('pk'))
-        wb = to_template_workbook(dd)
-        response = WorkbookResponse(wb, dd.name)
+        ds = get_object_or_404(DataSet, pk=kwargs.get('pk'))
+        wb = to_template_workbook(ds)
+        response = WorkbookResponse(wb, ds.name)
         return response
+
+
+class UploadDataSetView(FormView):
+    template_name = 'main/data_upload.html'
+    form_class = UploadDataForm
+    success_url = reverse_lazy('admin:main_datadescriptor_changelist')
+
+    def get_context_data(self, **kwargs):
+        kwargs['opts'] = DataSet._meta
+        return super(UploadDataSetView, self).get_context_data(**kwargs)
+
+    def form_valid(self, form):
+        pk = self.kwargs.get('pk')
+        descriptor = get_object_or_404(DataSet, pk=pk)
+        if descriptor.type != DataSet.TYPE_GENERIC:
+            messages.error(self.request, 'Import of data set of type ' + descriptor.type + " is not yet implemented")
+            return HttpResponseRedirect(reverse_lazy('admin:main_datadescriptor_change', args=[pk]))
+        src_file = DataFile(file=self.request.FILES['file'])
+        src_file.save()
+        is_append = form.cleaned_data['append_mode']
+        if not is_append:
+            GenericRecord.objects.filter(data_descriptor=descriptor).delete()
+        with open(src_file.path, 'rb') as csvfile:
+            reader = csv.DictReader(csvfile)
+            records = []
+            for row in reader:
+                record = GenericRecord(
+                    data_descriptor=descriptor,
+                    data=row,
+                    src_file=src_file
+                )
+                records.append(record)
+            GenericRecord.objects.bulk_create(records)
+        return super(UploadDataSetView, self).form_valid(form)
+
+
+class ExportDataSetView(View):
+    pass

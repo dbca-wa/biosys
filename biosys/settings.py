@@ -51,6 +51,7 @@ INSTALLED_APPS = (
     'reversion',
     'tastypie',
     'webtemplate_dpaw',
+    'bootstrap3',
 )
 
 PROJECT_APPS = (
@@ -152,6 +153,18 @@ STATICFILES_FINDERS = (
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
+
+BOOTSTRAP3 = {
+    'jquery_url': '//static.dpaw.wa.gov.au/static/libs/jquery/2.2.1/jquery.min.js',
+    'base_url': '//static.dpaw.wa.gov.au/static/libs/twitter-bootstrap/3.3.6/',
+    'css_url': None,
+    'theme_url': None,
+    'javascript_url': None,
+    'javascript_in_head': False,
+    'include_jquery': False,
+    'required_css_class': 'required-form-field',
+    'set_placeholder': False,
+}
 
 # Logging settings
 # Ensure that the logs directory exists:

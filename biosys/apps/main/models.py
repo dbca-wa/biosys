@@ -26,20 +26,20 @@ DEFAULT_SITE_ID = 16120
 
 
 @python_2_unicode_compatible
-class DataDescriptor(models.Model):
+class DataSet(models.Model):
     TYPE_PROJECT = 'project'
     TYPE_SITE = 'site'
-    TYPE_DATASET = 'dataset'
+    TYPE_GENERIC = 'generic'
     TYPE_OBSERVATION = 'observation'
     TYPE_SPECIES_OBSERVATION = 'species_observation'
     TYPE_CHOICES = [(TYPE_PROJECT, TYPE_PROJECT.capitalize()),
                     (TYPE_SITE, TYPE_SITE.capitalize()),
-                    (TYPE_DATASET, TYPE_DATASET.capitalize()),
+                    (TYPE_GENERIC, TYPE_GENERIC.capitalize()),
                     (TYPE_OBSERVATION, TYPE_OBSERVATION.capitalize()),
                     (TYPE_SPECIES_OBSERVATION, 'Species observation')]
     project = models.ForeignKey('Project', null=False, blank=False)
     name = models.CharField(max_length=200, null=False, blank=False)
-    type = models.CharField(max_length=100, null=False, blank=False, choices=TYPE_CHOICES, default=TYPE_DATASET)
+    type = models.CharField(max_length=100, null=False, blank=False, choices=TYPE_CHOICES, default=TYPE_GENERIC)
     data_package = JSONField()
 
     def __str__(self):
@@ -54,9 +54,27 @@ class DataDescriptor(models.Model):
 
 
 @python_2_unicode_compatible
-class AbstractDataSet(models.Model):
+class DataFile(models.Model):
+    file = models.FileField(upload_to='%Y/%m/%d')
+    uploaded_date = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(User, null=True, blank=True)
+
+    def __str__(self):
+        return self.file.name
+
+    @property
+    def path(self):
+        return self.file.path
+
+    @property
+    def filename(self):
+        return path.basename(self.path)
+
+
+@python_2_unicode_compatible
+class AbstractRecord(models.Model):
     data = JSONField()
-    data_descriptor = models.ForeignKey(DataDescriptor, null=False, blank=False)
+    data_descriptor = models.ForeignKey(DataSet, null=False, blank=False)
 
     def __str__(self):
         return "{0}: {1}".format(self.data_descriptor.name, Truncator(self.data).chars(100))
@@ -65,18 +83,19 @@ class AbstractDataSet(models.Model):
         abstract = True
 
 
-class DataSet(AbstractDataSet):
+class GenericRecord(AbstractRecord):
     site = models.ForeignKey('Site', null=True, blank=True)
+    src_file = models.ForeignKey(DataFile, null=True, blank=True)
 
 
-class Observation(AbstractDataSet):
+class Observation(AbstractRecord):
     site = models.ForeignKey('Site', null=True, blank=True)
     date_time = models.DateTimeField(null=False, blank=False)
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
 
 
 @python_2_unicode_compatible
-class SpeciesObservation(AbstractDataSet):
+class SpeciesObservation(AbstractRecord):
     """
     If the input_name has been validated against the species database the name_id is populated with the value from the
     database
@@ -138,9 +157,9 @@ class Project(models.Model):
                                 verbose_name="Comments", help_text="")
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Extent Geometry", help_text="")
-    # can't extend AbstractDataSet directly because we need to change the related name and possible null
+    # can't extend AbstractRecord directly because we need to change the related name and possible null
     data = JSONField(null=True)
-    data_descriptor = models.ForeignKey(DataDescriptor, null=True, blank=True,
+    data_descriptor = models.ForeignKey(DataSet, null=True, blank=True,
                                         related_name='descriptors',
                                         related_query_name='descriptor')
 
@@ -248,7 +267,7 @@ class Site(models.Model):
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Geometry", help_text="")
     data = JSONField(null=True)
-    data_descriptor = models.ForeignKey(DataDescriptor, null=True, blank=True)
+    data_descriptor = models.ForeignKey(DataSet, null=True, blank=True)
 
     class Meta:
         unique_together = ('project', 'site_code')
