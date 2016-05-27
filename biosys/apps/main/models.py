@@ -88,6 +88,7 @@ class AbstractRecord(models.Model):
 class GenericRecord(AbstractRecord):
     site = models.ForeignKey('Site', null=True, blank=True)
 
+
 class Observation(AbstractRecord):
     site = models.ForeignKey('Site', null=True, blank=True)
     date_time = models.DateTimeField(null=False, blank=False)
