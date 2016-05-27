@@ -113,7 +113,7 @@ class FeedbackView(FormMessagesMixin, ContactView):
     success_url = 'home'
 
 
-class DescriptorTemplate(View):
+class DescriptorTemplateView(View):
     def get(self, request, *args, **kwargs):
         dd = get_object_or_404(DataDescriptor, pk=kwargs.get('pk'))
         wb = to_template_workbook(dd)
