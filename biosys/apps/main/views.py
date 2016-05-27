@@ -13,7 +13,7 @@ from envelope.views import ContactView
 from main import utils as utils_model
 from main.admin import readonly_user
 from main.forms import FeedbackForm, UploadDataForm
-from main.models import DataSet, DataFile, GenericRecord
+from main.models import DataSet, DataSetFile, GenericRecord
 from main.utils_data_package import to_template_workbook
 from main.utils_http import WorkbookResponse
 from main.utils_zip import zip_dir_to_temp_zip, export_zip
@@ -138,7 +138,7 @@ class UploadDataSetView(FormView):
         if dataset.type != DataSet.TYPE_GENERIC:
             messages.error(self.request, 'Import of data set of type ' + dataset.type + " is not yet implemented")
             return HttpResponseRedirect(reverse_lazy('admin:main_dataset_change', args=[pk]))
-        src_file = DataFile(file=self.request.FILES['file'])
+        src_file = DataSetFile(file=self.request.FILES['file'], dataset=dataset, uploaded_by=self.request.user)
         src_file.save()
         is_append = form.cleaned_data['append_mode']
         if not is_append:

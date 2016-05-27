@@ -55,10 +55,11 @@ class DataSet(models.Model):
 
 
 @python_2_unicode_compatible
-class DataFile(models.Model):
+class DataSetFile(models.Model):
     file = models.FileField(upload_to='%Y/%m/%d')
     uploaded_date = models.DateTimeField(auto_now_add=True)
     uploaded_by = models.ForeignKey(User, null=True, blank=True)
+    dataset = models.ForeignKey(DataSet, blank=False, null=True)
 
     def __str__(self):
         return self.file.name
@@ -86,8 +87,6 @@ class AbstractRecord(models.Model):
 
 class GenericRecord(AbstractRecord):
     site = models.ForeignKey('Site', null=True, blank=True)
-    src_file = models.ForeignKey(DataFile, null=True, blank=True)
-
 
 class Observation(AbstractRecord):
     site = models.ForeignKey('Site', null=True, blank=True)
