@@ -1,9 +1,0 @@
-{% extends "main/main_change_form.html" %}
-
-{% block object-tools-items %}
-    {% if not readonly_user %}
-        <li><a href="{% url 'main:data_upload' original.pk %}">Upload Data</a></li>
-        <li><a href="{% url 'main:descriptor_template' original.pk %}">Download Template</a></li>
-        {{ block.super }}
-    {% endif %}
-{% endblock %}

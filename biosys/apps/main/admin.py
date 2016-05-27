@@ -155,7 +155,7 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
 
 @admin.register(DataSet)
 class DataDescriptorAdmin(MainAppAdmin):
-    change_form_template = 'main/data_descriptor_change_form.html'
+    change_form_template = 'main/dataset_change_form.html'
     list_display = ['name', 'project', 'type']
 
 
