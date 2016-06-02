@@ -136,7 +136,7 @@ class GenericRecord(AbstractRecord):
 
 class Observation(AbstractRecord):
     site = models.ForeignKey('Site', null=True, blank=True)
-    date_time = models.DateTimeField(null=False, blank=False)
+    date_time = models.DateTimeField(null=True, blank=True)
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
 
 
@@ -147,7 +147,7 @@ class SpeciesObservation(AbstractRecord):
     database
     """
     site = models.ForeignKey('Site', null=True, blank=True)
-    date_time = models.DateTimeField(null=False, blank=False)
+    date_time = models.DateTimeField(null=True, blank=True)
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
 
     input_name = models.CharField(max_length=500, null=False, blank=False,
