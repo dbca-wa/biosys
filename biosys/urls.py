@@ -44,7 +44,7 @@ urlpatterns = [
     url(r'^admin/$', admin_view_selection_view),
     url(r'^admin/', include(admin.site.urls)),
     url(r'^download/', include('download.urls')),
-    url(r'^publish/', include('publish.urls')),
+    url(r'^old_publish/', include('old_publish.urls', namespace='old_publish')),
     url(r'^$', home_view_selection_view, name='home'),
     url(r'^dashboard/', login_required(DashboardView.as_view()), name='dashboard'),
     url(r'^about/', TemplateView.as_view(template_name='main/about.html'), name='about'),

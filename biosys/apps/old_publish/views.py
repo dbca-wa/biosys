@@ -21,7 +21,7 @@ from animals.models import Trap, AnimalObservation, OpportunisticObservation
 class ReportView(TemplateView):
     """Template view to allow filtering and analysis of data.
     """
-    template_name = 'publish/report.html'
+    template_name = 'old_publish/report.html'
 
     def get_context_data(self, **kwargs):
         context = super(ReportView, self).get_context_data(**kwargs)

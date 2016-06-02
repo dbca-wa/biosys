@@ -599,7 +599,7 @@
 
             function downloadData() {
                 window.open(
-                        "{% url 'publish_download' %}" + '?' + $.param(queryFilters()),
+                        "{% url 'old_publish:publish_download' %}" + '?' + $.param(queryFilters()),
                         "_blank"
                 );
             }
