@@ -142,7 +142,7 @@
         var biosys = biosys || {};
         biosys.report_page = (function ($, _) {
             var tableSelector = 'table#id-biosys-data';
-            var schemaDeferred = $.getJSON("{% url 'datasheet_schema' %}");
+            var schemaDeferred = $.getJSON("{% url 'main:datasheet_schema' %}");
             var spinner = new Spinner();
 
             function setWaitSpinner(on) {
