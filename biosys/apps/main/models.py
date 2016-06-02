@@ -1,10 +1,11 @@
 from __future__ import unicode_literals
 import datetime
-from django.db import transaction
 from os import path
 from reversion import revisions as reversion
 import jsontableschema
+import datapackage
 
+from django.db import transaction
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.text import Truncator
 from django.db.models import Max
@@ -13,7 +14,8 @@ from django.contrib.postgres.fields import JSONField
 from django.contrib.gis.geos import Point
 from django.contrib.auth.models import User
 from django.contrib.gis.geos.polygon import Polygon
-from django.contrib import messages
+from django.core.exceptions import ValidationError
+
 
 MODEL_SRID = 4326
 DATUM_CHOICES = [
@@ -41,6 +43,13 @@ class DataSet(models.Model):
                                 related_query_name='project')
     name = models.CharField(max_length=200, null=False, blank=False)
     type = models.CharField(max_length=100, null=False, blank=False, choices=TYPE_CHOICES, default=TYPE_GENERIC)
+    #  data_package should follow the Tabular Data Package format described at:
+    #  http://data.okfn.org/doc/tabular-data-package
+    #  also in:
+    #  http://dataprotocols.org/data-packages/
+    #  The schema inside the 'resources' must follow the JSON Table Schema defined at:
+    #  http://dataprotocols.org/json-table-schema/
+    # IMPORTANT! The data_package should contain only one resources
     data_package = JSONField()
 
     def __str__(self):
@@ -48,7 +57,43 @@ class DataSet(models.Model):
 
     @property
     def schema(self):
-        return self.data_package['resources'][0]['schema']
+        return self.resource.get('schema', {})
+
+    @property
+    def resource(self):
+        return self.resources[0]
+
+    @property
+    def resources(self):
+        return self.data_package.get('resources', [])
+
+    def clean(self):
+        """
+        Validate the data descriptor
+        """
+        #  Validate the data package
+        validator = datapackage.DataPackage(self.data_package)
+        try:
+            validator.validate()
+        except Exception as e:
+            raise ValidationError('Data package errors: {}'.format([e.message for e in validator.iter_errors()]))
+        # Check that there is at least one resources defined (not required by the standard)
+        if len(self.resources) == 0:
+            raise ValidationError('You must define at least one resource')
+        if len(self.resources) > 1:
+            raise ValidationError('Only one resource per DataSet')
+        # Validate the schema
+        if 'schema' not in self.resource:
+            raise ValidationError("Resource without a 'schema'.")
+        else:
+            schema = self.schema
+            try:
+                jsontableschema.validate(schema)
+            except Exception as e:
+                raise ValidationError(
+                    'Schema errors for resource "{}": {}'.format(
+                        self.resource.get('name'),
+                        [e.message for e in jsontableschema.validator.iter_errors(schema)]))
 
     class Meta:
         unique_together = ('project', 'name')

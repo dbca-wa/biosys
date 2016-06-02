@@ -1,7 +1,9 @@
+import json
 from django import forms
+from django.contrib.postgres.forms import JSONField
 from envelope.forms import ContactForm
 
-from .models import Project, SiteVisitDataSheetTemplate, Visit, Site
+from .models import Project, SiteVisitDataSheetTemplate, Visit, Site, DataSet
 
 DATUM_BOUNDS = {
     4326: (-180.0, -90.0, 180.0, 90.0),
@@ -9,6 +11,32 @@ DATUM_BOUNDS = {
     4203: (108.0, -39.0, 155.0, -10.0),
     4202: (129.0, -45.0, 155.0, -1.0)
 }
+
+
+class BetterJSONField(JSONField):
+    """
+    A form field for the JSONField.
+    It fixes the double 'stringification' (see prepare_value)
+    """
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('widget', forms.Textarea(attrs={'cols': 80, 'rows': 20}))
+        super(JSONField, self).__init__(**kwargs)
+
+    def prepare_value(self, value):
+        if isinstance(value, basestring):
+            # already a string
+            return value
+        else:
+            return json.dumps(value)
+
+
+class DataSetForm(forms.ModelForm):
+    data_package = BetterJSONField()
+
+    class Meta:
+        model = DataSet
+        exclude = []
 
 
 class ProjectForm(forms.ModelForm):

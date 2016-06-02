@@ -157,6 +157,7 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
 class DataSetAdmin(MainAppAdmin):
     change_form_template = 'main/dataset_change_form.html'
     list_display = ['name', 'project', 'type']
+    form = forms.DataSetForm
 
 
 @admin.register(GenericRecord)
