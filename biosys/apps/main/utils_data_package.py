@@ -1,6 +1,7 @@
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from jsontableschema.model import SchemaModel
+from datapackage import datapackage
 
 from django.utils.encoding import python_2_unicode_compatible
 from upload.utils_openpyxl import write_values, is_blank_value
@@ -83,6 +84,56 @@ class SchemaField:
         return '{}'.format(self.name)
 
 
+@python_2_unicode_compatible
+class SchemaForeignKey:
+    """
+    A utility class for foreign key in schema
+    """
+
+    def __init__(self, data):
+        self.data = data
+
+    def __str__(self):
+        return 'Foreign Key {}'.format(self.data)
+
+    @staticmethod
+    def _as_list(value):
+        if isinstance(value, list):
+            return value
+        elif isinstance(value, basestring):
+            return [value]
+        else:
+            return list(value)
+
+    @property
+    def fields(self):
+        return self._as_list(self.data.get('fields', []))
+
+    @property
+    def data_field(self):
+        return self.fields[0] if self.fields else None
+
+    @property
+    def reference(self):
+        return self.data.get('reference', {})
+
+    @property
+    def reference_fields(self):
+        return self._as_list(self.reference.get('fields', []))
+
+    @property
+    def reference_resource(self):
+        return self.reference.get('resource')
+
+    @property
+    def model(self):
+        return self.reference_resource
+
+    @property
+    def model_field(self):
+        return self.reference_fields[0] if self.reference_fields else None
+
+
 class Schema:
     """
     A utility class for schema.
@@ -91,8 +142,11 @@ class Schema:
     """
 
     def __init__(self, schema):
+        self.data = schema
         self.schema_model = SchemaModel(schema)
         self.fields = [SchemaField(f) for f in self.schema_model.fields]
+        self.foreign_keys = [SchemaForeignKey(fk) for fk in
+                             self.schema_model.foreignKeys] if self.schema_model.foreignKeys else []
 
     @property
     def headers(self):
@@ -165,6 +219,15 @@ class Schema:
             if not self.is_row_valid(row):
                 return False
         return True
+
+    def has_fk_for_model(self, model_name):
+        return self.get_fk_for_model(model_name) is not None
+
+    def get_fk_for_model(self, model_name):
+        for fk in self.foreign_keys:
+            if fk.model == model_name:
+                return fk
+        return None
 
 
 class Exporter:

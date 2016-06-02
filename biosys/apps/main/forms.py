@@ -251,6 +251,8 @@ class UploadDataForm(forms.Form):
     file = forms.FileField(required=True, help_text='CSV files only')
     append_mode = forms.BooleanField(required=False, initial=False,
                                      help_text="If checked data will be added to the current set")
+    create_site = forms.BooleanField(required=False, initial=False,
+                                     help_text="Check if you want to dynamically create site (not recommended)")
 
     def clean(self):
         if 'file' in self.cleaned_data and hasattr(self.cleaned_data['file'], 'content_type'):
