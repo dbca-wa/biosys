@@ -14,7 +14,7 @@ from main import utils as utils_model
 from main.admin import readonly_user
 from main.forms import FeedbackForm, UploadDataForm
 from main.models import DataSet, DataSetFile, GenericRecord
-from main.utils_data_package import to_template_workbook
+from main.utils_data_package import to_template_workbook, Schema
 from main.utils_http import WorkbookResponse
 from main.utils_zip import zip_dir_to_temp_zip, export_zip
 from upload.validation import DATASHEET_MODELS_MAPPING
@@ -141,19 +141,37 @@ class UploadDataSetView(FormView):
         src_file = DataSetFile(file=self.request.FILES['file'], dataset=dataset, uploaded_by=self.request.user)
         src_file.save()
         is_append = form.cleaned_data['append_mode']
-        if not is_append:
-            GenericRecord.objects.filter(dataset=dataset).delete()
+        schema = Schema(dataset.schema)
         with open(src_file.path, 'rb') as csvfile:
             reader = csv.DictReader(csvfile)
             records = []
+            row_number = 1
+            errors = []
             for row in reader:
-                record = GenericRecord(
-                    dataset=dataset,
-                    data=row,
-                    src_file=src_file
-                )
-                records.append(record)
-            GenericRecord.objects.bulk_create(records)
+                row_number += 1
+                field_errors = schema.get_error_fields(row)
+                if len(field_errors) > 0:
+                    for field_name, data in field_errors:
+                        msg = 'Row #{}: {}'.format(row_number, data.get('error'))
+                        errors.append(msg)
+                else:
+                    record = GenericRecord(
+                        dataset=dataset,
+                        data=row,
+                    )
+                    records.append(record)
+            if not errors:
+                if not is_append:
+                    GenericRecord.objects.filter(dataset=dataset).delete()
+                GenericRecord.objects.bulk_create(records)
+                messages.success(self.request, '{} records successfully imported in dataset {}'.format(
+                    len(records), dataset
+                ))
+            else:
+                messages.error(self.request, '\n'.join(errors))
+                url = reverse_lazy('admin:main_dataset_change', args=[pk])
+                return HttpResponseRedirect(url)
+
         return super(UploadDataSetView, self).form_valid(form)
 
 

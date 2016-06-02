@@ -53,7 +53,7 @@ class DataSet(models.Model):
     data_package = JSONField()
 
     def __str__(self):
-        return '{} - {}'.format(self.name, self.project)
+        return '{}'.format(self.name)
 
     @property
     def schema(self):

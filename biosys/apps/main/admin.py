@@ -157,21 +157,24 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
 class DataSetAdmin(MainAppAdmin):
     change_form_template = 'main/dataset_change_form.html'
     list_display = ['name', 'project', 'type']
+    list_filter = ['project']
     form = forms.DataSetForm
 
 
 @admin.register(GenericRecord)
-class DataSetAdmin(VersionAdmin):
-    pass
+class GenericRecordAdmin(MainAppAdmin):
+    list_display = ['dataset', 'data']
+    list_filter = ['dataset']
+    readonly_fields = ['data']
 
 
 @admin.register(Observation)
-class ObservationAdmin(VersionAdmin):
+class ObservationAdmin(MainAppAdmin):
     pass
 
 
 @admin.register(SpeciesObservation)
-class SpeciesObservationAdmin(VersionAdmin):
+class SpeciesObservationAdmin(MainAppAdmin):
     pass
 
 
