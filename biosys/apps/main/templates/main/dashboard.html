@@ -45,7 +45,7 @@
 		    		</div>
 		    	</div>
 	  		</a>
-	    	<a href="{% url 'old_publish:publish_report' %}">
+	    	<a href="{% url 'publish:data_view' %}">
 		  		<div class="col-md-3">
 		    		<div class="thumbnail">
 		      			<img src="{% static 'img/data.jpg' %}" alt="project">
@@ -56,7 +56,7 @@
 		    	</div>
 	  		</a>
             {% else %}
-	    	<a href="{% url 'old_publish:publish_report' %}">
+	    	<a href="{% url 'publish:data_view' %}">
             <div class="thumbnail">
                 <img src="{% static 'img/data.jpg' %}" alt="project">
                 <div class="caption">

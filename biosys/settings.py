@@ -57,6 +57,7 @@ INSTALLED_APPS = (
 PROJECT_APPS = (
     'main',
     'species',
+    'publish',
 
 
     # legacy apps

@@ -43,6 +43,7 @@ urlpatterns = [
     # use a function to determine where admin/ will resolve to, based on the user
     url(r'^admin/$', admin_view_selection_view),
     url(r'^admin/', include(admin.site.urls)),
+    url(r'^publish/', include('publish.urls', namespace='publish')),
     url(r'^download/', include('download.urls')),
     url(r'^old_publish/', include('old_publish.urls', namespace='old_publish')),
     url(r'^$', home_view_selection_view, name='home'),
