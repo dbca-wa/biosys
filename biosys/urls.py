@@ -10,7 +10,7 @@ from django.contrib.auth import views as auth_views
 from main.views import DashboardView, FeedbackView
 
 # All API views are defined in api.py
-from api import v1_api
+from api import v1_api, v2_api
 
 
 def home_view_selection_view(request):
@@ -31,7 +31,7 @@ def admin_view_selection_view(request):
 
 urlpatterns = [
     # API URLs
-    url(r'^api/', include(v1_api.urls)),
+    url(r'^api/', include(v1_api.urls + v2_api.urls)),
     # Authentication URLs
     url(r'^logout/$', auth_views.logout, {'next_page': '/login/'}),
     url('^', include('django.contrib.auth.urls')),
