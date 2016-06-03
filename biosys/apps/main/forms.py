@@ -20,7 +20,7 @@ class BetterJSONField(JSONField):
     """
 
     def __init__(self, **kwargs):
-        kwargs.setdefault('widget', forms.Textarea(attrs={'cols': 80, 'rows': 20}))
+        kwargs.setdefault('widget', forms.Textarea(attrs={'cols': 80, 'rows': 40}))
         super(JSONField, self).__init__(**kwargs)
 
     def prepare_value(self, value):

@@ -1,14 +1,14 @@
+import csv
 import json
 import tempfile
-import csv
 
 from braces.views import FormMessagesMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
+from django.core.urlresolvers import reverse_lazy
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView, View, FormView
-from django.core.urlresolvers import reverse, reverse_lazy
-from django.contrib import messages
-from django.db.models import ObjectDoesNotExist
 from envelope.views import ContactView
 
 from main import utils as utils_model
@@ -21,7 +21,7 @@ from main.utils_zip import zip_dir_to_temp_zip, export_zip
 from upload.validation import DATASHEET_MODELS_MAPPING
 
 
-class DashboardView(TemplateView):
+class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'main/dashboard.html'
 
     def get_context_data(self, **kwargs):
@@ -116,7 +116,7 @@ class FeedbackView(FormMessagesMixin, ContactView):
     success_url = 'home'
 
 
-class DataSetTemplateView(View):
+class DataSetTemplateView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         ds = get_object_or_404(DataSet, pk=kwargs.get('pk'))
         wb = to_template_workbook(ds)
@@ -124,7 +124,7 @@ class DataSetTemplateView(View):
         return response
 
 
-class UploadDataSetView(FormView):
+class UploadDataSetView(LoginRequiredMixin, FormView):
     template_name = 'main/data_upload.html'
     form_class = UploadDataForm
     success_url = reverse_lazy('admin:main_dataset_changelist')
@@ -217,5 +217,5 @@ class UploadDataSetView(FormView):
         return super(UploadDataSetView, self).form_valid(form)
 
 
-class ExportDataSetView(View):
+class ExportDataSetView(LoginRequiredMixin, View):
     pass
