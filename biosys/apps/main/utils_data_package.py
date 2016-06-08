@@ -1,9 +1,8 @@
+from django.utils.encoding import python_2_unicode_compatible
+from jsontableschema.model import SchemaModel
 from openpyxl import Workbook
 from openpyxl.styles import Font
-from jsontableschema.model import SchemaModel
-from datapackage import datapackage
 
-from django.utils.encoding import python_2_unicode_compatible
 from upload.utils_openpyxl import write_values, is_blank_value
 
 COLUMN_HEADER_FONT = Font(bold=True)
@@ -239,11 +238,29 @@ class Exporter:
         self.errors = []
         self.records = records if records else []
 
+    def row_it(self):
+        for record in self.records:
+            row = []
+            for field in self.schema.field_names:
+                row.append(unicode(record.get(field, '')))
+            yield row
+
     def to_csv(self):
-        pass
+        rows = list()
+        rows.append(self.headers)
+        rows += list(self.row_it())
+        return rows
 
     def to_worksheet(self, ws):
-        pass
+        ws.title = self.ds.name
+        write_values(ws, 1, 1, self.headers, direction='right', font=COLUMN_HEADER_FONT)
+        row_count = 1
+        for row in self.row_it():
+            row_count += 1
+            write_values(ws, row_count, 1, row)
+        return ws
 
     def to_workbook(self):
-        pass
+        wb = Workbook()
+        self.to_worksheet(wb.active)
+        return wb
