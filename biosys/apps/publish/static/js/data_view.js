@@ -11,8 +11,8 @@ biosys.view_data = function ($, _, moduleOptions) {
             processing: true,
             deferRender: true,
             serverSide: false,
-            autowidth: false,
-            scrollX: true
+            autowidth: true,
+            scrollx: true
         },
         selectors = options.selectors,
         data = options.data,
