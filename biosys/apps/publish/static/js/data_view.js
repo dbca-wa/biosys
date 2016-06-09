@@ -18,6 +18,7 @@ biosys.view_data = function ($, _, moduleOptions) {
         data = options.data,
         $tablePanel = $(selectors.tablePanel),
         $tabletitle = $(selectors.tableTitle),
+        $downloadButton = $(selectors.downloadButton),
         dataTable,
         datasets;
 
@@ -59,6 +60,7 @@ biosys.view_data = function ($, _, moduleOptions) {
     function clearDataPanel(){
         $tablePanel.children().remove();
         $tabletitle.text('');
+        //$downloadButton.hide();
     }
 
     function showData(name) {
@@ -99,6 +101,7 @@ biosys.view_data = function ($, _, moduleOptions) {
                 });
             dataTable = biosys.dataTable.initTable($tableNode, tableOptions,  colDefs);
             $tabletitle.text(name);
+            $downloadButton.show();
         }
     }
 

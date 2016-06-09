@@ -78,17 +78,19 @@
         </div>
     </div>
 
+    <div class="row" id="id-div-result-header">
+        <div class="col-md-6 text-center">
+            <h3 id="id-datatable-title"></h3>
+        </div>
+        <div class="col-md-6">
+            <a href="#" type="button" class="btn btn-primary btn-lg pull-left hide"
+               id="id-button-download">Download (Excel)</a>
+        </div>
+    </div>
     <div class="row" id="id-div-result-panel">
-            <div class="col-xs-12">
-                <h3 id="id-datatable-title"></h3>
-                <div id="id-div-datatable"></div>
-            </div>
-{#        <div class="row">#}
-{#            <div class="col-xs-12">#}
-{#                <div id="id-div-datatable">#}
-{#                </div>#}
-{#            </div>#}
-{#        </div>#}
+        <div class="col-xs-12">
+            <div id="id-div-datatable"></div>
+        </div>
     </div>
 {% endblock %}
 
@@ -115,7 +117,8 @@
                     navPanel: '#id-div-nav-panel',
                     tablePanel: '#id-div-datatable',
                     tableTitle: '#id-datatable-title',
-                    dataTable: '#data-table'
+                    dataTable: '#data-table',
+                    downloadButton: '#id-button-download'
                 },
                 data: {% if dataJSON %} {{ dataJSON|safe }} {% else %} {} {% endif %}
             });

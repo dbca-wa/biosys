@@ -236,7 +236,7 @@ LOGGING = {
             'propagate': False,
         },
         'import_lci': {
-            'handlers': ['import_lci', 'console'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False
         }
