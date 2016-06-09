@@ -1,0 +1,125 @@
+{% extends "base_biosys.html" %}
+{% load static %}
+{% load bootstrap3 %}
+
+
+{% block extra_style %}
+    {{ block.super }}
+    <link rel="stylesheet"
+          href="//static.dpaw.wa.gov.au/static/libs/datatables/1.10.10/css/dataTables.bootstrap.css">
+    <link href="//static.dpaw.wa.gov.au/static/libs/select2/3.5.3/select2.min.css" rel="stylesheet"/>
+    <link href="//static.dpaw.wa.gov.au/static/libs/select2-bootstrap-css/1.4.6/select2-bootstrap.css"
+          rel="stylesheet"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/data_view.css' %}">
+{% endblock %}
+
+{% block page_content_inner %}
+    <div class="row">
+        <div class="col-md-10">
+            <div><a href="{% url 'old_publish:publish_report' %}">legacy data view(LCI)</a></div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3">
+            <form class="form-horizontal" role="form">
+                <div class="form-group">
+                    <label for="filter-project"
+                           class="col-lg-1 col-sm-2 col-xs-12 control-label">Project</label>
+
+                    <div class="col-lg-5 col-sm-4 col-xs-12">
+                        <select class="form-control" id="filter-project">
+                            <option></option>
+                            {% for project in projects %}
+                                <option value="{{ project.pk }}"
+                                        data-target="/api/v2/dataset/?project__id={{ project.pk }}">
+                                    {{ project.title }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-10 col-md-offset-1">
+            <div class="panel-group hidden" id="filter-panel">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h4 class="panel-title">
+                            <a data-toggle="collapse" data-parent="#filter-panel" href="#collapseFilters">
+                                <span class="glyphicon glyphicon-search"></span>
+                                FILTERS (click to collapse/expand)
+                            </a>
+                        </h4>
+                    </div>
+                    <div id="collapseFilters" class="panel-collapse collapse in">
+                        <div class="panel-body">
+                            <form class="form-horizontal" role="form" id="filter-form">
+                                <div class="form-group">
+                                    <label for="filter-site"
+                                           class="col-lg-1 col-sm-2 col-xs-12 control-label">Site</label>
+
+                                    <div class="col-lg-5 col-sm-4 col-xs-12">
+                                        <select class="form-control" id="filter-site" name="site"></select>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-12">
+            <ul class="nav nav-pills " id="id-div-nav-panel">
+            </ul>
+        </div>
+    </div>
+
+    <div class="row" id="id-div-result-panel">
+            <div class="col-xs-12">
+                <h3 id="id-datatable-title"></h3>
+                <div id="id-div-datatable"></div>
+            </div>
+{#        <div class="row">#}
+{#            <div class="col-xs-12">#}
+{#                <div id="id-div-datatable">#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    {{ block.super }}
+    <script type="text/javascript" charset="utf8"
+            src="//static.dpaw.wa.gov.au/static/libs/moment.js/2.9.0/moment.min.js"></script>
+    <script type="text/javascript" charset="utf8"
+            src="//static.dpaw.wa.gov.au/static/libs/datatables/1.10.11/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" charset="utf8"
+            src="//static.dpaw.wa.gov.au/static/libs/datatables/1.10.11/js/dataTables.bootstrap.min.js"></script>
+    <script type="text/javascript" charset="utf8"
+            src="//static.dpaw.wa.gov.au/static/libs/select2/3.5.4/select2.min.js"></script>
+    <script type="text/javascript" charset="utf8"
+            src="//static.dpaw.wa.gov.au/static/libs/bootstrap-datetimepicker/4.7.14/js/bootstrap-datetimepicker.min.js"></script>
+    <script type="text/javascript" charset="utf8"
+            src="//cdn.datatables.net/plug-ins/1.10.11/sorting/datetime-moment.js"></script>
+    <script type="text/javascript" charset="utf8" src="{% static 'js/data_view.js' %}"></script>
+    <script type="text/javascript">
+        $(function () {
+            var module = biosys.view_data($, _, {
+                selectors: {
+                    projectFilter: '#filter-project',
+                    navPanel: '#id-div-nav-panel',
+                    tablePanel: '#id-div-datatable',
+                    tableTitle: '#id-datatable-title',
+                    dataTable: '#data-table'
+                },
+                data: {% if dataJSON %} {{ dataJSON|safe }} {% else %} {} {% endif %}
+            });
+            module.init();
+        });
+    </script>
+{% endblock %}

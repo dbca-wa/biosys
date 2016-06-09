@@ -1,8 +1,7 @@
 from django.conf.urls import url
-from django.contrib.auth.decorators import login_required
-from .views import ReportView, DownloadView
+from apps.publish.views import data_view
 
 urlpatterns = [
-    url(r'^$', login_required(ReportView.as_view()), name='publish_report'),
-    url(r'^download/$', login_required(DownloadView.as_view()), name='publish_download'),
+    url(r'^$', data_view.DataView.as_view(), name='data_view'),
+    url(r'^data/(?P<pk>\d+)/?$', data_view.JSONDataTableView.as_view(), name='data_json'),
 ]

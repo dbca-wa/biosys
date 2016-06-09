@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import csv
+import json
 from django.conf.urls import url
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
@@ -88,6 +89,7 @@ class BaseMetaClass:
 class UserResource(ModelResource):
     """django.contrib.auth User model
     """
+
     class Meta(BaseMetaClass):
         queryset = User.objects.all()
 
@@ -112,6 +114,22 @@ class ProjectResource(ModelResource):
             'extent_long_max': ALL,
             'comments': ['contains', 'icontains'],
         }
+
+
+class DataSetResource(ModelResource):
+    project = fields.ToOneField(
+        ProjectResource, attribute='project', readonly=True, full=False)
+    data_package = fields.DictField(attribute='data_package')
+
+    class Meta:
+        queryset = models.DataSet.objects.all()
+        filtering = {
+            'id': ALL,
+            'name': ALL,
+            'project': ALL_WITH_RELATIONS
+        }
+        authentication = SessionAuthentication()
+        allowed_methods = ['get']
 
 
 class DatumField(fields.IntegerField):
@@ -333,9 +351,8 @@ class AbstractSiteVisitObservationResource(ModelResource):
 
 
 class SpeciesObservationResource(AbstractSiteVisitObservationResource):
-
     class Meta(BaseMetaClass):
-        queryset = models.SpeciesObservation.objects.all()
+        queryset = models.OldSpeciesObservation.objects.all()
         filtering = {
             'id': ALL,
             'site_visit': ALL_WITH_RELATIONS,
@@ -376,6 +393,7 @@ class SiteCharacteristicResource(AbstractSiteVisitObservationResource):
             'comments': ['contains', 'icontains'],
         }
 
+
 #########################
 # Lookup resources
 #########################
@@ -384,6 +402,7 @@ class SiteCharacteristicResource(AbstractSiteVisitObservationResource):
 class AbstractLookupResource(ModelResource):
     """Abstract ModelResource class for lookup models.
     """
+
     class Meta(BaseMetaClass):
         filtering = {
             'id': ALL,
