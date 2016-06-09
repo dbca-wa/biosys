@@ -1,26 +1,27 @@
+import csv
 import json
 import tempfile
-import csv
 
 from braces.views import FormMessagesMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
+from django.core.urlresolvers import reverse_lazy
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView, View, FormView
-from django.core.urlresolvers import reverse, reverse_lazy
-from django.contrib import messages
 from envelope.views import ContactView
 
 from main import utils as utils_model
 from main.admin import readonly_user
 from main.forms import FeedbackForm, UploadDataForm
-from main.models import DataSet, DataFile, GenericRecord
-from main.utils_data_package import to_template_workbook
+from main.models import DataSet, DataSetFile, GenericRecord, Site
+from main.utils_data_package import to_template_workbook, Schema
 from main.utils_http import WorkbookResponse
 from main.utils_zip import zip_dir_to_temp_zip, export_zip
 from upload.validation import DATASHEET_MODELS_MAPPING
 
 
-class DashboardView(TemplateView):
+class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'main/dashboard.html'
 
     def get_context_data(self, **kwargs):
@@ -115,7 +116,7 @@ class FeedbackView(FormMessagesMixin, ContactView):
     success_url = 'home'
 
 
-class DataSetTemplateView(View):
+class DataSetTemplateView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         ds = get_object_or_404(DataSet, pk=kwargs.get('pk'))
         wb = to_template_workbook(ds)
@@ -123,10 +124,10 @@ class DataSetTemplateView(View):
         return response
 
 
-class UploadDataSetView(FormView):
+class UploadDataSetView(LoginRequiredMixin, FormView):
     template_name = 'main/data_upload.html'
     form_class = UploadDataForm
-    success_url = reverse_lazy('admin:main_datadescriptor_changelist')
+    success_url = reverse_lazy('admin:main_dataset_changelist')
 
     def get_context_data(self, **kwargs):
         kwargs['opts'] = DataSet._meta
@@ -134,28 +135,87 @@ class UploadDataSetView(FormView):
 
     def form_valid(self, form):
         pk = self.kwargs.get('pk')
-        descriptor = get_object_or_404(DataSet, pk=pk)
-        if descriptor.type != DataSet.TYPE_GENERIC:
-            messages.error(self.request, 'Import of data set of type ' + descriptor.type + " is not yet implemented")
-            return HttpResponseRedirect(reverse_lazy('admin:main_datadescriptor_change', args=[pk]))
-        src_file = DataFile(file=self.request.FILES['file'])
+        dataset = get_object_or_404(DataSet, pk=pk)
+        error_url = reverse_lazy('admin:main_dataset_change', args=[pk])
+        if dataset.type != DataSet.TYPE_GENERIC:
+            messages.error(self.request, 'Import of data set of type ' + dataset.type + " is not yet implemented")
+            return HttpResponseRedirect(reverse_lazy('admin:main_dataset_change', args=[pk]))
+        src_file = DataSetFile(file=self.request.FILES['file'], dataset=dataset, uploaded_by=self.request.user)
         src_file.save()
         is_append = form.cleaned_data['append_mode']
-        if not is_append:
-            GenericRecord.objects.filter(data_descriptor=descriptor).delete()
+        create_site = form.cleaned_data['create_site']
+        schema = Schema(dataset.schema)
         with open(src_file.path, 'rb') as csvfile:
             reader = csv.DictReader(csvfile)
             records = []
+            row_number = 1
+            warnings = []
+            errors = []
+            site_fk = schema.get_fk_for_model('Site')
+            if site_fk is None or site_fk.model_field is None:
+                warnings.append(
+                    "The schema doesn't include a a related link to a Site model. The data won't be linked to a Site")
             for row in reader:
-                record = GenericRecord(
-                    data_descriptor=descriptor,
-                    data=row,
-                    src_file=src_file
-                )
-                records.append(record)
-            GenericRecord.objects.bulk_create(records)
+                row_number += 1
+                field_errors = schema.get_error_fields(row)
+                if len(field_errors) > 0:
+                    for field_name, data in field_errors:
+                        msg = 'Row #{}: {}'.format(row_number, data.get('error'))
+                        errors.append(msg)
+                else:
+                    # data valid
+                    #  find site
+                    site = None
+                    if site_fk:
+                        model_field = site_fk.model_field
+                        data = row.get(site_fk.data_field)
+                        kwargs = {
+                            "project": dataset.project,
+                            model_field: data
+                        }
+                        site = Site.objects.filter(**kwargs).first()
+                        if site is None:
+                            if create_site:
+                                try:
+                                    site = Site.objects.create(**kwargs)
+                                except Exception as e:
+                                    errors.append("Error while creating the site '{}: {}".format(
+                                        data,
+                                        e.message
+                                    ))
+                            else:
+                                msg = "Row #{}: could not find the site '{}:".format(row_number, data)
+                                errors.append(msg)
+                    record = GenericRecord(
+                        site=site,
+                        dataset=dataset,
+                        data=row,
+                    )
+                    records.append(record)
+            if not errors:
+                if not is_append:
+                    GenericRecord.objects.filter(dataset=dataset).delete()
+                GenericRecord.objects.bulk_create(records)
+                if warnings:
+                    msg = "{} records imported but with the following warnings: \n {}".format(
+                        len(records),
+                        '\n'.join(warnings)
+                    )
+                    messages.warning(self.request, msg)
+                    return HttpResponseRedirect(error_url)
+                else:
+                    msg = "{} records successfully imported in dataset '{}'".format(
+                        len(records), dataset
+                    )
+                    messages.success(self.request, msg)
+            else:
+                src_file.delete()
+                msg = '\n'.join(errors)
+                messages.error(self.request, msg)
+                return HttpResponseRedirect(error_url)
+
         return super(UploadDataSetView, self).form_valid(form)
 
 
-class ExportDataSetView(View):
+class ExportDataSetView(LoginRequiredMixin, View):
     pass

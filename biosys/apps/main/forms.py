@@ -1,7 +1,9 @@
+import json
 from django import forms
+from django.contrib.postgres.forms import JSONField
 from envelope.forms import ContactForm
 
-from .models import Project, SiteVisitDataSheetTemplate, Visit, Site
+from .models import Project, SiteVisitDataSheetTemplate, Visit, Site, DataSet
 
 DATUM_BOUNDS = {
     4326: (-180.0, -90.0, 180.0, 90.0),
@@ -9,6 +11,32 @@ DATUM_BOUNDS = {
     4203: (108.0, -39.0, 155.0, -10.0),
     4202: (129.0, -45.0, 155.0, -1.0)
 }
+
+
+class BetterJSONField(JSONField):
+    """
+    A form field for the JSONField.
+    It fixes the double 'stringification' (see prepare_value)
+    """
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('widget', forms.Textarea(attrs={'cols': 80, 'rows': 40}))
+        super(JSONField, self).__init__(**kwargs)
+
+    def prepare_value(self, value):
+        if isinstance(value, basestring):
+            # already a string
+            return value
+        else:
+            return json.dumps(value)
+
+
+class DataSetForm(forms.ModelForm):
+    data_package = BetterJSONField()
+
+    class Meta:
+        model = DataSet
+        exclude = []
 
 
 class ProjectForm(forms.ModelForm):
@@ -223,6 +251,8 @@ class UploadDataForm(forms.Form):
     file = forms.FileField(required=True, help_text='CSV files only')
     append_mode = forms.BooleanField(required=False, initial=False,
                                      help_text="If checked data will be added to the current set")
+    create_site = forms.BooleanField(required=False, initial=False,
+                                     help_text="Check if you want to dynamically create site (not recommended)")
 
     def clean(self):
         if 'file' in self.cleaned_data and hasattr(self.cleaned_data['file'], 'content_type'):

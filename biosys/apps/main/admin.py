@@ -154,23 +154,27 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
 
 
 @admin.register(DataSet)
-class DataDescriptorAdmin(MainAppAdmin):
+class DataSetAdmin(MainAppAdmin):
     change_form_template = 'main/dataset_change_form.html'
     list_display = ['name', 'project', 'type']
+    list_filter = ['project']
+    form = forms.DataSetForm
 
 
 @admin.register(GenericRecord)
-class DataSetAdmin(VersionAdmin):
-    pass
+class GenericRecordAdmin(MainAppAdmin):
+    list_display = ['dataset', 'data']
+    list_filter = ['dataset']
+    readonly_fields = ['data']
 
 
 @admin.register(Observation)
-class ObservationAdmin(VersionAdmin):
+class ObservationAdmin(MainAppAdmin):
     pass
 
 
 @admin.register(SpeciesObservation)
-class SpeciesObservationAdmin(VersionAdmin):
+class SpeciesObservationAdmin(MainAppAdmin):
     pass
 
 
@@ -257,7 +261,7 @@ class VisitAdmin(MainAppAdmin):
 
             if request.POST.get('_cancel'):
                 self.message_user(request, 'Datasheet upload cancelled.'.format(obj), level=logging.WARNING)
-                return HttpResponseRedirect(reverse('publish_report'))
+                return HttpResponseRedirect(reverse('old_publish:publish_report'))
                 # return HttpResponseRedirect(reverse('admin:main_visit_change', args=[object_id]))
             if form.is_valid():
                 # create the SiteVisitDataFile
@@ -270,7 +274,7 @@ class VisitAdmin(MainAppAdmin):
                 if site_visit is not None and site_visit.data_status == 'approved':
                     self.message_user(request, """Datasheet for this site visit has already been uploaded and approved by the
                     curator, so cannot be overwritten.""".format(obj), level=logging.WARNING)
-                    return HttpResponseRedirect(reverse('publish_report'))
+                    return HttpResponseRedirect(reverse('old_publish:publish_report'))
                     # return HttpResponseRedirect(reverse('admin:main_visit_change', args=[object_id]))
 
                 validator = SiteDataFileValidator(sv_file)
@@ -294,8 +298,8 @@ class VisitAdmin(MainAppAdmin):
                     builder = SiteVisitDataBuilder(sv_file)
                     builder.build_all(keep_invalid=False)
 
-                    # Return to the publish/data view.
-                    return HttpResponseRedirect(reverse('publish_report'))
+                    # Return to the old_publish/data view.
+                    return HttpResponseRedirect(reverse('old_publish:publish_report'))
                     # return HttpResponseRedirect(reverse('admin:main_visit_change', args=[object_id]))
 
         else:
@@ -339,7 +343,7 @@ class VisitAdmin(MainAppAdmin):
                 self.message_user(request, 'Datasheet upload cancelled.'.format(obj),
                                   level=logging.WARNING)
 
-            return HttpResponseRedirect(reverse('publish_report'))
+            return HttpResponseRedirect(reverse('old_publish:publish_report'))
             # return HttpResponseRedirect(reverse('admin:main_visit_change', args=[visit_id]))
 
         context = {

@@ -6,13 +6,29 @@ from vegetation import api as veg_api
 from animals import api as animal_api
 
 
-class BiosysApi(Api):
+class V2Api(Api):
     """A subclass of Api that restricts anonymous access to the top_level view.
     """
     def top_level(self, request, api_name=None):
         if not request.user.is_authenticated():
             return HttpUnauthorized('Forbidden')
+        return super(V2Api, self).top_level(request, api_name)
+
+
+class BiosysApi(Api):
+    """A subclass of Api that restricts anonymous access to the top_level view.
+    """
+
+    def top_level(self, request, api_name=None):
+        if not request.user.is_authenticated():
+            return HttpUnauthorized('Forbidden')
         return super(BiosysApi, self).top_level(request, api_name)
+
+
+v2_api = V2Api(api_name='v2')
+v2_api.register(main_api.ProjectResource())
+v2_api.register(main_api.SiteResource())
+v2_api.register(main_api.DataSetResource())
 
 
 v1_api = BiosysApi(api_name='v1')

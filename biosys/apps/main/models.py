@@ -1,10 +1,11 @@
 from __future__ import unicode_literals
 import datetime
-from django.db import transaction
 from os import path
 from reversion import revisions as reversion
 import jsontableschema
+import datapackage
 
+from django.db import transaction
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.text import Truncator
 from django.db.models import Max
@@ -13,7 +14,8 @@ from django.contrib.postgres.fields import JSONField
 from django.contrib.gis.geos import Point
 from django.contrib.auth.models import User
 from django.contrib.gis.geos.polygon import Polygon
-from django.contrib import messages
+from django.core.exceptions import ValidationError
+
 
 MODEL_SRID = 4326
 DATUM_CHOICES = [
@@ -37,27 +39,72 @@ class DataSet(models.Model):
                     (TYPE_GENERIC, TYPE_GENERIC.capitalize()),
                     (TYPE_OBSERVATION, TYPE_OBSERVATION.capitalize()),
                     (TYPE_SPECIES_OBSERVATION, 'Species observation')]
-    project = models.ForeignKey('Project', null=False, blank=False)
+    project = models.ForeignKey('Project', null=False, blank=False, related_name='projects',
+                                related_query_name='project')
     name = models.CharField(max_length=200, null=False, blank=False)
     type = models.CharField(max_length=100, null=False, blank=False, choices=TYPE_CHOICES, default=TYPE_GENERIC)
+    #  data_package should follow the Tabular Data Package format described at:
+    #  http://data.okfn.org/doc/tabular-data-package
+    #  also in:
+    #  http://dataprotocols.org/data-packages/
+    #  The schema inside the 'resources' must follow the JSON Table Schema defined at:
+    #  http://dataprotocols.org/json-table-schema/
+    # IMPORTANT! The data_package should contain only one resources
     data_package = JSONField()
 
     def __str__(self):
-        return self.name
+        return '{}'.format(self.name)
 
     @property
     def schema(self):
-        return self.data_package['resources'][0]['schema']
+        return self.resource.get('schema', {})
+
+    @property
+    def resource(self):
+        return self.resources[0]
+
+    @property
+    def resources(self):
+        return self.data_package.get('resources', [])
+
+    def clean(self):
+        """
+        Validate the data descriptor
+        """
+        #  Validate the data package
+        validator = datapackage.DataPackage(self.data_package)
+        try:
+            validator.validate()
+        except Exception as e:
+            raise ValidationError('Data package errors: {}'.format([e.message for e in validator.iter_errors()]))
+        # Check that there is at least one resources defined (not required by the standard)
+        if len(self.resources) == 0:
+            raise ValidationError('You must define at least one resource')
+        if len(self.resources) > 1:
+            raise ValidationError('Only one resource per DataSet')
+        # Validate the schema
+        if 'schema' not in self.resource:
+            raise ValidationError("Resource without a 'schema'.")
+        else:
+            schema = self.schema
+            try:
+                jsontableschema.validate(schema)
+            except Exception as e:
+                raise ValidationError(
+                    'Schema errors for resource "{}": {}'.format(
+                        self.resource.get('name'),
+                        [e.message for e in jsontableschema.validator.iter_errors(schema)]))
 
     class Meta:
         unique_together = ('project', 'name')
 
 
 @python_2_unicode_compatible
-class DataFile(models.Model):
+class DataSetFile(models.Model):
     file = models.FileField(upload_to='%Y/%m/%d')
     uploaded_date = models.DateTimeField(auto_now_add=True)
     uploaded_by = models.ForeignKey(User, null=True, blank=True)
+    dataset = models.ForeignKey(DataSet, blank=False, null=True)
 
     def __str__(self):
         return self.file.name
@@ -74,10 +121,10 @@ class DataFile(models.Model):
 @python_2_unicode_compatible
 class AbstractRecord(models.Model):
     data = JSONField()
-    data_descriptor = models.ForeignKey(DataSet, null=False, blank=False)
+    dataset = models.ForeignKey(DataSet, null=False, blank=False)
 
     def __str__(self):
-        return "{0}: {1}".format(self.data_descriptor.name, Truncator(self.data).chars(100))
+        return "{0}: {1}".format(self.dataset.name, Truncator(self.data).chars(100))
 
     class Meta:
         abstract = True
@@ -85,12 +132,11 @@ class AbstractRecord(models.Model):
 
 class GenericRecord(AbstractRecord):
     site = models.ForeignKey('Site', null=True, blank=True)
-    src_file = models.ForeignKey(DataFile, null=True, blank=True)
 
 
 class Observation(AbstractRecord):
     site = models.ForeignKey('Site', null=True, blank=True)
-    date_time = models.DateTimeField(null=False, blank=False)
+    date_time = models.DateTimeField(null=True, blank=True)
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
 
 
@@ -101,7 +147,7 @@ class SpeciesObservation(AbstractRecord):
     database
     """
     site = models.ForeignKey('Site', null=True, blank=True)
-    date_time = models.DateTimeField(null=False, blank=False)
+    date_time = models.DateTimeField(null=True, blank=True)
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
 
     input_name = models.CharField(max_length=500, null=False, blank=False,
@@ -159,9 +205,9 @@ class Project(models.Model):
                                     verbose_name="Extent Geometry", help_text="")
     # can't extend AbstractRecord directly because we need to change the related name and possible null
     data = JSONField(null=True)
-    data_descriptor = models.ForeignKey(DataSet, null=True, blank=True,
-                                        related_name='descriptors',
-                                        related_query_name='descriptor')
+    dataset = models.ForeignKey(DataSet, null=True, blank=True,
+                                related_name='data_sets',
+                                related_query_name='data_set')
 
     class Meta:
         pass
@@ -267,7 +313,7 @@ class Site(models.Model):
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Geometry", help_text="")
     data = JSONField(null=True)
-    data_descriptor = models.ForeignKey(DataSet, null=True, blank=True)
+    dataset = models.ForeignKey(DataSet, null=True, blank=True)
 
     class Meta:
         unique_together = ('project', 'site_code')

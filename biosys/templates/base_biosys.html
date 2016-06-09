@@ -1,6 +1,11 @@
 {% extends "webtemplate_dpaw/base.html" %}
 {% load static from staticfiles %}
 
+{% block extra_style %}
+    {{ block.super }}
+    <link href="{% static 'css/biosys.css' %}" rel="stylesheet" type="text/css"/>
+{% endblock %}
+
 {% block bootflat_style %}{% endblock %}
 {% block bootflat_js %}{% endblock %}
 
@@ -77,7 +82,7 @@
 
 {% block extra_js %}
     {# The always useful lodash (underscore) lib#}
-    <script src="{% static 'js/libs/lodash.js' %}"></script>
+    <script src='//static.dpaw.wa.gov.au/static/libs/lodash.js/4.5.1/lodash.min.js'></script>
     {# The project library#}
     <script src="{% static 'js/biosys.js' %}"></script>
 {% endblock %}
