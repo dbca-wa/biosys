@@ -100,7 +100,7 @@ biosys.view_data = function ($, _, moduleOptions) {
             );
             url = '/publish/data/' + ds.id;
             tableOptions = $.extend({
-                order: [[0, 'asc']]
+                order: [[0, 'asc']]  // sort by id
             }, defaultTableOptions, {
                     ajax: {
                         url: url,
@@ -108,7 +108,7 @@ biosys.view_data = function ($, _, moduleOptions) {
                         error: function (xhr, textStatus, thrownError) {
                             console.log("Error while loading applications data:", thrownError, textStatus, xhr.responseText, xhr.status);
                             //Stop the data table 'Processing'.
-                            //$(options.selectors.applicationsTable + '_processing').hide();
+                            //$(options.selectors.table + '_processing').hide();
                         }
                     }
                 });
