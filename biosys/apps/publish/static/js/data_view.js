@@ -60,7 +60,7 @@ biosys.view_data = function ($, _, moduleOptions) {
     function clearDataPanel(){
         $tablePanel.children().remove();
         $tabletitle.text('');
-        //$downloadButton.hide();
+        $downloadButton.addClass('hide');
     }
 
     function showData(name) {
@@ -101,7 +101,8 @@ biosys.view_data = function ($, _, moduleOptions) {
                 });
             dataTable = biosys.dataTable.initTable($tableNode, tableOptions,  colDefs);
             $tabletitle.text(name);
-            $downloadButton.show();
+            $downloadButton.attr('href', '/publish/export/' + ds.id);
+            $downloadButton.removeClass('hide');
         }
     }
 

@@ -232,7 +232,7 @@ class Schema:
 class Exporter:
     def __init__(self, dataset, records=None):
         self.ds = dataset
-        self.schema = Schema(dataset)
+        self.schema = Schema(dataset.schema)
         self.headers = self.schema.headers
         self.warnings = []
         self.errors = []
@@ -242,7 +242,7 @@ class Exporter:
         for record in self.records:
             row = []
             for field in self.schema.field_names:
-                row.append(unicode(record.get(field, '')))
+                row.append(unicode(record.data.get(field, '')))
             yield row
 
     def to_csv(self):
@@ -261,6 +261,7 @@ class Exporter:
         return ws
 
     def to_workbook(self):
+        # TODO: implement version in write_only mode.
         wb = Workbook()
         self.to_worksheet(wb.active)
         return wb
