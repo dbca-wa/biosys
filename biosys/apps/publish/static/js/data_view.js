@@ -80,15 +80,28 @@ biosys.view_data = function ($, _, moduleOptions) {
             headers = _.map(ds.data_package.resources[0].schema.fields, function (field) {
                 return field.name;
             });
+            // add the hidden id column
+
             colDefs = _.map(headers, function (header) {
                 return {
-                    'title': header,
-                    'name': header,
-                    'data': header
+                    title: header,
+                    name: header,
+                    data: header
                 };
             });
+            // add the hidden id column at the first place
+            colDefs.unshift(
+                {
+                    title: 'id',
+                    name: 'id',
+                    data: 'id',
+                    visible: false
+                }
+            );
             url = '/publish/data/' + ds.id;
-            tableOptions = $.extend({}, defaultTableOptions, {
+            tableOptions = $.extend({
+                order: [[0, 'asc']]
+            }, defaultTableOptions, {
                     ajax: {
                         url: url,
                         method: 'get',
@@ -109,7 +122,6 @@ biosys.view_data = function ($, _, moduleOptions) {
     return {
         init: function () {
             initProjectFilter();
-            //$('select').select2();
         }
     };
 };

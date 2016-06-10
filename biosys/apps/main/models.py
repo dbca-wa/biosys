@@ -126,6 +126,10 @@ class AbstractRecord(models.Model):
     def __str__(self):
         return "{0}: {1}".format(self.dataset.name, Truncator(self.data).chars(100))
 
+    @property
+    def data_with_id(self):
+        return dict({'id': self.id}, **self.data)
+
     class Meta:
         abstract = True
 
