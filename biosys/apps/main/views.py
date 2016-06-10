@@ -15,7 +15,7 @@ from main import utils as utils_model
 from main.admin import readonly_user
 from main.forms import FeedbackForm, UploadDataForm
 from main.models import DataSet, DataSetFile, GenericRecord, Site
-from main.utils_data_package import to_template_workbook, Schema
+from main.utils_data_package import Schema, Exporter
 from main.utils_http import WorkbookResponse
 from main.utils_zip import zip_dir_to_temp_zip, export_zip
 from upload.validation import DATASHEET_MODELS_MAPPING
@@ -114,14 +114,6 @@ class FeedbackView(FormMessagesMixin, ContactView):
     form_class = FeedbackForm
     template_name = 'envelope/feedback.html'
     success_url = 'home'
-
-
-class DataSetTemplateView(LoginRequiredMixin, View):
-    def get(self, request, *args, **kwargs):
-        ds = get_object_or_404(DataSet, pk=kwargs.get('pk'))
-        wb = to_template_workbook(ds)
-        response = WorkbookResponse(wb, ds.name)
-        return response
 
 
 class UploadDataSetView(LoginRequiredMixin, FormView):

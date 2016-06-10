@@ -8,20 +8,6 @@ from upload.utils_openpyxl import write_values, is_blank_value
 COLUMN_HEADER_FONT = Font(bold=True)
 
 
-def write_headers(dataset, ws):
-    schema = dataset.schema
-    headers = [field.get('name', 'No name') for field in schema.get('fields', [])]
-    write_values(ws, 1, 1, headers, direction='right', font=COLUMN_HEADER_FONT)
-
-
-def to_template_workbook(dataset):
-    wb = Workbook()
-    ws = wb.active
-    ws.title = dataset.name
-    write_headers(dataset, wb.active)
-    return wb
-
-
 @python_2_unicode_compatible
 class SchemaField:
     """

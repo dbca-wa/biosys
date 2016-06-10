@@ -23,3 +23,13 @@ class ExportDataSetView(View):
         file_name = ds.name + '_' + now.strftime('%Y-%m-%d-%H%M%S') + '.xlsx'
         response = WorkbookResponse(wb, file_name)
         return response
+
+
+class ExportTemplateView(View):
+    def get(self, request, *args, **kwargs):
+        ds = get_object_or_404(DataSet, pk=kwargs.get('pk'))
+        exporter = Exporter(ds)
+        wb = exporter.to_workbook()
+        file_name = ds.name + '_template'
+        response = WorkbookResponse(wb, file_name)
+        return response
