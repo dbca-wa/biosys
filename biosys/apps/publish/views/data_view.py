@@ -19,18 +19,18 @@ class DataView(LoginRequiredMixin, TemplateView):
 
 
 class JSONDataTableView(LoginRequiredMixin, View):
-    def get(self, reuest, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         ds = get_object_or_404(DataSet, pk=kwargs.get('pk'))
         rows = []
         records = GenericRecord.objects.filter(dataset=ds)
         for record in records:
-            rows.append(record.data)
+            rows.append(record.data_with_id)
         records = Observation.objects.filter(dataset=ds)
         for record in records:
-            rows.append(record.data)
+            rows.append(record.data_with_id)
         records = SpeciesObservation.objects.filter(dataset=ds)
         for record in records:
-            rows.append(record.data)
+            rows.append(record.data_with_id)
         return JsonResponse({
             'data': rows
         })
