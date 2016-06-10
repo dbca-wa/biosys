@@ -215,7 +215,3 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                 return HttpResponseRedirect(error_url)
 
         return super(UploadDataSetView, self).form_valid(form)
-
-
-class ExportDataSetView(LoginRequiredMixin, View):
-    pass

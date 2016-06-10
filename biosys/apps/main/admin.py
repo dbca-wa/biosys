@@ -87,7 +87,7 @@ class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
     list_display = ('title', 'id', 'code', 'custodian')
     fields = ['title', 'code', 'custodian', 'email', 'objectives', 'methodology',
               'funding', 'duration', 'datum', 'extent_lat_min', 'extent_lat_max',
-              'extent_long_min', 'extent_long_max', 'comments']
+              'extent_long_min', 'extent_long_max', 'attributes_descriptor', 'attributes', 'comments']
     readonly_fields = ['id']
     search_fields = ['title', 'code', 'custodian', 'objectives', 'methodology']
     modifiable = False
@@ -119,7 +119,7 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
         (None, {
             'fields': (
                 'project', 'site_ID', 'parent_site', 'site_code', 'site_name', 'date_established', 'established_by',
-                'datum', 'latitude', 'longitude', 'accuracy')
+                'datum', 'latitude', 'longitude', 'accuracy', 'dataset', 'data')
         }),
         ('Plot orientation and size (for rectangular quadrats)', {
             'classes': ('grp-collapse',),
