@@ -2,6 +2,7 @@ from django.utils.encoding import python_2_unicode_compatible
 from jsontableschema.model import SchemaModel
 from openpyxl import Workbook
 from openpyxl.styles import Font
+from openpyxl.writer.write_only import WriteOnlyCell
 
 from upload.utils_openpyxl import write_values, is_blank_value
 
@@ -237,17 +238,22 @@ class Exporter:
         rows += list(self.row_it())
         return rows
 
-    def to_worksheet(self, ws):
+    def _to_worksheet(self, ws):
         ws.title = self.ds.name
-        write_values(ws, 1, 1, self.headers, direction='right', font=COLUMN_HEADER_FONT)
-        row_count = 1
+        # write headers
+        headers = []
+        for header in self.headers:
+            cell = WriteOnlyCell(ws, value=header)
+            cell.font = COLUMN_HEADER_FONT
+            headers.append(cell)
+        ws.append(headers)
         for row in self.row_it():
-            row_count += 1
-            write_values(ws, row_count, 1, row)
+            ws.append(row)
         return ws
 
     def to_workbook(self):
         # TODO: implement version in write_only mode.
-        wb = Workbook()
-        self.to_worksheet(wb.active)
+        wb = Workbook(write_only=True)
+        ws = wb.create_sheet()
+        self._to_worksheet(ws)
         return wb
