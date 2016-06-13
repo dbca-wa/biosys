@@ -3,7 +3,7 @@
 {% block object-tools-items %}
     {% if not readonly_user %}
         <li><a href="{% url 'main:dataset_upload' original.pk %}">Upload Data</a></li>
-        <li><a href="{% url 'main:dataset_export_template' original.pk %}">Download Template</a></li>
+        <li><a href="{% url 'publish:data_export_template' original.pk %}">Download Template</a></li>
         {{ block.super }}
     {% endif %}
 {% endblock %}

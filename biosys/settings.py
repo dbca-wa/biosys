@@ -33,7 +33,7 @@ if not DEBUG:
 # Application definition
 # The variables below are added to all responses in biosys/context_processors.py
 SITE_TITLE = 'BioSys - WA Biological Survey Database'
-APPLICATION_VERSION_NO = '2.0.a'
+APPLICATION_VERSION_NO = '2.0.b1'
 
 INSTALLED_APPS = (
     'grappelli',  # Must be before django.contrib.admin
@@ -236,7 +236,7 @@ LOGGING = {
             'propagate': False,
         },
         'import_lci': {
-            'handlers': ['import_lci', 'console'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False
         }

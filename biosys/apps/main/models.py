@@ -126,6 +126,10 @@ class AbstractRecord(models.Model):
     def __str__(self):
         return "{0}: {1}".format(self.dataset.name, Truncator(self.data).chars(100))
 
+    @property
+    def data_with_id(self):
+        return dict({'id': self.id}, **self.data)
+
     class Meta:
         abstract = True
 
@@ -204,10 +208,8 @@ class Project(models.Model):
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Extent Geometry", help_text="")
     # can't extend AbstractRecord directly because we need to change the related name and possible null
-    data = JSONField(null=True)
-    dataset = models.ForeignKey(DataSet, null=True, blank=True,
-                                related_name='data_sets',
-                                related_query_name='data_set')
+    attributes = JSONField(null=True, blank=True)
+    attributes_descriptor = JSONField(null=True, blank=True)
 
     class Meta:
         pass
@@ -312,7 +314,7 @@ class Site(models.Model):
                                 verbose_name="Comments", help_text="")
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Geometry", help_text="")
-    data = JSONField(null=True)
+    data = JSONField(null=True, blank=True)
     dataset = models.ForeignKey(DataSet, null=True, blank=True)
 
     class Meta:

@@ -18,6 +18,7 @@ biosys.view_data = function ($, _, moduleOptions) {
         data = options.data,
         $tablePanel = $(selectors.tablePanel),
         $tabletitle = $(selectors.tableTitle),
+        $downloadButton = $(selectors.downloadButton),
         dataTable,
         datasets;
 
@@ -59,6 +60,7 @@ biosys.view_data = function ($, _, moduleOptions) {
     function clearDataPanel(){
         $tablePanel.children().remove();
         $tabletitle.text('');
+        $downloadButton.addClass('hide');
     }
 
     function showData(name) {
@@ -78,34 +80,48 @@ biosys.view_data = function ($, _, moduleOptions) {
             headers = _.map(ds.data_package.resources[0].schema.fields, function (field) {
                 return field.name;
             });
+            // add the hidden id column
+
             colDefs = _.map(headers, function (header) {
                 return {
-                    'title': header,
-                    'name': header,
-                    'data': header
+                    title: header,
+                    name: header,
+                    data: header
                 };
             });
+            // add the hidden id column at the first place
+            colDefs.unshift(
+                {
+                    title: 'id',
+                    name: 'id',
+                    data: 'id',
+                    visible: false
+                }
+            );
             url = '/publish/data/' + ds.id;
-            tableOptions = $.extend({}, defaultTableOptions, {
+            tableOptions = $.extend({
+                order: [[0, 'asc']]  // sort by id
+            }, defaultTableOptions, {
                     ajax: {
                         url: url,
                         method: 'get',
                         error: function (xhr, textStatus, thrownError) {
                             console.log("Error while loading applications data:", thrownError, textStatus, xhr.responseText, xhr.status);
                             //Stop the data table 'Processing'.
-                            //$(options.selectors.applicationsTable + '_processing').hide();
+                            //$(options.selectors.table + '_processing').hide();
                         }
                     }
                 });
             dataTable = biosys.dataTable.initTable($tableNode, tableOptions,  colDefs);
             $tabletitle.text(name);
+            $downloadButton.attr('href', '/publish/export/' + ds.id);
+            $downloadButton.removeClass('hide');
         }
     }
 
     return {
         init: function () {
             initProjectFilter();
-            //$('select').select2();
         }
     };
 };

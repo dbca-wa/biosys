@@ -2,24 +2,11 @@ from django.utils.encoding import python_2_unicode_compatible
 from jsontableschema.model import SchemaModel
 from openpyxl import Workbook
 from openpyxl.styles import Font
+from openpyxl.writer.write_only import WriteOnlyCell
 
 from upload.utils_openpyxl import write_values, is_blank_value
 
 COLUMN_HEADER_FONT = Font(bold=True)
-
-
-def write_headers(dataset, ws):
-    schema = dataset.schema
-    headers = [field.get('name', 'No name') for field in schema.get('fields', [])]
-    write_values(ws, 1, 1, headers, direction='right', font=COLUMN_HEADER_FONT)
-
-
-def to_template_workbook(dataset):
-    wb = Workbook()
-    ws = wb.active
-    ws.title = dataset.name
-    write_headers(dataset, wb.active)
-    return wb
 
 
 @python_2_unicode_compatible
@@ -232,7 +219,7 @@ class Schema:
 class Exporter:
     def __init__(self, dataset, records=None):
         self.ds = dataset
-        self.schema = Schema(dataset)
+        self.schema = Schema(dataset.schema)
         self.headers = self.schema.headers
         self.warnings = []
         self.errors = []
@@ -242,7 +229,7 @@ class Exporter:
         for record in self.records:
             row = []
             for field in self.schema.field_names:
-                row.append(unicode(record.get(field, '')))
+                row.append(unicode(record.data.get(field, '')))
             yield row
 
     def to_csv(self):
@@ -251,16 +238,22 @@ class Exporter:
         rows += list(self.row_it())
         return rows
 
-    def to_worksheet(self, ws):
+    def _to_worksheet(self, ws):
         ws.title = self.ds.name
-        write_values(ws, 1, 1, self.headers, direction='right', font=COLUMN_HEADER_FONT)
-        row_count = 1
+        # write headers
+        headers = []
+        for header in self.headers:
+            cell = WriteOnlyCell(ws, value=header)
+            cell.font = COLUMN_HEADER_FONT
+            headers.append(cell)
+        ws.append(headers)
         for row in self.row_it():
-            row_count += 1
-            write_values(ws, row_count, 1, row)
+            ws.append(row)
         return ws
 
     def to_workbook(self):
-        wb = Workbook()
-        self.to_worksheet(wb.active)
+        # TODO: implement version in write_only mode.
+        wb = Workbook(write_only=True)
+        ws = wb.create_sheet()
+        self._to_worksheet(ws)
         return wb
