@@ -152,7 +152,7 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                 field_errors = schema.get_error_fields(row)
                 if len(field_errors) > 0:
                     for field_name, data in field_errors:
-                        msg = 'Row #{}: {}'.format(row_number, data.get('error'))
+                        msg = "Row #{}, '{}': {}".format(row_number, field_name, data.get('error'))
                         errors.append(msg)
                 else:
                     # data valid
@@ -191,7 +191,7 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                 if warnings:
                     msg = "{} records imported but with the following warnings: \n {}".format(
                         len(records),
-                        '\n'.join(warnings)
+                        '<br>'.join(warnings)
                     )
                     messages.warning(self.request, msg)
                     return HttpResponseRedirect(error_url)
@@ -202,7 +202,7 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                     messages.success(self.request, msg)
             else:
                 src_file.delete()
-                msg = '\n'.join(errors)
+                msg = '<br>'.join(errors)
                 messages.error(self.request, msg)
                 return HttpResponseRedirect(error_url)
 

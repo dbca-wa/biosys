@@ -1,10 +1,14 @@
-from django.utils.encoding import python_2_unicode_compatible
+import io
+import json
+
+import jsontableschema
 from jsontableschema.model import SchemaModel
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.writer.write_only import WriteOnlyCell
+from django.utils.encoding import python_2_unicode_compatible
 
-from upload.utils_openpyxl import write_values, is_blank_value
+from upload.utils_openpyxl import is_blank_value
 
 COLUMN_HEADER_FONT = Font(bold=True)
 
@@ -257,3 +261,12 @@ class Exporter:
         ws = wb.create_sheet()
         self._to_worksheet(ws)
         return wb
+
+
+def infer_csv(csvpath, outpath, row_limit):
+    with io.open(outpath, 'w') as fp:
+        with io.open(csvpath) as stream:
+            headers = stream.readline().rstrip('\n').split(',')
+            values = jsontableschema.compat.csv_reader(stream)
+            schema = jsontableschema.infer(headers, values, row_limit=row_limit)
+            fp.write(unicode(json.dumps(schema, indent=2, ensure_ascii=False)))

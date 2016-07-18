@@ -8,7 +8,7 @@ from django.http import HttpResponseBadRequest, HttpResponseForbidden
 import StringIO
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
-from tastypie.authentication import SessionAuthentication
+from tastypie.authentication import ApiKeyAuthentication, MultiAuthentication, SessionAuthentication
 from tastypie.constants import ALL, ALL_WITH_RELATIONS
 from tastypie.exceptions import Unauthorized
 from tastypie.resources import ModelResource
@@ -81,7 +81,7 @@ class CSVSerializer(Serializer):
 class BaseMetaClass:
     """A base class to define comment Meta options for BioSys resource models.
     """
-    authentication = SessionAuthentication()
+    authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
     allowed_methods = ['get']
     serializer = CSVSerializer()
 

@@ -86,7 +86,7 @@ biosys.view_data = function ($, _, moduleOptions) {
                 return {
                     title: header,
                     name: header,
-                    data: header
+                    data: header.replace('.', '\\.')  // escape the 'dot' notation to allow '.' in data.
                 };
             });
             // add the hidden id column at the first place
