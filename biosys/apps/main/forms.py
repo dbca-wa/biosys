@@ -259,6 +259,10 @@ class UploadDataForm(forms.Form):
             # cvs only (possibly others in future).
             mime = [
                 'text/csv',
+                'application/vnd.ms-excel',
+                'application/vnd.msexcel'
+                'text/comma-separated-values',
+                'application/csv'
             ]
             f = self.cleaned_data['file'].content_type
             if f not in mime:
