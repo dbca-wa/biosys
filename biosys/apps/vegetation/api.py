@@ -27,6 +27,8 @@ class AbstractVegObservationResource(ModelResource):
         VegetationVisitResource, attribute='vegetation_visit', readonly=True, full=True)
 
     class Meta(BaseMetaClass):
+        limit = 0
+        max_limit = 0
         filtering = {
             'id': ALL,
             'vegetation_visit': ALL_WITH_RELATIONS,

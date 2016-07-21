@@ -19,6 +19,8 @@ from . import models
 from .admin import readonly_user, user_can_approve
 from .utils import flatten
 
+# TODO: use Django Rest Framework instead of TastyPie
+
 
 class CSVSerializer(Serializer):
     formats = ['json', 'jsonp', 'xml', 'yaml', 'html', 'plist', 'csv']
@@ -84,6 +86,8 @@ class BaseMetaClass:
     authentication = MultiAuthentication(SessionAuthentication(), ApiKeyAuthentication())
     allowed_methods = ['get']
     serializer = CSVSerializer()
+    limit = 0
+    max_limit = 0
 
 
 class UserResource(ModelResource):
@@ -97,6 +101,8 @@ class UserResource(ModelResource):
 class ProjectResource(ModelResource):
     class Meta(BaseMetaClass):
         queryset = models.Project.objects.all().order_by('title')
+        include_resource_uri = False
+        fields = ['id', 'title', 'code']
         filtering = {
             'id': ALL,
             'title': ALL,
@@ -151,35 +157,37 @@ class YesNoBoolean(fields.BooleanField):
 class SiteResource(ModelResource):
     project = fields.ToOneField(
         ProjectResource, attribute='project', readonly=True, full=True)
-    parent_site = fields.ToOneField(
-        'main.api.SiteResource', attribute='project', readonly=True, null=True)
-    location = fields.ToOneField(
-        'main.api.LocationLookupResource', attribute='location',
-        readonly=True, null=True, full=True)
-    geology_group = fields.ToOneField(
-        'main.api.GeologyGroupLookupResource', attribute='geology_group',
-        readonly=True, null=True, full=True)
-    vegetation_group = fields.ToOneField(
-        'main.api.VegetationGroupLookupResource', attribute='vegetation_group',
-        readonly=True, null=True, full=True)
-    underlaying_geology = fields.ToOneField(
-        'main.api.GeologyLookupResource', attribute='underlaying_geology',
-        readonly=True, null=True, full=True)
-    closest_water_type = fields.ToOneField(
-        'main.api.WaterTypeLookupResource', attribute='closest_water_type',
-        readonly=True, null=True, full=True)
-    landform_pattern = fields.ToOneField(
-        'main.api.LandformPatternLookupResource', attribute='landform_pattern',
-        readonly=True, null=True, full=True)
-    landform_element = fields.ToOneField(
-        'main.api.LandformElementLookupResource', attribute='landform_element',
-        readonly=True, null=True, full=True)
-    soil_surface_texture = fields.ToOneField(
-        'main.api.SoilSurfaceTextureLookupResource', attribute='soil_surface_texture',
-        readonly=True, null=True, full=True)
+    # parent_site = fields.ToOneField(
+    #     'main.api.SiteResource', attribute='project', readonly=True, null=True)
+    # location = fields.ToOneField(
+    #     'main.api.LocationLookupResource', attribute='location',
+    #     readonly=True, null=True, full=True)
+    # geology_group = fields.ToOneField(
+    #     'main.api.GeologyGroupLookupResource', attribute='geology_group',
+    #     readonly=True, null=True, full=True)
+    # vegetation_group = fields.ToOneField(
+    #     'main.api.VegetationGroupLookupResource', attribute='vegetation_group',
+    #     readonly=True, null=True, full=True)
+    # underlaying_geology = fields.ToOneField(
+    #     'main.api.GeologyLookupResource', attribute='underlaying_geology',
+    #     readonly=True, null=True, full=True)
+    # closest_water_type = fields.ToOneField(
+    #     'main.api.WaterTypeLookupResource', attribute='closest_water_type',
+    #     readonly=True, null=True, full=True)
+    # landform_pattern = fields.ToOneField(
+    #     'main.api.LandformPatternLookupResource', attribute='landform_pattern',
+    #     readonly=True, null=True, full=True)
+    # landform_element = fields.ToOneField(
+    #     'main.api.LandformElementLookupResource', attribute='landform_element',
+    #     readonly=True, null=True, full=True)
+    # soil_surface_texture = fields.ToOneField(
+    #     'main.api.SoilSurfaceTextureLookupResource', attribute='soil_surface_texture',
+    #     readonly=True, null=True, full=True)
 
     class Meta(BaseMetaClass):
         queryset = models.Site.objects.all().order_by('site_code')
+        fields = ['site_ID', 'site_code', 'id']
+        include_resource_uri = False
         filtering = {
             'id': ALL,
             'project': ALL_WITH_RELATIONS,
@@ -353,6 +361,8 @@ class AbstractSiteVisitObservationResource(ModelResource):
 class SpeciesObservationResource(AbstractSiteVisitObservationResource):
     class Meta(BaseMetaClass):
         queryset = models.OldSpeciesObservation.objects.all()
+        include_resource_uri = False
+        excludes = ['site_visit']
         filtering = {
             'id': ALL,
             'site_visit': ALL_WITH_RELATIONS,
@@ -404,6 +414,8 @@ class AbstractLookupResource(ModelResource):
     """
 
     class Meta(BaseMetaClass):
+        fields = ['value', 'code']
+        include_resource_uri = False
         filtering = {
             'id': ALL,
             'value': ALL,
