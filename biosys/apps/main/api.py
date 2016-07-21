@@ -19,6 +19,8 @@ from . import models
 from .admin import readonly_user, user_can_approve
 from .utils import flatten
 
+# TODO: use Django Rest Framework instead of TastyPie
+
 
 class CSVSerializer(Serializer):
     formats = ['json', 'jsonp', 'xml', 'yaml', 'html', 'plist', 'csv']
