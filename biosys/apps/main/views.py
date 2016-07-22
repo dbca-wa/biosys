@@ -117,7 +117,7 @@ class FeedbackView(FormMessagesMixin, ContactView):
 
 
 class UploadDataSetView(LoginRequiredMixin, FormView):
-    #TODO: implement Observation and SpeciesObservation upload
+    # TODO: implement Observation and SpeciesObservation upload
     template_name = 'main/data_upload.html'
     form_class = UploadDataForm
     success_url = reverse_lazy('admin:main_dataset_changelist')

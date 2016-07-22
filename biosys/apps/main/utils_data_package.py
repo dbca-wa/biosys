@@ -4,7 +4,7 @@ from os import listdir
 from os.path import join
 
 import jsontableschema
-from jsontableschema.model import SchemaModel
+from jsontableschema.model import SchemaModel, types
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.writer.write_only import WriteOnlyCell
@@ -41,6 +41,20 @@ class SchemaField:
     @property
     def required(self):
         return self.constraints.get('required', False)
+
+    @property
+    def aliases(self):
+        return self.data['aliases'] if 'aliases' in self.data else []
+
+    def has_alias(self, name, icase=False):
+        for alias in self.aliases:
+            if alias == name or (icase and alias.lower() == name.lower()):
+                return True
+        return False
+
+    def has_name_or_alias(self, name, icase=False):
+        has_name = self.name == name or (icase and self.name.lower() == name.lower())
+        return has_name or self.has_alias(name, icase=icase)
 
     def cast(self, value):
         """
@@ -220,6 +234,83 @@ class Schema:
             if fk.model == model_name:
                 return fk
         return None
+
+
+class ObservationSchema(Schema):
+    """
+    A schema specific to an Observation Dataset.
+    It's main job is to deal with the observation date and it's geometry
+    (lat/long or geojson)
+    """
+
+    def _get_observation_date_field_or_throw(self):
+        """
+        Rules:
+        1- If there's only one field of type date it's this one.
+        2- More than one date field, look for name or alisases 'Observation Date'
+        3- Throw exception if not found
+        :return: the SchemaField
+        """
+        date_fields = [field for field in self.fields
+                       if isinstance(field.type, types.DateType) or isinstance(field.type, types.DateTimeType)]
+        dates_count = len(date_fields)
+        if dates_count == 0:
+            msg = 'One field must be of type date to be a valid Observation schema.'
+            raise Exception(msg)
+        if dates_count == 1:
+            return date_fields[0]
+        else:
+            # more than one date. Look for the Observation Date field
+            lname = 'Observation Date'.lower()
+            observation_dates = [field for field in date_fields
+                                 if field.has_name_or_alias(lname, icase=True)]
+            count = len(observation_dates)
+            if count == 0:
+                msg = "The schema contains more than one date. One must be named or alias as 'Observation Date'."
+                raise Exception(msg)
+            if count > 1:
+                msg = "The schema contains more than one 'Observation Date' field (as name or alias)."
+                raise Exception(msg)
+            return observation_dates[0]
+
+
+    def _valid_geometry_or_throw(self):
+        """
+        Rules:
+        1 - look for type geojson. If one only use it
+        2 - look for type geopoint. If one only use it
+        3 - look for latitude/longitude
+        :return:
+        """
+        geometry_fields = [field for field in self.fields
+                           if isinstance(field.type, types.GeoJSONType) or isinstance(field.type, types.GeoPointType)]
+        # TODO: implement latitude/longitude
+        return False
+
+
+class SpeciesObservation(ObservationSchema):
+    """
+    An ObservationSchema with a Species Name
+    """
+
+    SPECIES_NAME_FIELD = 'Species Name'
+
+    def _get_species_name_field_or_throw(self):
+        """
+        Rules:
+        One and only string field with a name or alias 'Species Name' (case insensitive)
+        :return: the field or throw an exception
+        """
+        species_fields = [field for field in self.fields if field.has_name_or_alias(self.SPECIES_NAME_FIELD)]
+        count = len(species_fields)
+        if count == 0:
+            msg = "No 'Species Name' field found. One field must have a name or alias '{}' ".format(
+                self.SPECIES_NAME_FIELD)
+            raise Exception(msg)
+        if count > 1:
+            msg = "More than one '{}' field found (in name or aliases).".format(self.SPECIES_NAME_FIELD)
+            raise Exception(msg)
+        return species_fields[0]
 
 
 class Exporter:
