@@ -242,12 +242,15 @@ class ObservationSchema(Schema):
     It's main job is to deal with the observation date and it's geometry
     (lat/long or geojson)
     """
+    OBSERVATION_DATE_FIELD_NAME = 'Observation Date'
+    OBSERVATION_DATE_TAG_NAME = '~observation_date'
 
     def _get_observation_date_field_or_throw(self):
         """
-        Rules:
+        Precedence Rules:
         1- If there's only one field of type date it's this one.
-        2- More than one date field, look for name or alisases 'Observation Date'
+        2- More than one date field, look for an aliass '~observation_date'
+        3- Look for a name 'Observation Date' case insensitive
         3- Throw exception if not found
         :return: the SchemaField
         """
@@ -260,19 +263,28 @@ class ObservationSchema(Schema):
         if dates_count == 1:
             return date_fields[0]
         else:
-            # more than one date. Look for the Observation Date field
-            lname = 'Observation Date'.lower()
+            # more than one date. Look for the ~observation_date alias
+            observation_dates = [field for field in date_fields if field.has_alias(self.OBSERVATION_DATE_TAG_NAME)]
+            count = len(observation_dates)
+            if count > 1:
+                msg = "The schema contains more than one field tagged as observation date (alias = '{}')."\
+                    .format(self.OBSERVATION_DATE_TAG_NAME)
+                raise Exception(msg)
+            if count == 1:
+                return observation_dates[0]
+            # search for name or alias 'Observation Date' (case insensitive)
             observation_dates = [field for field in date_fields
-                                 if field.has_name_or_alias(lname, icase=True)]
+                                 if field.name.lower() == self.OBSERVATION_DATE_FIELD_NAME.lower()]
             count = len(observation_dates)
             if count == 0:
-                msg = "The schema contains more than one date. One must be named or alias as 'Observation Date'."
+                msg = "The schema contains more than one date. One must be named '{}' or " \
+                      "has an alias '{}'.".format(self.OBSERVATION_DATE_FIELD_NAME, self.OBSERVATION_DATE_TAG_NAME)
                 raise Exception(msg)
             if count > 1:
-                msg = "The schema contains more than one 'Observation Date' field (as name or alias)."
+                msg = "The schema contains more than one '{}' field (as name or alias)."\
+                    .format(self.OBSERVATION_DATE_FIELD_NAME)
                 raise Exception(msg)
             return observation_dates[0]
-
 
     def _valid_geometry_or_throw(self):
         """
@@ -288,27 +300,38 @@ class ObservationSchema(Schema):
         return False
 
 
-class SpeciesObservation(ObservationSchema):
+class SpeciesObservationSchema(ObservationSchema):
     """
     An ObservationSchema with a Species Name
     """
 
-    SPECIES_NAME_FIELD = 'Species Name'
+    SPECIES_NAME_FIELD_NAME = 'Species Name'
+    SPECIES_NAME_TAG_NAME = '~species_name'
 
     def _get_species_name_field_or_throw(self):
         """
         Rules:
-        One and only string field with a name or alias 'Species Name' (case insensitive)
+        1: search for alias ~species_name
+        2: One and only one string field with a name 'Species Name' (case insensitive)
         :return: the field or throw an exception
         """
-        species_fields = [field for field in self.fields if field.has_name_or_alias(self.SPECIES_NAME_FIELD)]
+        species_fields = [field for field in self.fields if field.has_alias(self.SPECIES_NAME_TAG_NAME)]
+        count = len(species_fields)
+        if count > 1:
+            msg = "The schema contains more than one field tagged as Species Name (alias = ~{})."\
+                .format(self.SPECIES_NAME_TAG_NAME)
+            raise Exception(msg)
+        if count == 1:
+            return species_fields[0]
+        # search for Species Name field
+        species_fields = [field for field in self.fields if field.name.lower() == self.SPECIES_NAME_FIELD_NAME.lower()]
         count = len(species_fields)
         if count == 0:
-            msg = "No 'Species Name' field found. One field must have a name or alias '{}' ".format(
-                self.SPECIES_NAME_FIELD)
+            msg = "No 'Species Name' field found. One field must have a name {} or alias '{}' ".format(
+                self.SPECIES_NAME_FIELD_NAME, '~species_name')
             raise Exception(msg)
         if count > 1:
-            msg = "More than one '{}' field found (in name or aliases).".format(self.SPECIES_NAME_FIELD)
+            msg = "More than one '{}' field found.".format(self.SPECIES_NAME_FIELD_NAME)
             raise Exception(msg)
         return species_fields[0]
 
@@ -356,7 +379,7 @@ class Exporter:
         return wb
 
 
-def infer_csv(csvfile, outfile, row_limit = 0):
+def infer_csv(csvfile, outfile, row_limit=0):
     with io.open(outfile, 'w') as fp:
         with io.open(csvfile) as stream:
             headers = stream.readline().rstrip('\n').split(',')
@@ -369,6 +392,3 @@ def infer_csvs(path, row_limit=0):
     for filename in listdir(path):
         if filename.endswith('.csv'):
             infer_csv(join(path, filename), join(path, filename) + '.json', row_limit)
-
-
-
