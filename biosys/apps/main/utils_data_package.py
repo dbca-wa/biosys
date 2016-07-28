@@ -312,7 +312,7 @@ class SpeciesObservationSchema(ObservationSchema):
         """
         Rules:
         1: search for alias ~species_name
-        2: One and only one string field with a name 'Species Name' (case insensitive)
+        2: One field with a name 'Species Name' (case insensitive)
         :return: the field or throw an exception
         """
         species_fields = [field for field in self.fields if field.has_alias(self.SPECIES_NAME_TAG_NAME)]
@@ -324,7 +324,8 @@ class SpeciesObservationSchema(ObservationSchema):
         if count == 1:
             return species_fields[0]
         # search for Species Name field
-        species_fields = [field for field in self.fields if field.name.lower() == self.SPECIES_NAME_FIELD_NAME.lower()]
+        species_fields = [field for field in self.fields
+                          if field.name.lower() == self.SPECIES_NAME_FIELD_NAME.lower()]
         count = len(species_fields)
         if count == 0:
             msg = "No 'Species Name' field found. One field must have a name {} or alias '{}' ".format(
