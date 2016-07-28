@@ -365,10 +365,10 @@ def infer_csv(csvfile, outfile, row_limit = 0):
             fp.write(unicode(json.dumps(schema, indent=2, ensure_ascii=False)))
 
 
-def infer_csvs(path, row_limit = 0):
+def infer_csvs(path, row_limit=0):
     for filename in listdir(path):
-	if filename.endswith( 'csv' ):
-	    infer_csv(join(path, filename), join(path, filename) + '.json', row_limit)
+        if filename.endswith('.csv'):
+            infer_csv(join(path, filename), join(path, filename) + '.json', row_limit)
 
 
 

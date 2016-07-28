@@ -16,19 +16,21 @@ DATUM_BOUNDS = {
 class BetterJSONField(JSONField):
     """
     A form field for the JSONField.
-    It fixes the double 'stringification' (see prepare_value)
+    It fixes the double 'stringification' (see prepare_value), avoid the null text and indent the json.
     """
 
     def __init__(self, **kwargs):
-        kwargs.setdefault('widget', forms.Textarea(attrs={'cols': 80, 'rows': 40}))
+        kwargs.setdefault('widget', forms.Textarea(attrs={'cols': 80, 'rows': 20}))
         super(JSONField, self).__init__(**kwargs)
 
     def prepare_value(self, value):
+        if value is None:
+            return ""
         if isinstance(value, basestring):
             # already a string
             return value
         else:
-            return json.dumps(value)
+            return json.dumps(value, indent=4)
 
 
 class DataSetForm(forms.ModelForm):
