@@ -1,10 +1,14 @@
+from future.utils import raise_with_traceback
 import io
 import json
 from os import listdir
 from os.path import join
 
+from dateutil.parser import parse as date_parse
+
 import jsontableschema
 from jsontableschema.model import SchemaModel, types
+from jsontableschema.exceptions import InvalidSchemaError, InvalidDateType
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.writer.write_only import WriteOnlyCell
@@ -15,6 +19,40 @@ from upload.utils_openpyxl import is_blank_value
 COLUMN_HEADER_FONT = Font(bold=True)
 
 
+class ObservationDateSchemaError(InvalidSchemaError):
+    pass
+
+
+class SpeciesSchemaError(InvalidSchemaError):
+    pass
+
+
+class GeometrySchemaError(InvalidSchemaError):
+    pass
+
+
+class FieldSchemaError(InvalidSchemaError):
+    pass
+
+
+class NormalDateType(types.DateType):
+    """
+    Extend the jsontableschema DateType which use the mm/dd/yyyy date model for the 'any' format
+    """
+
+    def cast_any(self, value, fmt=None):
+        if isinstance(value, self.python_type):
+            return value
+        try:
+            return date_parse(value, dayfirst=True).date()
+        except (TypeError, ValueError) as e:
+            raise_with_traceback(InvalidDateType(e))
+
+
+class NotBlankStringType(types.StringType):
+    null_values = [None, '', 'nil', 'null']
+
+
 @python_2_unicode_compatible
 class SchemaField:
     """
@@ -23,24 +61,40 @@ class SchemaField:
     https://github.com/frictionlessdata/jsontableschema-py#types
     for validation.
     """
+    # For most of the type we use the jsontableschema ones
+    TYPE_MAP = SchemaModel._type_map().copy()
+    # except for the date we use our custom one.
+    TYPE_MAP['date'] = NormalDateType
+    TYPE_MAP['string'] = NotBlankStringType
 
     def __init__(self, data):
         self.data = data
-        self.name = data['name']  # We want to throw an exception if there is no name
+        self.name = data.get('name')
+        # We want to throw an exception if there is no name
+        if not self.name:
+            raise FieldSchemaError("A field without a name: {}".format(json.dumps(data)))
         # use of jsontableschema.types to help constraint validation
-        self.type = SchemaModel._type_map()[data.get('type')](data)
+        self.type = self.TYPE_MAP[data.get('type')](data)
+        self.constraints = SchemaConstraints(self.data.get('constraints', {}))
+
+    # implement some dict like methods
+    def __getitem__(self, item):
+        return self.data.__getitem__(item)
+
+    def get(self, k, d=None):
+        return self.data.get(k, d)
+
+    @property
+    def title(self):
+        return self.data.get('title')
 
     @property
     def column_name(self):
         return self.name
 
     @property
-    def constraints(self):
-        return self.data.get('constraints', {})
-
-    @property
     def required(self):
-        return self.constraints.get('required', False)
+        return self.constraints.required
 
     @property
     def aliases(self):
@@ -48,13 +102,20 @@ class SchemaField:
 
     def has_alias(self, name, icase=False):
         for alias in self.aliases:
-            if alias == name or (icase and alias.lower() == name.lower()):
+            if (alias == name) or (icase and alias.lower() == name.lower()):
                 return True
         return False
 
-    def has_name_or_alias(self, name, icase=False):
-        has_name = self.name == name or (icase and self.name.lower() == name.lower())
-        return has_name or self.has_alias(name, icase=icase)
+    def has_name_or_alias(self, name, alias, icase=False):
+        """
+        Test is the field has a name name or an alias alias
+        :param name:
+        :param alias:
+        :param icase:
+        :return:
+        """
+        has_name = (self.name == name) or (icase and self.name.lower() == name.lower())
+        return has_name or self.has_alias(alias, icase=icase)
 
     def cast(self, value):
         """
@@ -65,9 +126,6 @@ class SchemaField:
         :param value:
         :return:
         """
-        if is_blank_value(value):
-            # must do that because an empty string is considered as valid even if required by the StringType
-            value = None
         if isinstance(value, basestring):
             # the StringType accepts only unicode
             value = unicode(value)
@@ -90,6 +148,26 @@ class SchemaField:
         return '{}'.format(self.name)
 
 
+class SchemaConstraints:
+    """
+    A helper class for a schema field constraints
+    """
+
+    def __init__(self, data):
+        self.data = data or {}
+
+    # implement some dict like methods
+    def __getitem__(self, item):
+        return self.data.__getitem__(item)
+
+    def get(self, k, d=None):
+        return self.data.get(k, d)
+
+    @property
+    def required(self):
+        return self.get('required', False)
+
+
 @python_2_unicode_compatible
 class SchemaForeignKey:
     """
@@ -101,6 +179,13 @@ class SchemaForeignKey:
 
     def __str__(self):
         return 'Foreign Key {}'.format(self.data)
+
+    # implement some dict like methods
+    def __getitem__(self, item):
+        return self.data.__getitem__(item)
+
+    def get(self, k, d=None):
+        return self.data.get(k, d)
 
     @staticmethod
     def _as_list(value):
@@ -153,6 +238,13 @@ class Schema:
         self.fields = [SchemaField(f) for f in self.schema_model.fields]
         self.foreign_keys = [SchemaForeignKey(fk) for fk in
                              self.schema_model.foreignKeys] if self.schema_model.foreignKeys else []
+
+    # implement some dict like methods
+    def __getitem__(self, item):
+        return self.data.__getitem__(item)
+
+    def get(self, k, d=None):
+        return self.data.get(k, d)
 
     @property
     def headers(self):
@@ -244,6 +336,13 @@ class ObservationSchema(Schema):
     """
     OBSERVATION_DATE_FIELD_NAME = 'Observation Date'
     OBSERVATION_DATE_TAG_NAME = '~observation_date'
+    GEOMETRY_TAG_NAME = '~geometry'
+    LATITUDE_FIELD_NAME = 'Latitude'
+    LATITUDE_TAG_NAME = '~latitude'
+    LONGITUDE_FIELD_NAME = 'Longitude'
+    LONGITUDE_TAG_NAME = '~longitude'
+    DATUM_FIELD_NAME = 'Datum'
+    DATUM_TAG_NAME = '~datum'
 
     def _get_observation_date_field_or_throw(self):
         """
@@ -259,7 +358,7 @@ class ObservationSchema(Schema):
         dates_count = len(date_fields)
         if dates_count == 0:
             msg = 'One field must be of type date to be a valid Observation schema.'
-            raise Exception(msg)
+            raise ObservationDateSchemaError(msg)
         if dates_count == 1:
             return date_fields[0]
         else:
@@ -267,9 +366,9 @@ class ObservationSchema(Schema):
             observation_dates = [field for field in date_fields if field.has_alias(self.OBSERVATION_DATE_TAG_NAME)]
             count = len(observation_dates)
             if count > 1:
-                msg = "The schema contains more than one field tagged as observation date (alias = '{}')."\
+                msg = "The schema contains more than one field tagged as observation date (alias = '{}')." \
                     .format(self.OBSERVATION_DATE_TAG_NAME)
-                raise Exception(msg)
+                raise ObservationDateSchemaError(msg)
             if count == 1:
                 return observation_dates[0]
             # search for name or alias 'Observation Date' (case insensitive)
@@ -279,11 +378,11 @@ class ObservationSchema(Schema):
             if count == 0:
                 msg = "The schema contains more than one date. One must be named '{}' or " \
                       "has an alias '{}'.".format(self.OBSERVATION_DATE_FIELD_NAME, self.OBSERVATION_DATE_TAG_NAME)
-                raise Exception(msg)
+                raise ObservationDateSchemaError(msg)
             if count > 1:
-                msg = "The schema contains more than one '{}' field (as name or alias)."\
+                msg = "The schema contains more than one '{}' field (as name or alias)." \
                     .format(self.OBSERVATION_DATE_FIELD_NAME)
-                raise Exception(msg)
+                raise ObservationDateSchemaError(msg)
             return observation_dates[0]
 
     def _valid_geometry_or_throw(self):
@@ -318,9 +417,9 @@ class SpeciesObservationSchema(ObservationSchema):
         species_fields = [field for field in self.fields if field.has_alias(self.SPECIES_NAME_TAG_NAME)]
         count = len(species_fields)
         if count > 1:
-            msg = "The schema contains more than one field tagged as Species Name (alias = ~{})."\
+            msg = "The schema contains more than one field tagged as Species Name (alias = ~{})." \
                 .format(self.SPECIES_NAME_TAG_NAME)
-            raise Exception(msg)
+            raise SpeciesSchemaError(msg)
         if count == 1:
             return species_fields[0]
         # search for Species Name field
@@ -330,10 +429,10 @@ class SpeciesObservationSchema(ObservationSchema):
         if count == 0:
             msg = "No 'Species Name' field found. One field must have a name {} or alias '{}' ".format(
                 self.SPECIES_NAME_FIELD_NAME, '~species_name')
-            raise Exception(msg)
+            raise SpeciesSchemaError(msg)
         if count > 1:
             msg = "More than one '{}' field found.".format(self.SPECIES_NAME_FIELD_NAME)
-            raise Exception(msg)
+            raise SpeciesSchemaError(msg)
         return species_fields[0]
 
 
