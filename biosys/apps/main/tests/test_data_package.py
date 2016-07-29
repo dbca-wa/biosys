@@ -206,7 +206,7 @@ class TestSchemaFieldCast(TestCase):
 
     def test_string(self):
         # test that a blank string '' is not accepted when the field is required
-        null_values = ['', None]
+        null_values = ['null', 'none', 'nil', 'nan', '-', '']
         desc = BASE_FIELD.copy()
         desc['type'] = 'string'
         desc['constraints'] = REQUIRED_CONSTRAINTS.copy()
@@ -221,7 +221,7 @@ class TestSchemaFieldCast(TestCase):
         self.assertEqual(f.cast(value), value)
 
 
-class TestBaseSchemaValidation(TestCase):
+class TestBaseSchema(TestCase):
     def test_resources_mandatory(self):
         descriptor = GENERIC_SCHEMA
         del descriptor['resources']

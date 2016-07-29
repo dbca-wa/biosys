@@ -50,7 +50,10 @@ class NormalDateType(types.DateType):
 
 
 class NotBlankStringType(types.StringType):
-    null_values = [None, '', 'nil', 'null']
+    """
+    The default StringType accepts empty string when required = True
+    """
+    null_values = ['null', 'none', 'nil', 'nan', '-', '']
 
 
 @python_2_unicode_compatible
