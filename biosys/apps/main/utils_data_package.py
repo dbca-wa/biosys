@@ -126,6 +126,7 @@ class SchemaField:
         :param value:
         :return:
         """
+        # TODO: delete in python3
         if isinstance(value, basestring):
             # the StringType accepts only unicode
             value = unicode(value)
