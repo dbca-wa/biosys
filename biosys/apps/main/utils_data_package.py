@@ -1,5 +1,7 @@
 import io
 import json
+from os import listdir
+from os.path import join
 
 import jsontableschema
 from jsontableschema.model import SchemaModel
@@ -263,10 +265,19 @@ class Exporter:
         return wb
 
 
-def infer_csv(csvpath, outpath, row_limit):
-    with io.open(outpath, 'w') as fp:
-        with io.open(csvpath) as stream:
+def infer_csv(csvfile, outfile, row_limit = 0):
+    with io.open(outfile, 'w') as fp:
+        with io.open(csvfile) as stream:
             headers = stream.readline().rstrip('\n').split(',')
             values = jsontableschema.compat.csv_reader(stream)
             schema = jsontableschema.infer(headers, values, row_limit=row_limit)
             fp.write(unicode(json.dumps(schema, indent=2, ensure_ascii=False)))
+
+
+def infer_csvs(path, row_limit=0):
+    for filename in listdir(path):
+        if filename.endswith('.csv'):
+            infer_csv(join(path, filename), join(path, filename) + '.json', row_limit)
+
+
+
