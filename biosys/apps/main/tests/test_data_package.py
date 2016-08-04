@@ -1,11 +1,16 @@
 from jsontableschema.exceptions import *
 import datetime
 import dateutil
+import copy
 
 from django.test import TestCase
 from main.utils_data_package import *
 
 BASE_CONSTRAINTS = {
+    "required": False
+}
+
+NOT_REQUIRED_CONSTRAINTS = {
     "required": False
 }
 
@@ -18,10 +23,16 @@ BASE_FIELD = {
     "tile": "Title",
     "type": "string",
     "format": "default",
-    "constraints": BASE_CONSTRAINTS.copy()
+    "constraints": copy.deepcopy(BASE_CONSTRAINTS)
 }
 
 GENERIC_SCHEMA = {
+    "fields": [
+        copy.deepcopy(BASE_FIELD)
+    ]
+}
+
+GENERIC_DATA_PACKAGE = {
     "name": "test",
     "resources": [
         {
@@ -31,11 +42,7 @@ GENERIC_SCHEMA = {
             "bytes": 0,
             "mediatype": "text/csv",
             "path": "test.csv",
-            "schema": {
-                "fields": [
-                    BASE_FIELD.copy()
-                ]
-            }
+            "schema": copy.deepcopy(GENERIC_SCHEMA)
         }
     ],
     "title": "Test"
@@ -53,11 +60,11 @@ class TestSchemaConstraints(TestCase):
     def test_required_property(self):
         # no constraints -> require = False
         self.assertFalse(SchemaConstraints(None).required)
-        cts = BASE_CONSTRAINTS.copy()
+        cts = copy.deepcopy(BASE_CONSTRAINTS)
         self.assertFalse(cts['required'])
         self.assertFalse(SchemaConstraints(cts).required)
 
-        cts = BASE_CONSTRAINTS.copy()
+        cts = copy.deepcopy(BASE_CONSTRAINTS)
         cts['required'] = True
         self.assertTrue(cts['required'])
         self.assertTrue(SchemaConstraints(cts).required)
@@ -66,7 +73,7 @@ class TestSchemaConstraints(TestCase):
         """
         test that the SchemaField has the dict-like get('key', default)
         """
-        cts = BASE_CONSTRAINTS.copy()
+        cts = copy.deepcopy(BASE_CONSTRAINTS)
         sch = SchemaConstraints(cts)
         self.assertTrue(hasattr(sch, 'get'))
         self.assertEquals(cts.get('required'), sch.get('required'))
@@ -76,16 +83,19 @@ class TestSchemaConstraints(TestCase):
 
 
 class TestSchemaField(TestCase):
+    def setUp(self):
+        self.base_field = copy.deepcopy(BASE_FIELD)
+
     def test_name_mandatory(self):
         """
         A schema field without name should throw an exception
         """
-        field = BASE_FIELD.copy()
+        field = self.base_field
         del field['name']
         with self.assertRaises(FieldSchemaError):
             SchemaField(field)
         # no blank
-        field = BASE_FIELD.copy()
+        field = self.base_field
         field['name'] = ''
         with self.assertRaises(FieldSchemaError):
             SchemaField(field)
@@ -94,7 +104,7 @@ class TestSchemaField(TestCase):
         """
         test that the SchemaField has the dict-like get('key', default)
         """
-        field = BASE_FIELD.copy()
+        field = self.base_field
         sch = SchemaField(field)
         self.assertTrue(hasattr(sch, 'get'))
         self.assertEquals(field.get('Name'), sch.get('Name'))
@@ -106,7 +116,7 @@ class TestSchemaField(TestCase):
         """
         'column_name' is a property that is equal to name
         """
-        field = BASE_FIELD.copy()
+        field = self.base_field
         sch = SchemaField(field)
         self.assertEquals(sch.name, sch.column_name)
         self.assertNotEqual(sch.column_name, sch.title)
@@ -121,7 +131,7 @@ class TestSchemaField(TestCase):
         """
         aliases is a biosys specific property.
         """
-        field = BASE_FIELD.copy()
+        field = self.base_field
         self.assertFalse(field.get('aliases'))
         self.assertEquals([], SchemaField(field).aliases)
         field['aliases'] = []
@@ -143,11 +153,14 @@ class TestSchemaField(TestCase):
 
 
 class TestSchemaFieldCast(TestCase):
+    def setUp(self):
+        self.base_field = copy.deepcopy(BASE_FIELD)
+
     def test_boolean(self):
         true_values = [True, 'True', 'true', 'YES', 'yes', 'y', 't', '1', 1]
         false_values = [False, 'FALSE', 'false', 'NO', 'no', 'n', 'f', '0', 0]
         wrong_values = [2, 3, 'FLSE', 'flse', 'NON', 'oui', 'maybe', 'not sure']
-        descriptor = BASE_FIELD.copy()
+        descriptor = self.base_field
         descriptor['type'] = 'boolean'
         # only 'default' format
         descriptor['format'] = 'default'
@@ -161,7 +174,7 @@ class TestSchemaFieldCast(TestCase):
                 f.cast(v)
 
     def test_date(self):
-        descriptor = BASE_FIELD.copy()
+        descriptor = copy.deepcopy(BASE_FIELD)
         descriptor['type'] = 'date'
         # 'default' format = ISO
         descriptor['format'] = 'default'
@@ -207,9 +220,9 @@ class TestSchemaFieldCast(TestCase):
     def test_string(self):
         # test that a blank string '' is not accepted when the field is required
         null_values = ['null', 'none', 'nil', 'nan', '-', '']
-        desc = BASE_FIELD.copy()
+        desc = copy.deepcopy(BASE_FIELD)
         desc['type'] = 'string'
-        desc['constraints'] = REQUIRED_CONSTRAINTS.copy()
+        desc['constraints'] = copy.deepcopy(REQUIRED_CONSTRAINTS)
         f = SchemaField(desc)
         for v in null_values:
             with self.assertRaises(Exception):
@@ -217,20 +230,234 @@ class TestSchemaFieldCast(TestCase):
 
         # test non unicode (python 2)
         value = 'not unicode'
-        self.assertIsInstance(f.cast(value), unicode) # will fail on python 3 (type = str)
+        self.assertIsInstance(f.cast(value), unicode)  # will fail on python 3 (type = str)
         self.assertEqual(f.cast(value), value)
 
 
 class TestBaseSchema(TestCase):
-    def test_resources_mandatory(self):
-        descriptor = GENERIC_SCHEMA
-        del descriptor['resources']
-        with self.assertRaises(InvalidSchemaError):
-            Schema(descriptor)
+    def setUp(self):
+        self.descriptor = copy.deepcopy(GENERIC_SCHEMA)
+        self.sch = Schema(self.descriptor)
 
 
 class TestObservationSchema(TestCase):
-    pass
+    def setUp(self):
+        self.descriptor = copy.deepcopy(GENERIC_SCHEMA)
+        self.schema = Schema(self.descriptor)
+
+    def test_no_date_field(self):
+        # schema without date throw an exception
+        descriptor = self.descriptor
+        with self.assertRaises(ObservationDateSchemaError):
+            ObservationSchema.get_observation_date_field_or_throw(descriptor)
+
+    def test_one_date_field_with_required(self):
+        # happy path: one date field only and
+        descriptor = self.descriptor
+        descriptor['fields'].append(
+            {
+                "name": "Date Field",
+                "type": "date",
+                "format": "any",
+                "constraints": REQUIRED_CONSTRAINTS
+            }
+        )
+        try:
+            field = ObservationSchema.get_observation_date_field_or_throw(descriptor)
+            self.assertEqual(field.name, "Date Field")
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_one_date_field_without_required(self):
+        # the required is always needed
+        descriptor = self.descriptor
+        descriptor['fields'].append(
+            {
+                "name": "Expected Date Field",
+                "type": "date",
+                "format": "any",
+                "constraints": NOT_REQUIRED_CONSTRAINTS
+            }
+        )
+        with self.assertRaises(ObservationDateSchemaError):
+            ObservationSchema.get_observation_date_field_or_throw(descriptor)
+
+    def test_two_date_fields_throws(self):
+        # two date fields without more information throw an error
+        descriptor = self.descriptor
+        descriptor['fields'].append(
+            {
+                "name": "Date Field #1",
+                "type": "date",
+                "format": "any",
+                "constraints": REQUIRED_CONSTRAINTS
+            }
+        )
+        descriptor['fields'].append(
+            {
+                "name": "Date Field #2",
+                "type": "date",
+                "format": "any",
+                "constraints": REQUIRED_CONSTRAINTS
+            }
+        )
+
+    def test_two_date_fields_one_with_biosys_type(self):
+        # Happy path: two required date fields one with a biosys type
+        descriptor = self.descriptor
+        descriptor['fields'].append(
+            {
+                "name": "Date Field #1",
+                "type": "date",
+                "format": "any",
+                "constraints": REQUIRED_CONSTRAINTS
+            }
+        )
+        descriptor['fields'].append(
+            {
+                "name": "Biosys Observation Date",
+                "type": "date",
+                "format": "any",
+                "constraints": REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": "observationDate"
+                }
+            }
+        )
+        try:
+            field = ObservationSchema.get_observation_date_field_or_throw(descriptor)
+            self.assertEqual(field.name, "Biosys Observation Date")
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_two_date_fields_one_with_biosys_type_not_required(self):
+        # Sad path: two date fields one required and one with a biosys type not required
+        descriptor = self.descriptor
+        descriptor['fields'].append(
+            {
+                "name": "Date Field #1",
+                "type": "date",
+                "format": "any",
+                "constraints": REQUIRED_CONSTRAINTS
+            }
+        )
+        descriptor['fields'].append(
+            {
+                "name": "Biosys Observation Date",
+                "type": "date",
+                "format": "any",
+                "constraints": NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": "observationDate"
+                }
+            }
+        )
+        with self.assertRaises(ObservationDateSchemaError):
+            ObservationSchema.get_observation_date_field_or_throw(descriptor)
+
+    def test_two_biosys_observation_date(self):
+        # Sad path: two date fields tagged as a biosys observation date
+        descriptor = self.descriptor
+        descriptor['fields'].append(
+            {
+                "name": "Date Field #1",
+                "type": "date",
+                "format": "any",
+                "constraints": REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": "observationDate"
+                }
+            }
+        )
+        descriptor['fields'].append(
+            {
+                "name": "Date field2",
+                "type": "date",
+                "format": "any",
+                "constraints": REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": "observationDate"
+                }
+            }
+        )
+        with self.assertRaises(ObservationDateSchemaError):
+            ObservationSchema.get_observation_date_field_or_throw(descriptor)
+
+    def test_two_date_one_with_correct_name(self):
+        # happy path: two required date but one correctly named 'Observation Date'
+        descriptor = self.descriptor
+        descriptor['fields'].append(
+            {
+                "name": ObservationSchema.OBSERVATION_DATE_FIELD_NAME,
+                "type": "date",
+                "format": "any",
+                "constraints": REQUIRED_CONSTRAINTS,
+            }
+        )
+        descriptor['fields'].append(
+            {
+                "name": "Date field2",
+                "type": "date",
+                "format": "any",
+                "constraints": REQUIRED_CONSTRAINTS,
+            }
+        )
+        try:
+            field = ObservationSchema.get_observation_date_field_or_throw(descriptor)
+            self.assertEqual(field.name, ObservationSchema.OBSERVATION_DATE_FIELD_NAME)
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_two_date_with_correct_name(self):
+        # sad path: two required date both correctly named 'Observation Date'
+        descriptor = self.descriptor
+        descriptor['fields'].append(
+            {
+                "name": ObservationSchema.OBSERVATION_DATE_FIELD_NAME,
+                "type": "date",
+                "format": "any",
+                "constraints": REQUIRED_CONSTRAINTS,
+            }
+        )
+        descriptor['fields'].append(
+            {
+                "name": ObservationSchema.OBSERVATION_DATE_FIELD_NAME,
+                "type": "date",
+                "format": "any",
+                "constraints": REQUIRED_CONSTRAINTS,
+            }
+        )
+        with self.assertRaises(ObservationDateSchemaError):
+            ObservationSchema.get_observation_date_field_or_throw(descriptor)
+
+    def test_two_date_one_biosys_one_correct_name(self):
+        # happy path?: two required date one named 'Observation Date' the other tag as biosys. Biosys has precedence
+        descriptor = self.descriptor
+        descriptor['fields'].append(
+            {
+                "name": ObservationSchema.OBSERVATION_DATE_FIELD_NAME,
+                "type": "date",
+                "format": "any",
+                "constraints": REQUIRED_CONSTRAINTS,
+            }
+        )
+        descriptor['fields'].append(
+            {
+                "name": "The expected date",
+                "type": "date",
+                "format": "any",
+                "constraints": REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": "observationDate"
+                }
+            }
+        )
+        try:
+            field = ObservationSchema.get_observation_date_field_or_throw(descriptor)
+            self.assertNotEqual(field.name, ObservationSchema.OBSERVATION_DATE_FIELD_NAME)
+            self.assertEqual(field.name, "The expected date")
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
 
 
 class TestSpeciesObservation(TestCase):

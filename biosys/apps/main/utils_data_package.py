@@ -1,4 +1,6 @@
+from __future__ import print_function
 from future.utils import raise_with_traceback
+
 import io
 import json
 from os import listdir
@@ -19,25 +21,27 @@ from upload.utils_openpyxl import is_blank_value
 COLUMN_HEADER_FONT = Font(bold=True)
 
 
-class ObservationDateSchemaError(InvalidSchemaError):
+class ObservationDateSchemaError(Exception):
+    # don't  extend InvalidSchemaError (problem with message not showing in the str method)
     pass
 
 
-class SpeciesSchemaError(InvalidSchemaError):
+class SpeciesSchemaError(Exception):
     pass
 
 
-class GeometrySchemaError(InvalidSchemaError):
+class GeometrySchemaError(Exception):
     pass
 
 
-class FieldSchemaError(InvalidSchemaError):
+class FieldSchemaError(Exception):
     pass
 
 
 class NormalDateType(types.DateType):
     """
     Extend the jsontableschema DateType which use the mm/dd/yyyy date model for the 'any' format
+    to use dd/mm/yyyy
     """
 
     def cast_any(self, value, fmt=None):
@@ -54,6 +58,26 @@ class NotBlankStringType(types.StringType):
     The default StringType accepts empty string when required = True
     """
     null_values = ['null', 'none', 'nil', 'nan', '-', '']
+
+
+class BiosysSchema:
+    """
+    The utility class for the biosys data within a schema field
+
+    {
+      name: "...."
+      constraints: ....
+      biosys: {
+                type: [observationDate]
+              }
+    }
+    """
+
+    def __init__(self, data):
+        self.data = data or {}
+
+    def is_observation_date(self):
+        return self.data.get('type') == 'observationDate'
 
 
 @python_2_unicode_compatible
@@ -79,6 +103,7 @@ class SchemaField:
         # use of jsontableschema.types to help constraint validation
         self.type = self.TYPE_MAP[data.get('type')](data)
         self.constraints = SchemaConstraints(self.data.get('constraints', {}))
+        self.biosys = BiosysSchema(self.get('biosys'))
 
     # implement some dict like methods
     def __getitem__(self, item):
@@ -234,6 +259,7 @@ class Schema:
     A utility class for schema.
     It uses internally an instance SchemaModel of the frictionless jsontableschema for help.
     https://github.com/frictionlessdata/jsontableschema-py#model
+    Will throw an exception if the schema is not valid
     """
 
     def __init__(self, schema):
@@ -339,55 +365,62 @@ class ObservationSchema(Schema):
     (lat/long or geojson)
     """
     OBSERVATION_DATE_FIELD_NAME = 'Observation Date'
-    OBSERVATION_DATE_TAG_NAME = '~observation_date'
-    GEOMETRY_TAG_NAME = '~geometry'
-    LATITUDE_FIELD_NAME = 'Latitude'
-    LATITUDE_TAG_NAME = '~latitude'
-    LONGITUDE_FIELD_NAME = 'Longitude'
-    LONGITUDE_TAG_NAME = '~longitude'
-    DATUM_FIELD_NAME = 'Datum'
-    DATUM_TAG_NAME = '~datum'
 
-    def _get_observation_date_field_or_throw(self):
+    @staticmethod
+    def get_observation_date_field_or_throw(schema):
         """
         Precedence Rules:
-        1- If there's only one field of type date it's this one.
-        2- More than one date field, look for an aliass '~observation_date'
-        3- Look for a name 'Observation Date' case insensitive
-        3- Throw exception if not found
+        1- Look for a single date field with required = true
+        2- Look for biosys.type = 'observationDate'
+        3- Look for a field with name 'Observation Date' case insensitive
+        4- If there's only one field of type date it's this one.
+        5- Throw exception if not found
+        :param schema: a dict descriptor or a Schema instance
         :return: the SchemaField
         """
-        date_fields = [field for field in self.fields
-                       if isinstance(field.type, types.DateType) or isinstance(field.type, types.DateTimeType)]
-        dates_count = len(date_fields)
+        if not isinstance(schema, Schema):
+            schema = Schema(schema)
+        # edge case: a biosys observationDate set as not required
+        if len([field for field in schema.fields
+                if field.biosys.is_observation_date() and not field.required]) > 0:
+            msg = "A biosys observationDate with required=false detected. It must be set required=true"
+            raise ObservationDateSchemaError(msg)
+        # normal cases
+        required_date_fields = [field for field in schema.fields
+                                if
+                                (isinstance(field.type, types.DateType) or isinstance(field.type,
+                                                                                      types.DateTimeType)) and
+                                field.required
+                                ]
+        dates_count = len(required_date_fields)
         if dates_count == 0:
-            msg = 'One field must be of type date to be a valid Observation schema.'
+            msg = "One field must be of type 'date' with 'required': true to be a valid Observation schema."
             raise ObservationDateSchemaError(msg)
         if dates_count == 1:
-            return date_fields[0]
+            return required_date_fields[0]
         else:
-            # more than one date. Look for the ~observation_date alias
-            observation_dates = [field for field in date_fields if field.has_alias(self.OBSERVATION_DATE_TAG_NAME)]
-            count = len(observation_dates)
-            if count > 1:
-                msg = "The schema contains more than one field tagged as observation date (alias = '{}')." \
-                    .format(self.OBSERVATION_DATE_TAG_NAME)
-                raise ObservationDateSchemaError(msg)
+            # more than one date fields. Look the the biosys type
+            fields = [field for field in required_date_fields if field.biosys.is_observation_date()]
+            count = len(fields)
             if count == 1:
-                return observation_dates[0]
-            # search for name or alias 'Observation Date' (case insensitive)
-            observation_dates = [field for field in date_fields
-                                 if field.name.lower() == self.OBSERVATION_DATE_FIELD_NAME.lower()]
-            count = len(observation_dates)
-            if count == 0:
-                msg = "The schema contains more than one date. One must be named '{}' or " \
-                      "has an alias '{}'.".format(self.OBSERVATION_DATE_FIELD_NAME, self.OBSERVATION_DATE_TAG_NAME)
-                raise ObservationDateSchemaError(msg)
+                return fields[0]
             if count > 1:
-                msg = "The schema contains more than one '{}' field (as name or alias)." \
-                    .format(self.OBSERVATION_DATE_FIELD_NAME)
+                msg = "The schema contains more than one field tagged as a biosys type=observationDate"
                 raise ObservationDateSchemaError(msg)
-            return observation_dates[0]
+            # no biosys observation date. Look for field name
+            fields = [field for field in required_date_fields if
+                      field.name == ObservationSchema.OBSERVATION_DATE_FIELD_NAME]
+            count = len(fields)
+            if count == 1:
+                return fields[0]
+            if count > 1:
+                msg = "The schema contains more than one field named Observation Date. " \
+                      "One should be tagged as a biosys type=observationDate "
+                raise ObservationDateSchemaError(msg)
+            msg = "The schema contains more than one date that can be used as an observation date. " \
+                  "You need to name one {} or tag it a a biosys type=observationDate".format(
+                ObservationSchema.OBSERVATION_DATE_FIELD_NAME)
+            raise ObservationDateSchemaError(msg)
 
     def _valid_geometry_or_throw(self):
         """
@@ -483,9 +516,9 @@ class Exporter:
         return wb
 
 
-def infer_csv(csvfile, outfile, row_limit=0):
+def infer_csv(csv_file, outfile, row_limit=0):
     with io.open(outfile, 'w') as fp:
-        with io.open(csvfile) as stream:
+        with io.open(csv_file) as stream:
             headers = stream.readline().rstrip('\n').split(',')
             values = jsontableschema.compat.csv_reader(stream)
             schema = jsontableschema.infer(headers, values, row_limit=row_limit)
