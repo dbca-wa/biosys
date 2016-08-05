@@ -38,7 +38,22 @@ class FieldSchemaError(Exception):
     pass
 
 
-class NormalDateType(types.DateType):
+class DayFirstDateType(types.DateType):
+    """
+    Extend the jsontableschema DateType which use the mm/dd/yyyy date model for the 'any' format
+    to use dd/mm/yyyy
+    """
+
+    def cast_any(self, value, fmt=None):
+        if isinstance(value, self.python_type):
+            return value
+        try:
+            return date_parse(value, dayfirst=True).date()
+        except (TypeError, ValueError) as e:
+            raise_with_traceback(InvalidDateType(e))
+
+
+class DayFirstDateTimeType(types.DateTimeType):
     """
     Extend the jsontableschema DateType which use the mm/dd/yyyy date model for the 'any' format
     to use dd/mm/yyyy
@@ -72,12 +87,27 @@ class BiosysSchema:
               }
     }
     """
+    OBSERVATION_DATE_TYPE_NAME = 'observationDate'
+    BIOSYS_TYPE_MAP = {
+        OBSERVATION_DATE_TYPE_NAME: DayFirstDateType,
+    }
 
     def __init__(self, data):
         self.data = data or {}
 
+    # implement some dict like methods
+    def __getitem__(self, item):
+        return self.data.__getitem__(item)
+
+    @property
+    def type(self):
+        return self.get('type')
+
+    def get(self, k, d=None):
+        return self.data.get(k, d)
+
     def is_observation_date(self):
-        return self.data.get('type') == 'observationDate'
+        return self.type == self.OBSERVATION_DATE_TYPE_NAME
 
 
 @python_2_unicode_compatible
@@ -89,21 +119,27 @@ class SchemaField:
     for validation.
     """
     # For most of the type we use the jsontableschema ones
-    TYPE_MAP = SchemaModel._type_map().copy()
+    BASE_TYPE_MAP = SchemaModel._type_map()
     # except for the date we use our custom one.
-    TYPE_MAP['date'] = NormalDateType
-    TYPE_MAP['string'] = NotBlankStringType
+    BASE_TYPE_MAP['date'] = DayFirstDateType
+    BASE_TYPE_MAP['datetime'] = DayFirstDateTimeType
+    BASE_TYPE_MAP['string'] = NotBlankStringType
+
+    BIOSYS_TYPE_MAP = {
+    }
 
     def __init__(self, data):
         self.data = data
-        self.name = data.get('name')
+        self.name = self.data.get('name')
         # We want to throw an exception if there is no name
         if not self.name:
             raise FieldSchemaError("A field without a name: {}".format(json.dumps(data)))
-        # use of jsontableschema.types to help constraint validation
-        self.type = self.TYPE_MAP[data.get('type')](data)
+        # biosys specific
+        self.biosys = BiosysSchema(self.data.get('biosys'))
+        # set the type: biosys type as precedence
+        type_class = self.BIOSYS_TYPE_MAP.get(self.biosys.type) or self.BASE_TYPE_MAP.get(self.data.get('type'))
+        self.type = type_class(self.data)
         self.constraints = SchemaConstraints(self.data.get('constraints', {}))
-        self.biosys = BiosysSchema(self.get('biosys'))
 
     # implement some dict like methods
     def __getitem__(self, item):
@@ -253,8 +289,8 @@ class SchemaForeignKey:
     def model_field(self):
         return self.reference_fields[0] if self.reference_fields else None
 
-
-class Schema:
+@python_2_unicode_compatible
+class GenericSchema:
     """
     A utility class for schema.
     It uses internally an instance SchemaModel of the frictionless jsontableschema for help.
@@ -303,7 +339,7 @@ class Schema:
 
     def validate_row(self, row):
         """
-        The row must be a dictionary or a list of key value
+        The row must be a dictionary or a list of key => value
         :param row:
         :return: return a dictionary with an error added to the field
         {
@@ -357,14 +393,21 @@ class Schema:
                 return fk
         return None
 
+    def __str__(self):
+        return self.get('name')
 
-class ObservationSchema(Schema):
+
+class ObservationSchema(GenericSchema):
     """
     A schema specific to an Observation Dataset.
     It's main job is to deal with the observation date and it's geometry
     (lat/long or geojson)
     """
     OBSERVATION_DATE_FIELD_NAME = 'Observation Date'
+
+    def __init__(self, schema):
+        GenericSchema.__init__(self, schema)
+        self.observation_date_field = self.get_observation_date_field_or_throw(schema)
 
     @staticmethod
     def get_observation_date_field_or_throw(schema):
@@ -378,8 +421,8 @@ class ObservationSchema(Schema):
         :param schema: a dict descriptor or a Schema instance
         :return: the SchemaField
         """
-        if not isinstance(schema, Schema):
-            schema = Schema(schema)
+        if not isinstance(schema, GenericSchema):
+            schema = GenericSchema(schema)
         # edge case: a biosys observationDate set as not required
         if len([field for field in schema.fields
                 if field.biosys.is_observation_date() and not field.required]) > 0:
@@ -422,61 +465,26 @@ class ObservationSchema(Schema):
                 ObservationSchema.OBSERVATION_DATE_FIELD_NAME)
             raise ObservationDateSchemaError(msg)
 
-    def _valid_geometry_or_throw(self):
-        """
-        Rules:
-        1 - look for type geojson. If one only use it
-        2 - look for type geopoint. If one only use it
-        3 - look for latitude/longitude
-        :return:
-        """
-        geometry_fields = [field for field in self.fields
-                           if isinstance(field.type, types.GeoJSONType) or isinstance(field.type, types.GeoPointType)]
-        # TODO: implement latitude/longitude
-        return False
+    def get_record_observation_date_value(self, record):
+        return record.get(self.observation_date_field.name)
+
+    def cast_record_observation_date(self, record):
+        field = self.observation_date_field
+        return field.cast(record.get(field.name))
 
 
 class SpeciesObservationSchema(ObservationSchema):
     """
     An ObservationSchema with a Species Name
     """
-
-    SPECIES_NAME_FIELD_NAME = 'Species Name'
-    SPECIES_NAME_TAG_NAME = '~species_name'
-
-    def _get_species_name_field_or_throw(self):
-        """
-        Rules:
-        1: search for alias ~species_name
-        2: One field with a name 'Species Name' (case insensitive)
-        :return: the field or throw an exception
-        """
-        species_fields = [field for field in self.fields if field.has_alias(self.SPECIES_NAME_TAG_NAME)]
-        count = len(species_fields)
-        if count > 1:
-            msg = "The schema contains more than one field tagged as Species Name (alias = ~{})." \
-                .format(self.SPECIES_NAME_TAG_NAME)
-            raise SpeciesSchemaError(msg)
-        if count == 1:
-            return species_fields[0]
-        # search for Species Name field
-        species_fields = [field for field in self.fields
-                          if field.name.lower() == self.SPECIES_NAME_FIELD_NAME.lower()]
-        count = len(species_fields)
-        if count == 0:
-            msg = "No 'Species Name' field found. One field must have a name {} or alias '{}' ".format(
-                self.SPECIES_NAME_FIELD_NAME, '~species_name')
-            raise SpeciesSchemaError(msg)
-        if count > 1:
-            msg = "More than one '{}' field found.".format(self.SPECIES_NAME_FIELD_NAME)
-            raise SpeciesSchemaError(msg)
-        return species_fields[0]
+    # TODO: implement the species stuff
+    pass
 
 
 class Exporter:
     def __init__(self, dataset, records=None):
         self.ds = dataset
-        self.schema = Schema(dataset.schema)
+        self.schema = GenericSchema(dataset.schema)
         self.headers = self.schema.headers
         self.warnings = []
         self.errors = []

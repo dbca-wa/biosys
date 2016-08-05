@@ -154,13 +154,13 @@ class TestSchemaField(TestCase):
 
 class TestSchemaFieldCast(TestCase):
     def setUp(self):
-        self.base_field = copy.deepcopy(BASE_FIELD)
+        self.base_field_descriptor = copy.deepcopy(BASE_FIELD)
 
     def test_boolean(self):
         true_values = [True, 'True', 'true', 'YES', 'yes', 'y', 't', '1', 1]
         false_values = [False, 'FALSE', 'false', 'NO', 'no', 'n', 'f', '0', 0]
         wrong_values = [2, 3, 'FLSE', 'flse', 'NON', 'oui', 'maybe', 'not sure']
-        descriptor = self.base_field
+        descriptor = self.base_field_descriptor
         descriptor['type'] = 'boolean'
         # only 'default' format
         descriptor['format'] = 'default'
@@ -217,6 +217,17 @@ class TestSchemaFieldCast(TestCase):
         expected = datetime.date(2016, 12, 1)
         self.assertEqual(f.cast(date), expected)
 
+    def test_date_custom_format(self):
+        format_ = 'fmt:%d %b %y'  # ex 30 Nov 14
+        descriptor = {
+            'name': 'Date with fmt',
+            'type': 'date',
+            'format': format_
+        }
+        field = SchemaField(descriptor)
+        value = '30 Nov 14'
+        self.assertEqual(field.cast(value), datetime.date(2014, 11, 30))
+
     def test_string(self):
         # test that a blank string '' is not accepted when the field is required
         null_values = ['null', 'none', 'nil', 'nan', '-', '']
@@ -234,16 +245,16 @@ class TestSchemaFieldCast(TestCase):
         self.assertEqual(f.cast(value), value)
 
 
-class TestBaseSchema(TestCase):
+class TestGenericSchemaValidation(TestCase):
     def setUp(self):
         self.descriptor = copy.deepcopy(GENERIC_SCHEMA)
-        self.sch = Schema(self.descriptor)
+        self.sch = GenericSchema(self.descriptor)
 
 
 class TestObservationSchema(TestCase):
     def setUp(self):
         self.descriptor = copy.deepcopy(GENERIC_SCHEMA)
-        self.schema = Schema(self.descriptor)
+        self.schema = GenericSchema(self.descriptor)
 
     def test_no_date_field(self):
         # schema without date throw an exception
@@ -458,6 +469,90 @@ class TestObservationSchema(TestCase):
             self.assertEqual(field.name, "The expected date")
         except Exception as e:
             self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_cast_observation_date_happy_path(self):
+        descriptor = {
+            'fields': [
+                {
+                    "name": "Species",
+                    "tile": "Title",
+                    "type": "string",
+                    "format": "default",
+                    "constraints": copy.deepcopy(REQUIRED_CONSTRAINTS)
+                },
+                {
+                    "name": "Observation Date",
+                    "tile": "Title",
+                    "type": "date",
+                    "format": "any",
+                    "constraints": copy.deepcopy(REQUIRED_CONSTRAINTS)
+                },
+                {
+                    "name": "Observer",
+                    "tile": "Title",
+                    "type": "string",
+                    "format": "default",
+                    "constraints": copy.deepcopy(REQUIRED_CONSTRAINTS)
+                },
+            ]
+        }
+        schema = ObservationSchema(descriptor)
+        record = {
+            'Species': "Frog", 'Observation Date': '23/12/2016', 'Observer': "Serge"
+        }
+        self.assertEqual(schema.cast_record_observation_date(record), datetime.date(2016, 12, 23))
+
+    def test_cast_observation_date_sad_path(self):
+        # a record without date value should throw an exception
+        descriptor = {
+            'fields': [
+                {
+                    "name": "Species",
+                    "tile": "Title",
+                    "type": "string",
+                    "format": "default",
+                    "constraints": copy.deepcopy(REQUIRED_CONSTRAINTS)
+                },
+                {
+                    "name": "Observation Date",
+                    "tile": "Title",
+                    "type": "date",
+                    "format": "any",
+                    "constraints": copy.deepcopy(REQUIRED_CONSTRAINTS)
+                },
+                {
+                    "name": "Observer",
+                    "tile": "Title",
+                    "type": "string",
+                    "format": "default",
+                    "constraints": copy.deepcopy(REQUIRED_CONSTRAINTS)
+                },
+            ]
+        }
+        schema = ObservationSchema(descriptor)
+        record = {
+            'Species': "Frog", 'Observer': "Serge"
+        }
+        with self.assertRaises(ConstraintError):
+            self.assertEqual(schema.cast_record_observation_date(record), datetime.date(2016, 12, 23))
+
+        record = {
+            'Species': "Frog", 'Observation Date': '', 'Observer': "Serge"
+        }
+        with self.assertRaises(ConstraintError):
+            self.assertEqual(schema.cast_record_observation_date(record), datetime.date(2016, 12, 23))
+
+        record = {
+            'Species': "Frog", 'Observation Date': 'bullshit', 'Observer': "Serge"
+        }
+        with self.assertRaises(Exception):
+            self.assertEqual(schema.cast_record_observation_date(record), datetime.date(2016, 12, 23))
+
+        record = {
+            'Species': "Frog", 'Observation Date': 1200, 'Observer': "Serge"
+        }
+        with self.assertRaises(Exception):
+            self.assertEqual(schema.cast_record_observation_date(record), datetime.date(2016, 12, 23))
 
 
 class TestSpeciesObservation(TestCase):

@@ -16,6 +16,8 @@ from django.contrib.auth.models import User
 from django.contrib.gis.geos.polygon import Polygon
 from django.core.exceptions import ValidationError
 
+from utils_data_package import GenericSchema, ObservationSchema, SpeciesObservationSchema
+
 
 MODEL_SRID = 4326
 DATUM_CHOICES = [
@@ -29,16 +31,14 @@ DEFAULT_SITE_ID = 16120
 
 @python_2_unicode_compatible
 class DataSet(models.Model):
-    TYPE_PROJECT = 'project'
-    TYPE_SITE = 'site'
     TYPE_GENERIC = 'generic'
     TYPE_OBSERVATION = 'observation'
     TYPE_SPECIES_OBSERVATION = 'species_observation'
-    TYPE_CHOICES = [(TYPE_PROJECT, TYPE_PROJECT.capitalize()),
-                    (TYPE_SITE, TYPE_SITE.capitalize()),
+    TYPE_CHOICES = [
                     (TYPE_GENERIC, TYPE_GENERIC.capitalize()),
                     (TYPE_OBSERVATION, TYPE_OBSERVATION.capitalize()),
-                    (TYPE_SPECIES_OBSERVATION, 'Species observation')]
+                    (TYPE_SPECIES_OBSERVATION, 'Species observation')
+    ]
     project = models.ForeignKey('Project', null=False, blank=False, related_name='projects',
                                 related_query_name='project')
     name = models.CharField(max_length=200, null=False, blank=False)
@@ -54,6 +54,24 @@ class DataSet(models.Model):
 
     def __str__(self):
         return '{}'.format(self.name)
+
+    @property
+    def record_model(self):
+        if self.type == DataSet.TYPE_SPECIES_OBSERVATION:
+            return SpeciesObservation
+        elif self.type == DataSet.TYPE_OBSERVATION:
+            return Observation
+        else:
+            return GenericRecord
+
+    @property
+    def schema_model(self):
+        if self.type == DataSet.TYPE_SPECIES_OBSERVATION:
+            return SpeciesObservationSchema
+        elif self.type == DataSet.TYPE_OBSERVATION:
+            return ObservationSchema
+        else:
+            return GenericSchema
 
     @property
     def schema(self):
@@ -88,12 +106,28 @@ class DataSet(models.Model):
         else:
             schema = self.schema
             try:
+                # use frictionless validator
                 jsontableschema.validate(schema)
             except Exception as e:
                 raise ValidationError(
                     'Schema errors for resource "{}": {}'.format(
                         self.resource.get('name'),
                         [e.message for e in jsontableschema.validator.iter_errors(schema)]))
+            try:
+                # use our own schema class to validate.
+                # The constructor should raise an exception if error
+                if self.type == self.TYPE_SPECIES_OBSERVATION:
+                    SpeciesObservationSchema(schema)
+                elif self.type == self.TYPE_OBSERVATION:
+                    ObservationSchema(schema)
+                else:
+                    GenericSchema(schema)
+            except Exception as e:
+                raise ValidationError(
+                    'Schema errors for resource "{}": {}'.format(
+                        self.resource.get('name'),
+                        e))
+
 
     class Meta:
         unique_together = ('project', 'name')
@@ -140,7 +174,7 @@ class GenericRecord(AbstractRecord):
 
 class Observation(AbstractRecord):
     site = models.ForeignKey('Site', null=True, blank=True)
-    date_time = models.DateTimeField(null=True, blank=True)
+    observation_date = models.DateTimeField(null=True, blank=True)
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
 
 
@@ -148,10 +182,10 @@ class Observation(AbstractRecord):
 class SpeciesObservation(AbstractRecord):
     """
     If the input_name has been validated against the species database the name_id is populated with the value from the
-    database
+    databasedate
     """
     site = models.ForeignKey('Site', null=True, blank=True)
-    date_time = models.DateTimeField(null=True, blank=True)
+    observation_date = models.DateTimeField(null=True, blank=True)
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
 
     input_name = models.CharField(max_length=500, null=False, blank=False,
@@ -207,9 +241,8 @@ class Project(models.Model):
                                 verbose_name="Comments", help_text="")
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Extent Geometry", help_text="")
-    # can't extend AbstractRecord directly because we need to change the related name and possible null
     attributes = JSONField(null=True, blank=True)
-    attributes_descriptor = JSONField(null=True, blank=True)
+    attributes_schema = JSONField(null=True, blank=True)
 
     class Meta:
         pass
@@ -314,8 +347,8 @@ class Site(models.Model):
                                 verbose_name="Comments", help_text="")
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Geometry", help_text="")
-    data = JSONField(null=True, blank=True)
-    dataset = models.ForeignKey(DataSet, null=True, blank=True)
+    attributes = JSONField(null=True, blank=True)
+    attributes_schema = JSONField(null=True, blank=True)
 
     class Meta:
         unique_together = ('project', 'site_code')

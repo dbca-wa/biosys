@@ -14,8 +14,8 @@ from envelope.views import ContactView
 from main import utils as utils_model
 from main.admin import readonly_user
 from main.forms import FeedbackForm, UploadDataForm
-from main.models import DataSet, DataSetFile, GenericRecord, Site
-from main.utils_data_package import Schema, Exporter
+from main.models import DataSet, DataSetFile, GenericRecord, Site, Observation, SpeciesObservation
+from main.utils_data_package import GenericSchema, Exporter
 from main.utils_http import WorkbookResponse
 from main.utils_zip import zip_dir_to_temp_zip, export_zip
 from upload.validation import DATASHEET_MODELS_MAPPING
@@ -130,14 +130,15 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
         pk = self.kwargs.get('pk')
         dataset = get_object_or_404(DataSet, pk=pk)
         error_url = reverse_lazy('admin:main_dataset_change', args=[pk])
-        if dataset.type != DataSet.TYPE_GENERIC:
+        if dataset.type == DataSet.TYPE_SPECIES_OBSERVATION:
             messages.error(self.request, 'Import of data set of type ' + dataset.type + " is not yet implemented")
             return HttpResponseRedirect(reverse_lazy('admin:main_dataset_change', args=[pk]))
         src_file = DataSetFile(file=self.request.FILES['file'], dataset=dataset, uploaded_by=self.request.user)
         src_file.save()
         is_append = form.cleaned_data['append_mode']
         create_site = form.cleaned_data['create_site']
-        schema = Schema(dataset.schema)
+        schema = dataset.schema_model(dataset.schema)
+        Record = dataset.record_model
         with open(src_file.path, 'rb') as csvfile:
             reader = csv.DictReader(csvfile)
             records = []
@@ -172,23 +173,31 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                                 try:
                                     site = Site.objects.create(**kwargs)
                                 except Exception as e:
-                                    errors.append("Error while creating the site '{}: {}".format(
+                                    errors.append("Error while creating the site '{}': {}".format(
                                         data,
                                         e.message
                                     ))
                             else:
-                                msg = "Row #{}: could not find the site '{}:".format(row_number, data)
+                                msg = "Row #{}: could not find the site '{}':".format(row_number, data)
                                 errors.append(msg)
-                    record = GenericRecord(
+                    record = Record(
                         site=site,
                         dataset=dataset,
                         data=row,
                     )
+                    # specific fields
+                    try:
+                        if dataset.type == DataSet.TYPE_OBSERVATION or dataset.type == DataSet.TYPE_SPECIES_OBSERVATION:
+                            observation_date = schema.cast_record_observation_date(row)
+                            record.observation_date = observation_date
+                    except Exception as e:
+                        msg = "Row #{}: problem while extracting the Observation Date: {}:".format(row_number, row)
+                        errors.append(msg)
                     records.append(record)
             if not errors:
                 if not is_append:
-                    GenericRecord.objects.filter(dataset=dataset).delete()
-                GenericRecord.objects.bulk_create(records)
+                    Record.objects.filter(dataset=dataset).delete()
+                Record.objects.bulk_create(records)
                 if warnings:
                     msg = "{} records imported but with the following warnings: \n {}".format(
                         len(records),
