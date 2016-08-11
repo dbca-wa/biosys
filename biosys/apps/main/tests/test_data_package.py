@@ -48,6 +48,39 @@ GENERIC_DATA_PACKAGE = {
     "title": "Test"
 }
 
+LAT_LONG_OBSERVATION_SCHEMA = {
+    "fields": [
+        {
+            "name": "Observation Date",
+            "type": "date",
+            "format": "any",
+            "constraints": {
+                "required": True,
+            }
+        },
+        {
+            "name": "Latitude",
+            "type": "number",
+            "format": "default",
+            "constraints": {
+                "required": True,
+                "minimum": -90.0,
+                "maximum": 90.0,
+            }
+        },
+        {
+            "name": "Longitude",
+            "type": "number",
+            "format": "default",
+            "constraints": {
+                "required": True,
+                "minimum": -180.0,
+                "maximum": 180.0,
+            }
+        },
+    ]
+}
+
 
 class TestSchemaConstraints(TestCase):
     def test_none_or_empty(self):
@@ -251,16 +284,15 @@ class TestGenericSchemaValidation(TestCase):
         self.sch = GenericSchema(self.descriptor)
 
 
-class TestObservationSchema(TestCase):
+class TestObservationDateSchema(TestCase):
     def setUp(self):
         self.descriptor = copy.deepcopy(GENERIC_SCHEMA)
-        self.schema = GenericSchema(self.descriptor)
 
     def test_no_date_field(self):
         # schema without date throw an exception
         descriptor = self.descriptor
-        with self.assertRaises(ObservationDateSchemaError):
-            ObservationSchema.get_observation_date_field_or_throw(descriptor)
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_observation_date_field_or_throw(descriptor)
 
     def test_one_date_field_with_required(self):
         # happy path: one date field only and
@@ -274,7 +306,7 @@ class TestObservationSchema(TestCase):
             }
         )
         try:
-            field = ObservationSchema.get_observation_date_field_or_throw(descriptor)
+            field = ObservationSchema.find_observation_date_field_or_throw(descriptor)
             self.assertEqual(field.name, "Date Field")
         except Exception as e:
             self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
@@ -290,8 +322,8 @@ class TestObservationSchema(TestCase):
                 "constraints": NOT_REQUIRED_CONSTRAINTS
             }
         )
-        with self.assertRaises(ObservationDateSchemaError):
-            ObservationSchema.get_observation_date_field_or_throw(descriptor)
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_observation_date_field_or_throw(descriptor)
 
     def test_two_date_fields_throws(self):
         # two date fields without more information throw an error
@@ -336,7 +368,7 @@ class TestObservationSchema(TestCase):
             }
         )
         try:
-            field = ObservationSchema.get_observation_date_field_or_throw(descriptor)
+            field = ObservationSchema.find_observation_date_field_or_throw(descriptor)
             self.assertEqual(field.name, "Biosys Observation Date")
         except Exception as e:
             self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
@@ -363,8 +395,8 @@ class TestObservationSchema(TestCase):
                 }
             }
         )
-        with self.assertRaises(ObservationDateSchemaError):
-            ObservationSchema.get_observation_date_field_or_throw(descriptor)
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_observation_date_field_or_throw(descriptor)
 
     def test_two_biosys_observation_date(self):
         # Sad path: two date fields tagged as a biosys observation date
@@ -391,8 +423,8 @@ class TestObservationSchema(TestCase):
                 }
             }
         )
-        with self.assertRaises(ObservationDateSchemaError):
-            ObservationSchema.get_observation_date_field_or_throw(descriptor)
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_observation_date_field_or_throw(descriptor)
 
     def test_two_date_one_with_correct_name(self):
         # happy path: two required date but one correctly named 'Observation Date'
@@ -414,7 +446,7 @@ class TestObservationSchema(TestCase):
             }
         )
         try:
-            field = ObservationSchema.get_observation_date_field_or_throw(descriptor)
+            field = ObservationSchema.find_observation_date_field_or_throw(descriptor)
             self.assertEqual(field.name, ObservationSchema.OBSERVATION_DATE_FIELD_NAME)
         except Exception as e:
             self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
@@ -438,8 +470,8 @@ class TestObservationSchema(TestCase):
                 "constraints": REQUIRED_CONSTRAINTS,
             }
         )
-        with self.assertRaises(ObservationDateSchemaError):
-            ObservationSchema.get_observation_date_field_or_throw(descriptor)
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_observation_date_field_or_throw(descriptor)
 
     def test_two_date_one_biosys_one_correct_name(self):
         # happy path?: two required date one named 'Observation Date' the other tag as biosys. Biosys has precedence
@@ -464,108 +496,381 @@ class TestObservationSchema(TestCase):
             }
         )
         try:
-            field = ObservationSchema.get_observation_date_field_or_throw(descriptor)
+            field = ObservationSchema.find_observation_date_field_or_throw(descriptor)
             self.assertNotEqual(field.name, ObservationSchema.OBSERVATION_DATE_FIELD_NAME)
             self.assertEqual(field.name, "The expected date")
         except Exception as e:
             self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
 
-    def test_cast_observation_date_happy_path(self):
-        descriptor = {
-            'fields': [
-                {
-                    "name": "Species",
-                    "tile": "Title",
-                    "type": "string",
-                    "format": "default",
-                    "constraints": copy.deepcopy(REQUIRED_CONSTRAINTS)
-                },
-                {
-                    "name": "Observation Date",
-                    "tile": "Title",
-                    "type": "date",
-                    "format": "any",
-                    "constraints": copy.deepcopy(REQUIRED_CONSTRAINTS)
-                },
-                {
-                    "name": "Observer",
-                    "tile": "Title",
-                    "type": "string",
-                    "format": "default",
-                    "constraints": copy.deepcopy(REQUIRED_CONSTRAINTS)
-                },
-            ]
+
+class TestObservationSchemaLatitude(TestCase):
+    def setUp(self):
+        self.descriptor = copy.deepcopy(GENERIC_SCHEMA)
+
+    def test_happy_path_column_name(self):
+        """
+        Happy path: One field required, number and named Latitude
+        :return:
+        """
+        field_desc = {
+            "name": "Latitude",
+            "type": "number",
+            "constraints": {
+                'required': True
+            }
         }
+        descriptor = self.descriptor
+        descriptor['fields'].append(field_desc)
+        try:
+            field = ObservationSchema.find_latitude_field_or_throw(descriptor)
+            self.assertEqual(field.name, "Latitude")
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_happy_path_biosys_type(self):
+        """
+        Happy path: columns not name latitude but tagged as biosys type = latitude
+        :return:
+        """
+        field_desc = {
+            "name": "lat",
+            "type": "number",
+            "constraints": {
+                'required': True
+            }
+        }
+        descriptor = copy.deepcopy(GENERIC_SCHEMA)
+        descriptor['fields'].append(field_desc)
+        # as it is it should throw an exception
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_latitude_field_or_throw(descriptor)
+
+        # add biosys type
+        field_desc['biosys'] = {
+            'type': 'latitude'
+        }
+        descriptor = copy.deepcopy(GENERIC_SCHEMA)
+        descriptor['fields'].append(field_desc)
+        try:
+            field = ObservationSchema.find_latitude_field_or_throw(descriptor)
+            self.assertEqual(field.name, "lat")
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_must_be_required1(self):
+        field_desc = {
+            "name": "Latitude",
+            "type": "number",
+            "constraints": {
+                'required': False
+            }
+        }
+        descriptor = self.descriptor
+        descriptor['fields'].append(field_desc)
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_latitude_field_or_throw(descriptor)
+
+    def test_must_be_required2(self):
+        field_desc = {
+            "name": "lat",
+            "type": "number",
+            "constraints": {
+                'required': False
+            },
+            "biosys": {
+                "type": "latitude"
+            }
+        }
+        descriptor = self.descriptor
+        descriptor['fields'].append(field_desc)
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_latitude_field_or_throw(descriptor)
+
+    def test_biosys_type_has_precedence(self):
+        """
+        Two fields one name 'Latitude' and another one tagged as biosys type latitude
+        The biosys one is chosen
+        :return:
+        """
+        descriptor = self.descriptor
+        descriptor['fields'].append({
+            "name": "The Observation Latitude",
+            "type": "number",
+            "constraints": {
+                'required': True
+            },
+            "biosys": {
+                "type": "latitude"
+            }
+        })
+        descriptor['fields'].append({
+            "name": "Latitude",
+            "type": "number",
+            "constraints": {
+                'required': True
+            },
+        })
+        try:
+            field = ObservationSchema.find_latitude_field_or_throw(descriptor)
+            self.assertEqual(field.name, "The Observation Latitude")
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_two_biosys_type_throws(self):
+        """
+        Two fields tagged as biosys type latitude should throw
+        :return:
+        """
+        descriptor = self.descriptor
+        descriptor['fields'].append({
+            "name": "The Observation Latitude",
+            "type": "number",
+            "constraints": {
+                'required': True
+            },
+            "biosys": {
+                "type": "latitude"
+            }
+        })
+        descriptor['fields'].append({
+            "name": "Latitude",
+            "type": "number",
+            "constraints": {
+                'required': True
+            },
+            "biosys": {
+                "type": "latitude"
+            }
+        })
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_latitude_field_or_throw(descriptor)
+
+    def test_two_latitude_name_throws(self):
+        """
+        Two fields named Latitude (no biosys) should throw
+        :return:
+        """
+        descriptor = self.descriptor
+        descriptor['fields'].append({
+            "name": "Latitude",
+            "type": "number",
+            "constraints": {
+                'required': True
+            },
+        })
+        descriptor['fields'].append({
+            "name": "Latitude",
+            "type": "number",
+            "constraints": {
+                'required': True
+            },
+        })
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_latitude_field_or_throw(descriptor)
+
+
+class TestObservationSchemaLongitude(TestCase):
+    def setUp(self):
+        self.descriptor = copy.deepcopy(GENERIC_SCHEMA)
+
+    def test_happy_path_column_name(self):
+        """
+        Happy path: One field required, number and named Longitude
+        :return:
+        """
+        field_desc = {
+            "name": "Longitude",
+            "type": "number",
+            "constraints": {
+                'required': True
+            }
+        }
+        descriptor = self.descriptor
+        descriptor['fields'].append(field_desc)
+        try:
+            field = ObservationSchema.find_longitude_field_or_throw(descriptor)
+            self.assertEqual(field.name, "Longitude")
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_happy_path_biosys_type(self):
+        """
+        Happy path: columns not name longitude but tagged as biosys type = longitude
+        :return:
+        """
+        field_desc = {
+            "name": "lat",
+            "type": "number",
+            "constraints": {
+                'required': True
+            }
+        }
+        descriptor = copy.deepcopy(GENERIC_SCHEMA)
+        descriptor['fields'].append(field_desc)
+        # as it is it should throw an exception
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_longitude_field_or_throw(descriptor)
+
+        # add biosys type
+        field_desc['biosys'] = {
+            'type': 'longitude'
+        }
+        descriptor = copy.deepcopy(GENERIC_SCHEMA)
+        descriptor['fields'].append(field_desc)
+        try:
+            field = ObservationSchema.find_longitude_field_or_throw(descriptor)
+            self.assertEqual(field.name, "lat")
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_must_be_required1(self):
+        field_desc = {
+            "name": "Longitude",
+            "type": "number",
+            "constraints": {
+                'required': False
+            }
+        }
+        descriptor = self.descriptor
+        descriptor['fields'].append(field_desc)
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_longitude_field_or_throw(descriptor)
+
+    def test_must_be_required2(self):
+        field_desc = {
+            "name": "lat",
+            "type": "number",
+            "constraints": {
+                'required': False
+            },
+            "biosys": {
+                "type": "longitude"
+            }
+        }
+        descriptor = self.descriptor
+        descriptor['fields'].append(field_desc)
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_longitude_field_or_throw(descriptor)
+
+    def test_biosys_type_has_precedence(self):
+        """
+        Two fields one name 'Longitude' and another one tagged as biosys type longitude
+        The biosys one is chosen
+        :return:
+        """
+        descriptor = self.descriptor
+        descriptor['fields'].append({
+            "name": "The Observation Longitude",
+            "type": "number",
+            "constraints": {
+                'required': True
+            },
+            "biosys": {
+                "type": "longitude"
+            }
+        })
+        descriptor['fields'].append({
+            "name": "Longitude",
+            "type": "number",
+            "constraints": {
+                'required': True
+            },
+        })
+        try:
+            field = ObservationSchema.find_longitude_field_or_throw(descriptor)
+            self.assertEqual(field.name, "The Observation Longitude")
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_two_biosys_type_throws(self):
+        """
+        Two fields tagged as biosys type longitude should throw
+        :return:
+        """
+        descriptor = self.descriptor
+        descriptor['fields'].append({
+            "name": "The Observation Longitude",
+            "type": "number",
+            "constraints": {
+                'required': True
+            },
+            "biosys": {
+                "type": "longitude"
+            }
+        })
+        descriptor['fields'].append({
+            "name": "Longitude",
+            "type": "number",
+            "constraints": {
+                'required': True
+            },
+            "biosys": {
+                "type": "longitude"
+            }
+        })
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_longitude_field_or_throw(descriptor)
+
+    def test_two_longitude_name_throws(self):
+        """
+        Two fields named Longitude (no biosys) should throw
+        :return:
+        """
+        descriptor = self.descriptor
+        descriptor['fields'].append({
+            "name": "Longitude",
+            "type": "number",
+            "constraints": {
+                'required': True
+            },
+        })
+        descriptor['fields'].append({
+            "name": "Longitude",
+            "type": "number",
+            "constraints": {
+                'required': True
+            },
+        })
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema.find_longitude_field_or_throw(descriptor)
+
+
+class TestObservationSchemaCast(TestCase):
+    def setUp(self):
+        self.descriptor = copy.deepcopy(LAT_LONG_OBSERVATION_SCHEMA)
+
+    def test_cast_observation_date_happy_path(self):
+        descriptor = self.descriptor
         schema = ObservationSchema(descriptor)
         record = {
-            'Species': "Frog", 'Observation Date': '23/12/2016', 'Observer': "Serge"
+            'Latitude': "-32", 'Observation Date': '23/12/2016', 'Longitude': "115.3"
         }
         self.assertEqual(schema.cast_record_observation_date(record), datetime.date(2016, 12, 23))
 
     def test_cast_observation_date_sad_path(self):
         # a record without date value should throw an exception
-        descriptor = {
-            'fields': [
-                {
-                    "name": "Species",
-                    "tile": "Title",
-                    "type": "string",
-                    "format": "default",
-                    "constraints": copy.deepcopy(REQUIRED_CONSTRAINTS)
-                },
-                {
-                    "name": "Observation Date",
-                    "tile": "Title",
-                    "type": "date",
-                    "format": "any",
-                    "constraints": copy.deepcopy(REQUIRED_CONSTRAINTS)
-                },
-                {
-                    "name": "Observer",
-                    "tile": "Title",
-                    "type": "string",
-                    "format": "default",
-                    "constraints": copy.deepcopy(REQUIRED_CONSTRAINTS)
-                },
-            ]
-        }
+        descriptor = self.descriptor
         schema = ObservationSchema(descriptor)
         record = {
-            'Species': "Frog", 'Observer': "Serge"
+            'Latitude': "-32", 'Longitude': "115.3"
         }
         with self.assertRaises(ConstraintError):
             self.assertEqual(schema.cast_record_observation_date(record), datetime.date(2016, 12, 23))
 
         record = {
-            'Species': "Frog", 'Observation Date': '', 'Observer': "Serge"
+            'Latitude': "-32", 'Observation Date': '', 'Longitude': "115.3"
         }
         with self.assertRaises(ConstraintError):
             self.assertEqual(schema.cast_record_observation_date(record), datetime.date(2016, 12, 23))
 
         record = {
-            'Species': "Frog", 'Observation Date': 'bullshit', 'Observer': "Serge"
+            'Latitude': "-32", 'Observation Date': 'bullshit', 'Longitude': "115.3"
         }
         with self.assertRaises(Exception):
             self.assertEqual(schema.cast_record_observation_date(record), datetime.date(2016, 12, 23))
 
         record = {
-            'Species': "Frog", 'Observation Date': 1200, 'Observer': "Serge"
+            'Latitude': "-32", 'Observation Date': 1200, 'Longitude': "115.3"
         }
         with self.assertRaises(Exception):
             self.assertEqual(schema.cast_record_observation_date(record), datetime.date(2016, 12, 23))
-
-
-class TestSpeciesObservation(TestCase):
-    pass
-
-
-class TestBaseDataValidation(TestCase):
-    pass
-
-
-class TestObservationDataValidation(TestCase):
-    pass
-
-
-class TestSpeciesObservationdataValidation(TestCase):
-    pass

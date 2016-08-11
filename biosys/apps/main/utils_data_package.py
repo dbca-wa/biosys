@@ -1,27 +1,28 @@
 from __future__ import print_function
-from future.utils import raise_with_traceback
 
 import io
 import json
 from os import listdir
 from os.path import join
 
-from dateutil.parser import parse as date_parse
-
 import jsontableschema
+from dateutil.parser import parse as date_parse
+from django.utils.encoding import python_2_unicode_compatible
+from future.utils import raise_with_traceback
+from jsontableschema.exceptions import InvalidDateType
 from jsontableschema.model import SchemaModel, types
-from jsontableschema.exceptions import InvalidSchemaError, InvalidDateType
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.writer.write_only import WriteOnlyCell
-from django.utils.encoding import python_2_unicode_compatible
 
-from upload.utils_openpyxl import is_blank_value
+from django.contrib.gis.geos import GEOSGeometry, Point
+
+from main.models import MODEL_SRID
 
 COLUMN_HEADER_FONT = Font(bold=True)
 
 
-class ObservationDateSchemaError(Exception):
+class ObservationSchemaError(Exception):
     # don't  extend InvalidSchemaError (problem with message not showing in the str method)
     pass
 
@@ -75,6 +76,7 @@ class NotBlankStringType(types.StringType):
     null_values = ['null', 'none', 'nil', 'nan', '-', '']
 
 
+@python_2_unicode_compatible
 class BiosysSchema:
     """
     The utility class for the biosys data within a schema field
@@ -88,6 +90,9 @@ class BiosysSchema:
     }
     """
     OBSERVATION_DATE_TYPE_NAME = 'observationDate'
+    LATITUDE_TYPE_NAME = 'latitude'
+    LONGITUDE_TYPE_NAME = 'longitude'
+
     BIOSYS_TYPE_MAP = {
         OBSERVATION_DATE_TYPE_NAME: DayFirstDateType,
     }
@@ -99,6 +104,9 @@ class BiosysSchema:
     def __getitem__(self, item):
         return self.data.__getitem__(item)
 
+    def __str__(self):
+        return "BiosysSchema: {}".format(self.data)
+
     @property
     def type(self):
         return self.get('type')
@@ -108,6 +116,12 @@ class BiosysSchema:
 
     def is_observation_date(self):
         return self.type == self.OBSERVATION_DATE_TYPE_NAME
+
+    def is_latitude(self):
+        return self.type == self.LATITUDE_TYPE_NAME
+
+    def is_longitude(self):
+        return self.type == self.LONGITUDE_TYPE_NAME
 
 
 @python_2_unicode_compatible
@@ -289,6 +303,7 @@ class SchemaForeignKey:
     def model_field(self):
         return self.reference_fields[0] if self.reference_fields else None
 
+
 @python_2_unicode_compatible
 class GenericSchema:
     """
@@ -404,13 +419,17 @@ class ObservationSchema(GenericSchema):
     (lat/long or geojson)
     """
     OBSERVATION_DATE_FIELD_NAME = 'Observation Date'
+    LATITUDE_FIELD_NAME = 'Latitude'
+    LONGITUDE_FIELD_NAME = 'Longitude'
 
     def __init__(self, schema):
         GenericSchema.__init__(self, schema)
-        self.observation_date_field = self.get_observation_date_field_or_throw(schema)
+        self.observation_date_field = self.find_observation_date_field_or_throw(self)
+        self.latitude_field = self.find_latitude_field_or_throw(self)
+        self.longitude_field = self.find_longitude_field_or_throw(self)
 
     @staticmethod
-    def get_observation_date_field_or_throw(schema):
+    def find_observation_date_field_or_throw(schema):
         """
         Precedence Rules:
         1- Look for a single date field with required = true
@@ -427,7 +446,7 @@ class ObservationSchema(GenericSchema):
         if len([field for field in schema.fields
                 if field.biosys.is_observation_date() and not field.required]) > 0:
             msg = "A biosys observationDate with required=false detected. It must be set required=true"
-            raise ObservationDateSchemaError(msg)
+            raise ObservationSchemaError(msg)
         # normal cases
         required_date_fields = [field for field in schema.fields
                                 if
@@ -438,7 +457,7 @@ class ObservationSchema(GenericSchema):
         dates_count = len(required_date_fields)
         if dates_count == 0:
             msg = "One field must be of type 'date' with 'required': true to be a valid Observation schema."
-            raise ObservationDateSchemaError(msg)
+            raise ObservationSchemaError(msg)
         if dates_count == 1:
             return required_date_fields[0]
         else:
@@ -449,7 +468,7 @@ class ObservationSchema(GenericSchema):
                 return fields[0]
             if count > 1:
                 msg = "The schema contains more than one field tagged as a biosys type=observationDate"
-                raise ObservationDateSchemaError(msg)
+                raise ObservationSchemaError(msg)
             # no biosys observation date. Look for field name
             fields = [field for field in required_date_fields if
                       field.name == ObservationSchema.OBSERVATION_DATE_FIELD_NAME]
@@ -459,11 +478,89 @@ class ObservationSchema(GenericSchema):
             if count > 1:
                 msg = "The schema contains more than one field named Observation Date. " \
                       "One should be tagged as a biosys type=observationDate "
-                raise ObservationDateSchemaError(msg)
-            msg = "The schema contains more than one date that can be used as an observation date. " \
-                  "You need to name one {} or tag it a a biosys type=observationDate".format(
-                ObservationSchema.OBSERVATION_DATE_FIELD_NAME)
-            raise ObservationDateSchemaError(msg)
+                raise ObservationSchemaError(msg)
+            msg = "The schema doesn't include a required Observation Date field. " \
+                  "It must have a field named {} or with biosys type {}". \
+                format(ObservationSchema.OBSERVATION_DATE_FIELD_NAME, BiosysSchema.OBSERVATION_DATE_TYPE_NAME)
+            raise ObservationSchemaError(msg)
+
+    @staticmethod
+    def find_latitude_field_or_throw(schema):
+        """
+        Precedence Rules:
+        2- Look for biosys.type = 'latitude'
+        3- Look for a field with name 'Latitude' case insensitive
+        :param schema: a dict descriptor or a Schema instance
+        :return: None if not found or raise an exception if more than one
+        """
+        if not isinstance(schema, GenericSchema):
+            schema = GenericSchema(schema)
+        fields = [f for f in schema.fields if f.biosys.is_latitude()]
+        if len(fields) > 1:
+            msg = "More than one Biosys latitude field found!. {}".format(fields)
+            raise ObservationSchemaError(msg)
+        if len(fields) == 1:
+            field = fields[0]
+            if not field.required:
+                msg = "The Biosys latitude field must be set as 'required'. {}".format(field)
+                raise ObservationSchemaError(msg)
+            else:
+                return field
+        # no Biosys latitude field found
+        fields = [f for f in schema.fields if f.name.lower() == ObservationSchema.LATITUDE_FIELD_NAME.lower()]
+        if len(fields) > 1:
+            msg = "More than one Latitude field found!. {}".format(fields)
+            raise ObservationSchemaError(msg)
+        if len(fields) == 1:
+            field = fields[0]
+            if not field.required:
+                msg = "The Latitude field must be set as 'required'. {}".format(field)
+                raise ObservationSchemaError(msg)
+            else:
+                return field
+        msg = "The schema doesn't include a required latitude field. " \
+              "It must have a field named {} or with biosys type {}". \
+            format(ObservationSchema.LATITUDE_FIELD_NAME, BiosysSchema.LATITUDE_TYPE_NAME)
+        raise ObservationSchemaError(msg)
+
+    @staticmethod
+    def find_longitude_field_or_throw(schema):
+        """
+        Precedence Rules:
+        2- Look for biosys.type = 'longitude'
+        3- Look for a field with name 'Longitude' case insensitive
+        :param schema: a dict descriptor or a Schema instance
+        :return: None if not found or raise an exception if more than one
+        """
+        if not isinstance(schema, GenericSchema):
+            schema = GenericSchema(schema)
+        fields = [f for f in schema.fields if f.biosys.is_longitude()]
+        if len(fields) > 1:
+            msg = "More than one Biosys longitude field found!. {}".format(fields)
+            raise ObservationSchemaError(msg)
+        if len(fields) == 1:
+            field = fields[0]
+            if not field.required:
+                msg = "The Biosys longitude field must be set as 'required'. {}".format(field)
+                raise ObservationSchemaError(msg)
+            else:
+                return field
+        # no Biosys longitude field found
+        fields = [f for f in schema.fields if f.name.lower() == ObservationSchema.LONGITUDE_FIELD_NAME.lower()]
+        if len(fields) > 1:
+            msg = "More than one Longitude field found!. {}".format(fields)
+            raise ObservationSchemaError(msg)
+        if len(fields) == 1:
+            field = fields[0]
+            if not field.required:
+                msg = "The Longitude field must be set as 'required'. {}".format(field)
+                raise ObservationSchemaError(msg)
+            else:
+                return field
+        msg = "The schema doesn't include a required longitude field. " \
+              "It must have a field named {} or with biosys type {}". \
+            format(ObservationSchema.LONGITUDE_FIELD_NAME, BiosysSchema.LONGITUDE_TYPE_NAME)
+        raise ObservationSchemaError(msg)
 
     def get_record_observation_date_value(self, record):
         return record.get(self.observation_date_field.name)
@@ -471,6 +568,11 @@ class ObservationSchema(GenericSchema):
     def cast_record_observation_date(self, record):
         field = self.observation_date_field
         return field.cast(record.get(field.name))
+
+    def cast_geometry(self, record, srid=MODEL_SRID):
+        lat = record.get(self.latitude_field.name)
+        lon = record.get(self.longitude_field)
+        return Point(x=lon, y=lat, srid=srid)
 
 
 class SpeciesObservationSchema(ObservationSchema):
