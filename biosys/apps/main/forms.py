@@ -1,6 +1,11 @@
 import json
+import pytz
+import datetime
+
 from django import forms
 from django.contrib.postgres.forms import JSONField
+from django.core.exceptions import ValidationError
+
 from envelope.forms import ContactForm
 
 from .models import Project, SiteVisitDataSheetTemplate, Visit, Site, DataSet
@@ -33,6 +38,31 @@ class BetterJSONField(JSONField):
             return json.dumps(value, indent=4)
 
 
+class BetterTimeZoneFormField(forms.TypedChoiceField):
+    """
+    A fixed version of the TimeZoneFormField from timezone_field (but when updating a model)
+    It just ensure that the coerce test if it is already a timezone.
+    """
+    def __init__(self, *args, **kwargs):
+
+        def coerce_to_pytz(val):
+            if isinstance(val, datetime.tzinfo):
+                return val
+            else:
+                try:
+                    return pytz.timezone(val)
+                except pytz.UnknownTimeZoneError:
+                    raise ValidationError("Unknown time zone: '%s'" % val)
+
+        defaults = {
+            'coerce': coerce_to_pytz,
+            'choices': [(tz, tz) for tz in pytz.common_timezones],
+            'empty_value': None,
+        }
+        defaults.update(kwargs)
+        super(BetterTimeZoneFormField, self).__init__(*args, **defaults)
+
+
 class DataSetForm(forms.ModelForm):
     data_package = BetterJSONField()
 
@@ -42,6 +72,10 @@ class DataSetForm(forms.ModelForm):
 
 
 class ProjectForm(forms.ModelForm):
+    attributes_schema = BetterJSONField(required=False)
+    attributes = BetterJSONField(required=False)
+    timezone = BetterTimeZoneFormField(initial=Project.DEFAULT_TIMEZONE)
+
     class Meta:
         model = Project
         exclude = []
@@ -133,6 +167,9 @@ class VisitForm(forms.ModelForm):
 
 
 class SiteForm(forms.ModelForm):
+    attributes_schema = BetterJSONField(required=False)
+    attributes = BetterJSONField(required=False)
+
     class Meta:
         model = Site
         exclude = []

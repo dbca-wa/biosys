@@ -15,9 +15,11 @@ from django.contrib.gis.geos import Point
 from django.contrib.auth.models import User
 from django.contrib.gis.geos.polygon import Polygon
 from django.core.exceptions import ValidationError
+from django.conf import settings
+
+from timezone_field import TimeZoneField
 
 from utils_data_package import GenericSchema, ObservationSchema, SpeciesObservationSchema
-
 
 MODEL_SRID = 4326
 DATUM_CHOICES = [
@@ -35,9 +37,9 @@ class DataSet(models.Model):
     TYPE_OBSERVATION = 'observation'
     TYPE_SPECIES_OBSERVATION = 'species_observation'
     TYPE_CHOICES = [
-                    (TYPE_GENERIC, TYPE_GENERIC.capitalize()),
-                    (TYPE_OBSERVATION, TYPE_OBSERVATION.capitalize()),
-                    (TYPE_SPECIES_OBSERVATION, 'Species observation')
+        (TYPE_GENERIC, TYPE_GENERIC.capitalize()),
+        (TYPE_OBSERVATION, TYPE_OBSERVATION.capitalize()),
+        (TYPE_SPECIES_OBSERVATION, 'Species observation')
     ]
     project = models.ForeignKey('Project', null=False, blank=False, related_name='projects',
                                 related_query_name='project')
@@ -89,6 +91,8 @@ class DataSet(models.Model):
         """
         Validate the data descriptor
         """
+        if self.type == self.TYPE_SPECIES_OBSERVATION:
+            raise ValidationError('The support for {} is not yet implemented'.format(self.type))
         #  Validate the data package
         validator = datapackage.DataPackage(self.data_package)
         try:
@@ -127,7 +131,6 @@ class DataSet(models.Model):
                     'Schema errors for resource "{}": {}'.format(
                         self.resource.get('name'),
                         e))
-
 
     class Meta:
         unique_together = ('project', 'name')
@@ -168,26 +171,29 @@ class AbstractRecord(models.Model):
         abstract = True
 
 
+class AbstractObservationRecord(AbstractRecord):
+    datetime = models.DateTimeField(null=True, blank=True)
+    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+
 class GenericRecord(AbstractRecord):
     site = models.ForeignKey('Site', null=True, blank=True)
 
 
-class Observation(AbstractRecord):
+class Observation(AbstractObservationRecord):
     site = models.ForeignKey('Site', null=True, blank=True)
-    observation_date = models.DateTimeField(null=True, blank=True)
-    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
 
 
 @python_2_unicode_compatible
-class SpeciesObservation(AbstractRecord):
+class SpeciesObservation(AbstractObservationRecord):
     """
     If the input_name has been validated against the species database the name_id is populated with the value from the
     databasedate
     """
     site = models.ForeignKey('Site', null=True, blank=True)
-    observation_date = models.DateTimeField(null=True, blank=True)
-    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
-
     input_name = models.CharField(max_length=500, null=False, blank=False,
                                   verbose_name="Species", help_text="")
     name_id = models.IntegerField(default=-1,
@@ -204,11 +210,19 @@ class SpeciesObservation(AbstractRecord):
 
 
 class Project(models.Model):
+    DEFAULT_TIMEZONE = settings.TIME_ZONE
+
     title = models.CharField(max_length=300, null=False, blank=False, unique=True,
                              verbose_name="Title", help_text="Enter a brief title for the project (required).")
     code = models.CharField(max_length=30, null=True, blank=True,
                             verbose_name="Code",
                             help_text="Provide a brief code or acronym for this project. This code could be used for prefixing site codes.")
+    datum = models.IntegerField(null=True, blank=True, choices=DATUM_CHOICES, default=MODEL_SRID,
+                                verbose_name="Default Datum",
+                                help_text="The datum all locations will be assumed to have unless otherwise specified.")
+
+    timezone = TimeZoneField(default=DEFAULT_TIMEZONE)
+
     custodian = models.CharField(max_length=100, null=True, blank=True,
                                  verbose_name="Custodian",
                                  help_text="The person responsible for the content of this project.")
@@ -222,9 +236,6 @@ class Project(models.Model):
                                verbose_name="Funding", help_text="")
     duration = models.CharField(max_length=100, null=True, blank=True,
                                 verbose_name="Duration", help_text="The likely duration of the project.")
-    datum = models.IntegerField(null=True, blank=True, choices=DATUM_CHOICES, default=MODEL_SRID,
-                                verbose_name="Default Datum",
-                                help_text="The datum all locations will be assumed to have unless otherwise specified.")
     extent_lat_min = models.FloatField(null=True, blank=True,
                                        verbose_name="Extent latitude min",
                                        help_text="The southernmost extent of the project (-90 - 0)")

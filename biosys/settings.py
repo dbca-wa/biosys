@@ -52,6 +52,7 @@ INSTALLED_APPS = (
     'tastypie',
     'webtemplate_dpaw',
     'bootstrap3',
+    'timezone_field'
 )
 
 PROJECT_APPS = (
@@ -116,7 +117,7 @@ DATABASES = {'default': database.config()}
 
 # Internationalization
 LANGUAGE_CODE = 'en-au'
-TIME_ZONE = 'Australia/Perth'
+TIME_ZONE = env('TIME_ZONE', 'Australia/Perth')
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True

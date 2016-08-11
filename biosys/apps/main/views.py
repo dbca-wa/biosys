@@ -1,22 +1,23 @@
 import csv
 import json
 import tempfile
+import datetime
 
 from braces.views import FormMessagesMixin
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.urlresolvers import reverse_lazy
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
-from django.views.generic import TemplateView, View, FormView
+from django.views.generic import TemplateView, FormView
+from django.utils import timezone
+
 from envelope.views import ContactView
 
 from main import utils as utils_model
 from main.admin import readonly_user
 from main.forms import FeedbackForm, UploadDataForm
-from main.models import DataSet, DataSetFile, GenericRecord, Site, Observation, SpeciesObservation
-from main.utils_data_package import GenericSchema, Exporter
-from main.utils_http import WorkbookResponse
+from main.models import DataSet, DataSetFile, Site
 from main.utils_zip import zip_dir_to_temp_zip, export_zip
 from upload.validation import DATASHEET_MODELS_MAPPING
 
@@ -129,6 +130,7 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
     def form_valid(self, form):
         pk = self.kwargs.get('pk')
         dataset = get_object_or_404(DataSet, pk=pk)
+
         error_url = reverse_lazy('admin:main_dataset_change', args=[pk])
         if dataset.type == DataSet.TYPE_SPECIES_OBSERVATION:
             messages.error(self.request, 'Import of data set of type ' + dataset.type + " is not yet implemented")
@@ -189,9 +191,15 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                     try:
                         if dataset.type == DataSet.TYPE_OBSERVATION or dataset.type == DataSet.TYPE_SPECIES_OBSERVATION:
                             observation_date = schema.cast_record_observation_date(row)
-                            record.observation_date = observation_date
+                            # convert to datetime with timezone awareness
+                            if isinstance(observation_date, datetime.date):
+                                observation_date = datetime.datetime.combine(observation_date, datetime.time.min)
+                            # timezone awareness
+                            tz = dataset.project.timezone or timezone.get_current_timezone()
+                            record.datetime = timezone.make_aware(observation_date, tz)
                     except Exception as e:
-                        msg = "Row #{}: problem while extracting the Observation Date: {}:".format(row_number, row)
+                        msg = "> Row #{}: problem while extracting the Observation Date: {}. [{}]".format(row_number, e,
+                                                                                                          row)
                         errors.append(msg)
                     records.append(record)
             if not errors:
