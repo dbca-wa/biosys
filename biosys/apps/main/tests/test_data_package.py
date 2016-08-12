@@ -587,19 +587,6 @@ class TestObservationSchemaLatitude(TestCase):
         with self.assertRaises(ObservationSchemaError):
             ObservationSchema.find_latitude_field_or_throw(descriptor)
 
-    # def test_must_be_number(self):
-    #     field_desc = {
-    #         "name": "Latitude",
-    #         "type": "integer",
-    #         "constraints": {
-    #             'required': True
-    #         }
-    #     }
-    #     descriptor = self.descriptor
-    #     descriptor['fields'].append(field_desc)
-    #     with self.assertRaises(ObservationSchemaError):
-    #         ObservationSchema.find_latitude_field_or_throw(descriptor)
-
     def test_biosys_type_has_precedence(self):
         """
         Two fields one name 'Latitude' and another one tagged as biosys type latitude

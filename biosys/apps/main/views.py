@@ -200,7 +200,7 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                             geometry = schema.cast_geometry(row, default_srid=MODEL_SRID)
                             record.geometry = geometry
                     except Exception as e:
-                        msg = "> Row #{}: problem while extracting the Observation Date: {}. [{}]".format(row_number, e,
+                        msg = "> Row #{}: problem while extracting the Observation data: {}. [{}]".format(row_number, e,
                                                                                                           row)
                         errors.append(msg)
                     records.append(record)

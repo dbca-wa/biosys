@@ -15,9 +15,9 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.writer.write_only import WriteOnlyCell
 
-from django.contrib.gis.geos import GEOSGeometry, Point
+from django.contrib.gis.geos import Point
 
-# from main.models import MODEL_SRID
+from main.constants import MODEL_SRID, DATUM_CHOICES
 
 COLUMN_HEADER_FONT = Font(bold=True)
 
@@ -32,6 +32,10 @@ class SpeciesSchemaError(Exception):
 
 
 class GeometrySchemaError(Exception):
+    pass
+
+
+class InvalidDatumError(Exception):
     pass
 
 
@@ -92,6 +96,7 @@ class BiosysSchema:
     OBSERVATION_DATE_TYPE_NAME = 'observationDate'
     LATITUDE_TYPE_NAME = 'latitude'
     LONGITUDE_TYPE_NAME = 'longitude'
+    DATUM_TYPE_NAME = 'datum'
 
     BIOSYS_TYPE_MAP = {
         OBSERVATION_DATE_TYPE_NAME: DayFirstDateType,
@@ -122,6 +127,9 @@ class BiosysSchema:
 
     def is_longitude(self):
         return self.type == self.LONGITUDE_TYPE_NAME
+
+    def is_datum(self):
+        return self.type == self.DATUM_TYPE_NAME
 
 
 @python_2_unicode_compatible
@@ -421,12 +429,14 @@ class ObservationSchema(GenericSchema):
     OBSERVATION_DATE_FIELD_NAME = 'Observation Date'
     LATITUDE_FIELD_NAME = 'Latitude'
     LONGITUDE_FIELD_NAME = 'Longitude'
+    DATUM_FIELD_NAME = 'Datum'
 
     def __init__(self, schema):
         GenericSchema.__init__(self, schema)
         self.observation_date_field = self.find_observation_date_field_or_throw(self)
         self.latitude_field = self.find_latitude_field_or_throw(self)
         self.longitude_field = self.find_longitude_field_or_throw(self)
+        self.datum_field = self.find_datum_field_or_none(self)
 
     @staticmethod
     def find_observation_date_field_or_throw(schema):
@@ -527,8 +537,8 @@ class ObservationSchema(GenericSchema):
     def find_longitude_field_or_throw(schema):
         """
         Precedence Rules:
-        2- Look for biosys.type = 'longitude'
-        3- Look for a field with name 'Longitude' case insensitive
+        1- Look for biosys.type = 'longitude'
+        2- Look for a field with name 'Longitude' case insensitive
         :param schema: a dict descriptor or a Schema instance
         :return: None if not found or raise an exception if more than one
         """
@@ -545,7 +555,7 @@ class ObservationSchema(GenericSchema):
                 raise ObservationSchemaError(msg)
             else:
                 return field
-        # no Biosys longitude field found
+        # no Biosys longitude field found look for column name
         fields = [f for f in schema.fields if f.name.lower() == ObservationSchema.LONGITUDE_FIELD_NAME.lower()]
         if len(fields) > 1:
             msg = "More than one Longitude field found!. {}".format(fields)
@@ -562,6 +572,32 @@ class ObservationSchema(GenericSchema):
             format(ObservationSchema.LONGITUDE_FIELD_NAME, BiosysSchema.LONGITUDE_TYPE_NAME)
         raise ObservationSchemaError(msg)
 
+    @staticmethod
+    def find_datum_field_or_none(schema):
+        """
+        Precedence Rules:
+        1- Look for biosys.type = 'datum'
+        2- Look for a field with name 'Datum' case insensitive
+        :param schema: a dict descriptor or a Schema instance
+        :return: None if not found
+        """
+        if not isinstance(schema, GenericSchema):
+            schema = GenericSchema(schema)
+        fields = [f for f in schema.fields if f.biosys.is_datum()]
+        if len(fields) > 1:
+            msg = "More than one Biosys datum field found!. {}".format(fields)
+            raise ObservationSchemaError(msg)
+        if len(fields) == 1:
+            return fields[0]
+        # no Biosys datum field found look for column name
+        fields = [f for f in schema.fields if f.name.lower() == ObservationSchema.DATUM_FIELD_NAME.lower()]
+        if len(fields) > 1:
+            msg = "More than one Datum field found!. {}".format(fields)
+            raise ObservationSchemaError(msg)
+        if len(fields) == 1:
+            return fields[0]
+        return None
+
     def get_record_observation_date_value(self, record):
         return record.get(self.observation_date_field.name)
 
@@ -569,12 +605,22 @@ class ObservationSchema(GenericSchema):
         field = self.observation_date_field
         return field.cast(record.get(field.name))
 
-    def cast_geometry(self, record, default_srid=4326):
+    def cast_geometry(self, record, default_srid=MODEL_SRID):
         lat_val = record.get(self.latitude_field.name)
         lon_val = record.get(self.longitude_field.name)
         lat = self.latitude_field.cast(lat_val)
         lon = self.longitude_field.cast(lon_val)
-        return Point(x=float(lon), y=float(lat), srid=default_srid)
+        srid = default_srid
+        if self.datum_field is not None:
+            datum_val = record.get(self.datum_field.name)
+            valid_datums = dict(DATUM_CHOICES).values()
+            if datum_val:
+                if datum_val.upper() not in valid_datums:
+                    msg = "Invalid Datum '{}'. Should be one of: {}".format(datum_val, valid_datums)
+                    raise InvalidDatumError(msg)
+                else:
+                    srid = dict(DATUM_CHOICES).get(datum_val, default_srid)
+        return Point(x=float(lon), y=float(lat), srid=srid)
 
 
 class SpeciesObservationSchema(ObservationSchema):
