@@ -1,9 +1,10 @@
-from jsontableschema.exceptions import *
-import datetime
-import dateutil
 import copy
+import datetime
 
 from django.test import TestCase
+from django.contrib.gis.geos import Point
+from jsontableschema.exceptions import *
+
 from main.utils_data_package import *
 
 BASE_CONSTRAINTS = {
@@ -586,6 +587,19 @@ class TestObservationSchemaLatitude(TestCase):
         with self.assertRaises(ObservationSchemaError):
             ObservationSchema.find_latitude_field_or_throw(descriptor)
 
+    # def test_must_be_number(self):
+    #     field_desc = {
+    #         "name": "Latitude",
+    #         "type": "integer",
+    #         "constraints": {
+    #             'required': True
+    #         }
+    #     }
+    #     descriptor = self.descriptor
+    #     descriptor['fields'].append(field_desc)
+    #     with self.assertRaises(ObservationSchemaError):
+    #         ObservationSchema.find_latitude_field_or_throw(descriptor)
+
     def test_biosys_type_has_precedence(self):
         """
         Two fields one name 'Latitude' and another one tagged as biosys type latitude
@@ -874,3 +888,18 @@ class TestObservationSchemaCast(TestCase):
         }
         with self.assertRaises(Exception):
             self.assertEqual(schema.cast_record_observation_date(record), datetime.date(2016, 12, 23))
+
+    def test_cast_point_happy_path(self):
+        descriptor = self.descriptor
+        schema = ObservationSchema(descriptor)
+        record = {
+            'Latitude': "-32", 'Observation Date': '23/12/2016', 'Longitude': "115.3"
+        }
+        point = schema.cast_geometry(record)
+        self.assertIsNotNone(point)
+        self.assertTrue(isinstance(point, GEOSGeometry))
+        self.assertTrue(isinstance(point, Point))
+        self.assertEquals((115.3, -32), point.coords)
+        self.assertEquals(4326, point.get_srid())
+
+

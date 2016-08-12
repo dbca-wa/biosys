@@ -17,7 +17,7 @@ from envelope.views import ContactView
 from main import utils as utils_model
 from main.admin import readonly_user
 from main.forms import FeedbackForm, UploadDataForm
-from main.models import DataSet, DataSetFile, Site
+from main.models import DataSet, DataSetFile, Site, MODEL_SRID
 from main.utils_zip import zip_dir_to_temp_zip, export_zip
 from upload.validation import DATASHEET_MODELS_MAPPING
 
@@ -194,9 +194,11 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                             # convert to datetime with timezone awareness
                             if isinstance(observation_date, datetime.date):
                                 observation_date = datetime.datetime.combine(observation_date, datetime.time.min)
-                            # timezone awareness
                             tz = dataset.project.timezone or timezone.get_current_timezone()
                             record.datetime = timezone.make_aware(observation_date, tz)
+                            # geometry
+                            geometry = schema.cast_geometry(row, default_srid=MODEL_SRID)
+                            record.geometry = geometry
                     except Exception as e:
                         msg = "> Row #{}: problem while extracting the Observation Date: {}. [{}]".format(row_number, e,
                                                                                                           row)

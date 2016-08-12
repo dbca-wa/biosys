@@ -17,7 +17,7 @@ from openpyxl.writer.write_only import WriteOnlyCell
 
 from django.contrib.gis.geos import GEOSGeometry, Point
 
-from main.models import MODEL_SRID
+# from main.models import MODEL_SRID
 
 COLUMN_HEADER_FONT = Font(bold=True)
 
@@ -569,10 +569,12 @@ class ObservationSchema(GenericSchema):
         field = self.observation_date_field
         return field.cast(record.get(field.name))
 
-    def cast_geometry(self, record, srid=MODEL_SRID):
-        lat = record.get(self.latitude_field.name)
-        lon = record.get(self.longitude_field)
-        return Point(x=lon, y=lat, srid=srid)
+    def cast_geometry(self, record, default_srid=4326):
+        lat_val = record.get(self.latitude_field.name)
+        lon_val = record.get(self.longitude_field.name)
+        lat = self.latitude_field.cast(lat_val)
+        lon = self.longitude_field.cast(lon_val)
+        return Point(x=float(lon), y=float(lat), srid=default_srid)
 
 
 class SpeciesObservationSchema(ObservationSchema):
