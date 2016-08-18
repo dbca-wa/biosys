@@ -7,7 +7,7 @@ from jsontableschema.exceptions import *
 
 from main.utils_data_package import *
 from main.constants import MODEL_SRID, get_datum_srid
-from main.models import DataSet, Observation, Project
+from main.models import Dataset, Observation, Project
 
 
 def clone(descriptor):
@@ -1220,7 +1220,7 @@ class TestObservationSchemaCast(TestCase):
         project = Project.objects.create(
             title="Test"
         )
-        ds = DataSet.objects.create(
+        ds = Dataset.objects.create(
             project=project,
             name='test',
             data_package=GENERIC_DATA_PACKAGE

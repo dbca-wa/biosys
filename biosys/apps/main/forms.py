@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 
 from envelope.forms import ContactForm
 
-from .models import Project, SiteVisitDataSheetTemplate, Visit, Site, DataSet
+from .models import Project, SiteVisitDataSheetTemplate, Visit, Site, Dataset
 
 DATUM_BOUNDS = {
     4326: (-180.0, -90.0, 180.0, 90.0),
@@ -67,7 +67,7 @@ class DataSetForm(forms.ModelForm):
     data_package = BetterJSONField()
 
     class Meta:
-        model = DataSet
+        model = Dataset
         exclude = []
 
 

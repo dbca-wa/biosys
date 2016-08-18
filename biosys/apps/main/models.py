@@ -24,7 +24,7 @@ from utils_data_package import GenericSchema, ObservationSchema, SpeciesObservat
 
 
 @python_2_unicode_compatible
-class DataSet(models.Model):
+class Dataset(models.Model):
     TYPE_GENERIC = 'generic'
     TYPE_OBSERVATION = 'observation'
     TYPE_SPECIES_OBSERVATION = 'species_observation'
@@ -51,18 +51,18 @@ class DataSet(models.Model):
 
     @property
     def record_model(self):
-        if self.type == DataSet.TYPE_SPECIES_OBSERVATION:
+        if self.type == Dataset.TYPE_SPECIES_OBSERVATION:
             return SpeciesObservation
-        elif self.type == DataSet.TYPE_OBSERVATION:
+        elif self.type == Dataset.TYPE_OBSERVATION:
             return Observation
         else:
             return GenericRecord
 
     @property
     def schema_model(self):
-        if self.type == DataSet.TYPE_SPECIES_OBSERVATION:
+        if self.type == Dataset.TYPE_SPECIES_OBSERVATION:
             return SpeciesObservationSchema
-        elif self.type == DataSet.TYPE_OBSERVATION:
+        elif self.type == Dataset.TYPE_OBSERVATION:
             return ObservationSchema
         else:
             return GenericSchema
@@ -129,11 +129,11 @@ class DataSet(models.Model):
 
 
 @python_2_unicode_compatible
-class DataSetFile(models.Model):
+class DatasetFile(models.Model):
     file = models.FileField(upload_to='%Y/%m/%d')
     uploaded_date = models.DateTimeField(auto_now_add=True)
     uploaded_by = models.ForeignKey(User, null=True, blank=True)
-    dataset = models.ForeignKey(DataSet, blank=False, null=True)
+    dataset = models.ForeignKey(Dataset, blank=False, null=True)
 
     def __str__(self):
         return self.file.name
@@ -150,7 +150,7 @@ class DataSetFile(models.Model):
 @python_2_unicode_compatible
 class AbstractRecord(models.Model):
     data = JSONField()
-    dataset = models.ForeignKey(DataSet, null=False, blank=False)
+    dataset = models.ForeignKey(Dataset, null=False, blank=False)
 
     def __str__(self):
         return "{0}: {1}".format(self.dataset.name, Truncator(self.data).chars(100))
