@@ -46,3 +46,9 @@ staticfiles/
 biosys.conf
 
 **/*.xlsx*
+
+# Database/fixture dumps
+*.pgdump
+*.dump
+*.db
+*.sqlite3
