@@ -171,6 +171,10 @@ BOOTSTRAP3 = {
     'set_placeholder': False,
 }
 
+HERBIE_SPECIES_WFS_URL = env('HERBIE_SPECIES_WFS_URL',
+                             'https://kmi.dpaw.wa.gov.au/geoserver/ows?service=wfs&version=1.1.0&'
+                             'request=GetFeature&typeNames=public:herbie_hbvspecies_public&outputFormat=application/json')
+
 # Logging settings
 # Ensure that the logs directory exists:
 LOG_FOLDER = os.path.join(BASE_DIR, 'logs')
