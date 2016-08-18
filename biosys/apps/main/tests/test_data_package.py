@@ -7,6 +7,7 @@ from jsontableschema.exceptions import *
 
 from main.utils_data_package import *
 from main.constants import MODEL_SRID, get_datum_srid
+from main.models import DataSet, Observation, Project
 
 
 def clone(descriptor):
@@ -102,6 +103,52 @@ DATUM_FIELD = {
 
 LAT_LONG_WITH_DATUM_OBSERVATION_SCHEMA = clone(LAT_LONG_OBSERVATION_SCHEMA)
 LAT_LONG_WITH_DATUM_OBSERVATION_SCHEMA['fields'].append(clone(DATUM_FIELD))
+
+EASTING_NORTHING_OBSERVATION_SCHEMA = {
+    "fields": [
+        {
+            "name": "Observation Date",
+            "type": "date",
+            "format": "any",
+            "constraints": {
+                "required": True,
+            }
+        },
+        {
+            "name": "Northing",
+            "type": "number",
+            "format": "default",
+            "constraints": {
+                "required": True,
+            },
+            "biosys": {
+                "type": "latitude"
+            }
+        },
+        {
+            "name": "Easting",
+            "type": "number",
+            "format": "default",
+            "constraints": {
+                "required": True,
+            },
+            "biosys": {
+                "type": "longitude"
+            }
+        },
+        {
+            "name": "Datum",
+            "type": "string",
+            "format": "default",
+            "constraints": {
+                "required": False
+            },
+            "biosys": {
+                "type": "datum"
+            }
+        }
+    ]
+}
 
 
 class TestSchemaConstraints(TestCase):
@@ -1146,3 +1193,42 @@ class TestObservationSchemaCast(TestCase):
         }
         with self.assertRaises(Exception):
             schema.cast_geometry(record)
+
+    def test_cast_point_Zone50(self):
+        """
+        The easting/northing problem can be solved by tagging easting=longitude and northing=longitude
+        :return:
+        """
+        datum = 'GDA94 / MGA zone 50'
+        self.assertTrue(is_supported_datum(datum))
+        descriptor = clone(EASTING_NORTHING_OBSERVATION_SCHEMA)
+        schema = ObservationSchema(descriptor)
+        self.assertIsNotNone(schema.datum_field)
+        easting = 405542.537
+        northing = 6459127.469
+        record = {
+            'Observation Date': '23/12/2016', 'Easting': easting, 'Northing': northing, 'Datum': datum
+        }
+        point = schema.cast_geometry(record)
+        self.assertIsNotNone(point)
+        self.assertTrue(isinstance(point, Point))
+        self.assertEquals((easting, northing), point.coords)
+        self.assertEquals(get_datum_srid(datum), point.get_srid())
+
+        # create a db record and check geometry conversion
+        # create dataset
+        project = Project.objects.create(
+            title="Test"
+        )
+        ds = DataSet.objects.create(
+            project=project,
+            name='test',
+            data_package=GENERIC_DATA_PACKAGE
+        )
+        record = Observation.objects.create(
+            dataset=ds,
+            geometry=point,
+            data=record)
+        record.refresh_from_db()
+        self.assertEqual(MODEL_SRID, record.geometry.get_srid())
+        self.assertEqual((116, -31), (int(record.geometry.x), int(record.geometry.y)))

@@ -4,7 +4,7 @@ DATUM_CHOICES = [
     (4283, 'GDA94'),
     (4203, 'AGD84'),
     (4202, 'AGD66'),
-    (28350, 'GDA94/Zone50')
+    (28350, 'GDA94 / MGA zone 50'),
 ]
 SUPPORTED_DATUMS = dict(DATUM_CHOICES).values()
 
@@ -15,9 +15,8 @@ def is_supported_datum(datum):
 
 def get_datum_srid(datum):
     # case insensitive search
-    datum = datum.upper()
     for srid, datum_name in DATUM_CHOICES:
-        if datum_name == datum:
+        if datum_name.lower() == datum.lower():
             return srid
     return None
 
