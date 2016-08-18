@@ -33,7 +33,7 @@ if not DEBUG:
 # Application definition
 # The variables below are added to all responses in biosys/context_processors.py
 SITE_TITLE = 'BioSys - WA Biological Survey Database'
-APPLICATION_VERSION_NO = '2.0.b2'
+APPLICATION_VERSION_NO = '2.0.b3'
 
 INSTALLED_APPS = (
     'grappelli',  # Must be before django.contrib.admin
@@ -52,6 +52,7 @@ INSTALLED_APPS = (
     'tastypie',
     'webtemplate_dpaw',
     'bootstrap3',
+    'timezone_field'
 )
 
 PROJECT_APPS = (
@@ -116,7 +117,7 @@ DATABASES = {'default': database.config()}
 
 # Internationalization
 LANGUAGE_CODE = 'en-au'
-TIME_ZONE = 'Australia/Perth'
+TIME_ZONE = env('TIME_ZONE', 'Australia/Perth')
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True

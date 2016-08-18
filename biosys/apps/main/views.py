@@ -1,22 +1,23 @@
 import csv
 import json
 import tempfile
+import datetime
 
 from braces.views import FormMessagesMixin
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.urlresolvers import reverse_lazy
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
-from django.views.generic import TemplateView, View, FormView
+from django.views.generic import TemplateView, FormView
+from django.utils import timezone
+
 from envelope.views import ContactView
 
 from main import utils as utils_model
 from main.admin import readonly_user
 from main.forms import FeedbackForm, UploadDataForm
-from main.models import DataSet, DataSetFile, GenericRecord, Site
-from main.utils_data_package import Schema, Exporter
-from main.utils_http import WorkbookResponse
+from main.models import DataSet, DataSetFile, Site, MODEL_SRID
 from main.utils_zip import zip_dir_to_temp_zip, export_zip
 from upload.validation import DATASHEET_MODELS_MAPPING
 
@@ -117,7 +118,7 @@ class FeedbackView(FormMessagesMixin, ContactView):
 
 
 class UploadDataSetView(LoginRequiredMixin, FormView):
-    #TODO: implement Observation and SpeciesObservation upload
+    # TODO: implement Observation and SpeciesObservation upload
     template_name = 'main/data_upload.html'
     form_class = UploadDataForm
     success_url = reverse_lazy('admin:main_dataset_changelist')
@@ -129,15 +130,17 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
     def form_valid(self, form):
         pk = self.kwargs.get('pk')
         dataset = get_object_or_404(DataSet, pk=pk)
+
         error_url = reverse_lazy('admin:main_dataset_change', args=[pk])
-        if dataset.type != DataSet.TYPE_GENERIC:
+        if dataset.type == DataSet.TYPE_SPECIES_OBSERVATION:
             messages.error(self.request, 'Import of data set of type ' + dataset.type + " is not yet implemented")
             return HttpResponseRedirect(reverse_lazy('admin:main_dataset_change', args=[pk]))
         src_file = DataSetFile(file=self.request.FILES['file'], dataset=dataset, uploaded_by=self.request.user)
         src_file.save()
         is_append = form.cleaned_data['append_mode']
         create_site = form.cleaned_data['create_site']
-        schema = Schema(dataset.schema)
+        schema = dataset.schema_model(dataset.schema)
+        Record = dataset.record_model
         with open(src_file.path, 'rb') as csvfile:
             reader = csv.DictReader(csvfile)
             records = []
@@ -172,23 +175,39 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                                 try:
                                     site = Site.objects.create(**kwargs)
                                 except Exception as e:
-                                    errors.append("Error while creating the site '{}: {}".format(
+                                    errors.append("Error while creating the site '{}': {}".format(
                                         data,
                                         e.message
                                     ))
                             else:
-                                msg = "Row #{}: could not find the site '{}:".format(row_number, data)
+                                msg = "Row #{}: could not find the site '{}':".format(row_number, data)
                                 errors.append(msg)
-                    record = GenericRecord(
+                    record = Record(
                         site=site,
                         dataset=dataset,
                         data=row,
                     )
+                    # specific fields
+                    try:
+                        if dataset.type == DataSet.TYPE_OBSERVATION or dataset.type == DataSet.TYPE_SPECIES_OBSERVATION:
+                            observation_date = schema.cast_record_observation_date(row)
+                            # convert to datetime with timezone awareness
+                            if isinstance(observation_date, datetime.date):
+                                observation_date = datetime.datetime.combine(observation_date, datetime.time.min)
+                            tz = dataset.project.timezone or timezone.get_current_timezone()
+                            record.datetime = timezone.make_aware(observation_date, tz)
+                            # geometry
+                            geometry = schema.cast_geometry(row, default_srid=MODEL_SRID)
+                            record.geometry = geometry
+                    except Exception as e:
+                        msg = "> Row #{}: problem while extracting the Observation data: {}. [{}]".format(row_number, e,
+                                                                                                          row)
+                        errors.append(msg)
                     records.append(record)
             if not errors:
                 if not is_append:
-                    GenericRecord.objects.filter(dataset=dataset).delete()
-                GenericRecord.objects.bulk_create(records)
+                    Record.objects.filter(dataset=dataset).delete()
+                Record.objects.bulk_create(records)
                 if warnings:
                     msg = "{} records imported but with the following warnings: \n {}".format(
                         len(records),
