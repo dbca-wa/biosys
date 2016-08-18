@@ -17,7 +17,7 @@ from envelope.views import ContactView
 from main import utils as utils_model
 from main.admin import readonly_user
 from main.forms import FeedbackForm, UploadDataForm
-from main.models import DataSet, DataSetFile, Site, MODEL_SRID
+from main.models import Dataset, DatasetFile, Site, MODEL_SRID
 from main.utils_zip import zip_dir_to_temp_zip, export_zip
 from upload.validation import DATASHEET_MODELS_MAPPING
 
@@ -124,18 +124,18 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
     success_url = reverse_lazy('admin:main_dataset_changelist')
 
     def get_context_data(self, **kwargs):
-        kwargs['opts'] = DataSet._meta
+        kwargs['opts'] = Dataset._meta
         return super(UploadDataSetView, self).get_context_data(**kwargs)
 
     def form_valid(self, form):
         pk = self.kwargs.get('pk')
-        dataset = get_object_or_404(DataSet, pk=pk)
+        dataset = get_object_or_404(Dataset, pk=pk)
 
         error_url = reverse_lazy('admin:main_dataset_change', args=[pk])
-        if dataset.type == DataSet.TYPE_SPECIES_OBSERVATION:
+        if dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
             messages.error(self.request, 'Import of data set of type ' + dataset.type + " is not yet implemented")
             return HttpResponseRedirect(reverse_lazy('admin:main_dataset_change', args=[pk]))
-        src_file = DataSetFile(file=self.request.FILES['file'], dataset=dataset, uploaded_by=self.request.user)
+        src_file = DatasetFile(file=self.request.FILES['file'], dataset=dataset, uploaded_by=self.request.user)
         src_file.save()
         is_append = form.cleaned_data['append_mode']
         create_site = form.cleaned_data['create_site']
@@ -189,7 +189,7 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                     )
                     # specific fields
                     try:
-                        if dataset.type == DataSet.TYPE_OBSERVATION or dataset.type == DataSet.TYPE_SPECIES_OBSERVATION:
+                        if dataset.type == Dataset.TYPE_OBSERVATION or dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
                             observation_date = schema.cast_record_observation_date(row)
                             # convert to datetime with timezone awareness
                             if isinstance(observation_date, datetime.date):

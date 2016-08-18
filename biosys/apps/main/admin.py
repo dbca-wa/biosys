@@ -153,8 +153,8 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
         css = {'all': ('css/site_admin.css',)}
 
 
-@admin.register(DataSet)
-class DataSetAdmin(MainAppAdmin):
+@admin.register(Dataset)
+class DatasetAdmin(MainAppAdmin):
     change_form_template = 'main/dataset_change_form.html'
     list_display = ['name', 'project', 'type']
     list_filter = ['project']

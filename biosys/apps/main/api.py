@@ -128,7 +128,7 @@ class DataSetResource(ModelResource):
     data_package = fields.DictField(attribute='data_package')
 
     class Meta:
-        queryset = models.DataSet.objects.all()
+        queryset = models.Dataset.objects.all()
         filtering = {
             'id': ALL,
             'name': ALL,
