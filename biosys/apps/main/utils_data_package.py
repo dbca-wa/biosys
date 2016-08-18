@@ -17,7 +17,7 @@ from openpyxl.writer.write_only import WriteOnlyCell
 
 from django.contrib.gis.geos import Point
 
-from main.constants import MODEL_SRID, DATUM_CHOICES
+from main.constants import MODEL_SRID, SUPPORTED_DATUMS, get_datum_srid, is_supported_datum
 
 COLUMN_HEADER_FONT = Font(bold=True)
 
@@ -613,13 +613,11 @@ class ObservationSchema(GenericSchema):
         srid = default_srid
         if self.datum_field is not None:
             datum_val = record.get(self.datum_field.name)
-            valid_datums = dict(DATUM_CHOICES).values()
-            if datum_val:
-                if datum_val.upper() not in valid_datums:
-                    msg = "Invalid Datum '{}'. Should be one of: {}".format(datum_val, valid_datums)
-                    raise InvalidDatumError(msg)
-                else:
-                    srid = dict(DATUM_CHOICES).get(datum_val, default_srid)
+            if not is_supported_datum(datum_val):
+                msg = "Invalid Datum '{}'. Should be one of: {}".format(datum_val, SUPPORTED_DATUMS)
+                raise InvalidDatumError(msg)
+            else:
+                srid = get_datum_srid(datum_val)
         return Point(x=float(lon), y=float(lat), srid=srid)
 
 

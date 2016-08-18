@@ -2,10 +2,16 @@ import copy
 import datetime
 
 from django.test import TestCase
-from django.contrib.gis.geos import Point
+from django.contrib.gis.geos import Point, GEOSGeometry
 from jsontableschema.exceptions import *
 
 from main.utils_data_package import *
+from main.constants import MODEL_SRID, get_datum_srid
+
+
+def clone(descriptor):
+    return copy.deepcopy(descriptor)
+
 
 BASE_CONSTRAINTS = {
     "required": False
@@ -24,12 +30,12 @@ BASE_FIELD = {
     "tile": "Title",
     "type": "string",
     "format": "default",
-    "constraints": copy.deepcopy(BASE_CONSTRAINTS)
+    "constraints": clone(BASE_CONSTRAINTS)
 }
 
 GENERIC_SCHEMA = {
     "fields": [
-        copy.deepcopy(BASE_FIELD)
+        clone(BASE_FIELD)
     ]
 }
 
@@ -43,7 +49,7 @@ GENERIC_DATA_PACKAGE = {
             "bytes": 0,
             "mediatype": "text/csv",
             "path": "test.csv",
-            "schema": copy.deepcopy(GENERIC_SCHEMA)
+            "schema": clone(GENERIC_SCHEMA)
         }
     ],
     "title": "Test"
@@ -82,6 +88,21 @@ LAT_LONG_OBSERVATION_SCHEMA = {
     ]
 }
 
+DATUM_FIELD = {
+    "name": "Datum",
+    "type": "string",
+    "format": "default",
+    "constraints": {
+        "required": False
+    },
+    "biosys": {
+        "type": "datum"
+    }
+}
+
+LAT_LONG_WITH_DATUM_OBSERVATION_SCHEMA = clone(LAT_LONG_OBSERVATION_SCHEMA)
+LAT_LONG_WITH_DATUM_OBSERVATION_SCHEMA['fields'].append(clone(DATUM_FIELD))
+
 
 class TestSchemaConstraints(TestCase):
     def test_none_or_empty(self):
@@ -94,11 +115,11 @@ class TestSchemaConstraints(TestCase):
     def test_required_property(self):
         # no constraints -> require = False
         self.assertFalse(SchemaConstraints(None).required)
-        cts = copy.deepcopy(BASE_CONSTRAINTS)
+        cts = clone(BASE_CONSTRAINTS)
         self.assertFalse(cts['required'])
         self.assertFalse(SchemaConstraints(cts).required)
 
-        cts = copy.deepcopy(BASE_CONSTRAINTS)
+        cts = clone(BASE_CONSTRAINTS)
         cts['required'] = True
         self.assertTrue(cts['required'])
         self.assertTrue(SchemaConstraints(cts).required)
@@ -107,7 +128,7 @@ class TestSchemaConstraints(TestCase):
         """
         test that the SchemaField has the dict-like get('key', default)
         """
-        cts = copy.deepcopy(BASE_CONSTRAINTS)
+        cts = clone(BASE_CONSTRAINTS)
         sch = SchemaConstraints(cts)
         self.assertTrue(hasattr(sch, 'get'))
         self.assertEquals(cts.get('required'), sch.get('required'))
@@ -118,7 +139,7 @@ class TestSchemaConstraints(TestCase):
 
 class TestSchemaField(TestCase):
     def setUp(self):
-        self.base_field = copy.deepcopy(BASE_FIELD)
+        self.base_field = clone(BASE_FIELD)
 
     def test_name_mandatory(self):
         """
@@ -188,7 +209,7 @@ class TestSchemaField(TestCase):
 
 class TestSchemaFieldCast(TestCase):
     def setUp(self):
-        self.base_field_descriptor = copy.deepcopy(BASE_FIELD)
+        self.base_field_descriptor = clone(BASE_FIELD)
 
     def test_boolean(self):
         true_values = [True, 'True', 'true', 'YES', 'yes', 'y', 't', '1', 1]
@@ -208,7 +229,7 @@ class TestSchemaFieldCast(TestCase):
                 f.cast(v)
 
     def test_date(self):
-        descriptor = copy.deepcopy(BASE_FIELD)
+        descriptor = clone(BASE_FIELD)
         descriptor['type'] = 'date'
         # 'default' format = ISO
         descriptor['format'] = 'default'
@@ -265,9 +286,9 @@ class TestSchemaFieldCast(TestCase):
     def test_string(self):
         # test that a blank string '' is not accepted when the field is required
         null_values = ['null', 'none', 'nil', 'nan', '-', '']
-        desc = copy.deepcopy(BASE_FIELD)
+        desc = clone(BASE_FIELD)
         desc['type'] = 'string'
-        desc['constraints'] = copy.deepcopy(REQUIRED_CONSTRAINTS)
+        desc['constraints'] = clone(REQUIRED_CONSTRAINTS)
         f = SchemaField(desc)
         for v in null_values:
             with self.assertRaises(Exception):
@@ -281,13 +302,13 @@ class TestSchemaFieldCast(TestCase):
 
 class TestGenericSchemaValidation(TestCase):
     def setUp(self):
-        self.descriptor = copy.deepcopy(GENERIC_SCHEMA)
+        self.descriptor = clone(GENERIC_SCHEMA)
         self.sch = GenericSchema(self.descriptor)
 
 
 class TestObservationDateSchema(TestCase):
     def setUp(self):
-        self.descriptor = copy.deepcopy(GENERIC_SCHEMA)
+        self.descriptor = clone(GENERIC_SCHEMA)
 
     def test_no_date_field(self):
         # schema without date throw an exception
@@ -506,7 +527,7 @@ class TestObservationDateSchema(TestCase):
 
 class TestObservationSchemaLatitude(TestCase):
     def setUp(self):
-        self.descriptor = copy.deepcopy(GENERIC_SCHEMA)
+        self.descriptor = clone(GENERIC_SCHEMA)
 
     def test_happy_path_column_name(self):
         """
@@ -540,7 +561,7 @@ class TestObservationSchemaLatitude(TestCase):
                 'required': True
             }
         }
-        descriptor = copy.deepcopy(GENERIC_SCHEMA)
+        descriptor = clone(GENERIC_SCHEMA)
         descriptor['fields'].append(field_desc)
         # as it is it should throw an exception
         with self.assertRaises(ObservationSchemaError):
@@ -550,7 +571,7 @@ class TestObservationSchemaLatitude(TestCase):
         field_desc['biosys'] = {
             'type': 'latitude'
         }
-        descriptor = copy.deepcopy(GENERIC_SCHEMA)
+        descriptor = clone(GENERIC_SCHEMA)
         descriptor['fields'].append(field_desc)
         try:
             field = ObservationSchema.find_latitude_field_or_throw(descriptor)
@@ -672,7 +693,7 @@ class TestObservationSchemaLatitude(TestCase):
 
 class TestObservationSchemaLongitude(TestCase):
     def setUp(self):
-        self.descriptor = copy.deepcopy(GENERIC_SCHEMA)
+        self.descriptor = clone(GENERIC_SCHEMA)
 
     def test_happy_path_column_name(self):
         """
@@ -706,7 +727,7 @@ class TestObservationSchemaLongitude(TestCase):
                 'required': True
             }
         }
-        descriptor = copy.deepcopy(GENERIC_SCHEMA)
+        descriptor = clone(GENERIC_SCHEMA)
         descriptor['fields'].append(field_desc)
         # as it is it should throw an exception
         with self.assertRaises(ObservationSchemaError):
@@ -716,7 +737,7 @@ class TestObservationSchemaLongitude(TestCase):
         field_desc['biosys'] = {
             'type': 'longitude'
         }
-        descriptor = copy.deepcopy(GENERIC_SCHEMA)
+        descriptor = clone(GENERIC_SCHEMA)
         descriptor['fields'].append(field_desc)
         try:
             field = ObservationSchema.find_longitude_field_or_throw(descriptor)
@@ -836,9 +857,204 @@ class TestObservationSchemaLongitude(TestCase):
             ObservationSchema.find_longitude_field_or_throw(descriptor)
 
 
+class TestObservationSchemaDatum(TestCase):
+    def setUp(self):
+        self.descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+
+    def test_no_datum_not_throw(self):
+        """
+        Datum field is not mandatory
+        """
+        descriptor = clone(self.descriptor)
+        self.assertFalse(
+            [f for f in descriptor['fields'] if f['name'].lower == 'datum']
+        )
+
+        try:
+            field = ObservationSchema.find_datum_field_or_none(descriptor)
+            self.assertIsNone(field)
+            sch = ObservationSchema(descriptor)
+            self.assertIsNone(sch.datum_field)
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_datum_by_field_name(self):
+        """
+        Happy path: one Field named Datum
+        :return:
+        """
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+        self.assertIsNone(ObservationSchema(descriptor).datum_field)
+        field_desc = {
+            'name': 'Datum',
+            'title': 'The datum field',
+            'type': 'string',
+            'constraint': {
+                'required': False
+            }
+        }
+        descriptor['fields'].append(field_desc)
+        try:
+            sch = ObservationSchema(descriptor)
+            field = sch.datum_field
+            self.assertIsNotNone(field)
+            self.assertEqual(field.name, field_desc['name'])
+            self.assertEqual(field.title, field_desc['title'])
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_datum_by_field_name_lower_case(self):
+        """
+        Happy path: one Field named datum
+        :return:
+        """
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+        self.assertIsNone(ObservationSchema(descriptor).datum_field)
+        field_desc = {
+            'name': 'datum',
+            'title': 'The datum field',
+            'type': 'string',
+            'constraint': {
+                'required': False
+            }
+        }
+        descriptor['fields'].append(field_desc)
+        try:
+            sch = ObservationSchema(descriptor)
+            field = sch.datum_field
+            self.assertIsNotNone(field)
+            self.assertEqual(field.name, field_desc['name'])
+            self.assertEqual(field.title, field_desc['title'])
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_datum_by_biosys_type(self):
+        """
+        Happy path
+        Test for field that is not name 'Datum' but is biosys 'tagged' as datum
+        :return:
+        """
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+        self.assertIsNone(ObservationSchema(descriptor).datum_field)
+        field_desc = {
+            'name': 'Coordinate System',
+            'title': 'The datum field',
+            'type': 'string',
+            'constraint': {
+                'required': False
+            },
+            'biosys': {
+                'type': 'datum'
+            }
+        }
+        descriptor['fields'].append(field_desc)
+        try:
+            sch = ObservationSchema(descriptor)
+            field = sch.datum_field
+            self.assertIsNotNone(field)
+            self.assertEqual(field.name, field_desc['name'])
+            self.assertEqual(field.title, field_desc['title'])
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_two_datum_fields_throws(self):
+        """
+        Sad path: two columns named 'Datum' should throw an error
+        :return:
+        """
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+        self.assertIsNone(ObservationSchema(descriptor).datum_field)
+        field_desc = {
+            'name': 'datum',
+            'title': 'The datum field',
+            'type': 'string',
+            'constraint': {
+                'required': False
+            }
+        }
+        descriptor['fields'].append(field_desc)
+        descriptor['fields'].append(clone(field_desc))
+
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema(descriptor)
+
+    def test_two_datum_fields_but_one_biosys_tagged(self):
+        """
+        Happy path (or really?): two columns named 'Datum' but one is tagged biosys
+        :return:
+        """
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+        self.assertIsNone(ObservationSchema(descriptor).datum_field)
+        field_desc_1 = {
+            'name': 'Datum',
+            'title': 'The wrong datum field',
+            'type': 'string',
+            'constraint': {
+                'required': False
+            }
+        }
+        field_desc_2 = {
+            'name': 'Datum',
+            'title': 'The right datum field',
+            'type': 'string',
+            'constraint': {
+                'required': False
+            },
+            'biosys': {
+                'type': 'datum'
+            }
+        }
+        descriptor['fields'].append(field_desc_1)
+        descriptor['fields'].append(clone(field_desc_2))
+
+        try:
+            sch = ObservationSchema(descriptor)
+            field = sch.datum_field
+            self.assertIsNotNone(field)
+            self.assertEqual(field.title, field_desc_2['title'])
+            self.assertTrue(field.biosys.is_datum())
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_two_datum_biosys_tagged_throw(self):
+        """
+        Sad path: two columns biosys-tagged 'datum' should throw an error
+        :return:
+        """
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+        self.assertIsNone(ObservationSchema(descriptor).datum_field)
+        field_desc_1 = {
+            'name': 'Datum 1',
+            'title': 'The wrong datum field',
+            'type': 'string',
+            'constraint': {
+                'required': False
+            },
+            'biosys': {
+                'type': 'datum'
+            }
+        }
+        field_desc_2 = {
+            'name': 'Datum 2',
+            'title': 'The right datum field',
+            'type': 'string',
+            'constraint': {
+                'required': False
+            },
+            'biosys': {
+                'type': 'datum'
+            }
+        }
+        descriptor['fields'].append(field_desc_1)
+        descriptor['fields'].append(clone(field_desc_2))
+
+        with self.assertRaises(ObservationSchemaError):
+            ObservationSchema(descriptor)
+
+
 class TestObservationSchemaCast(TestCase):
     def setUp(self):
-        self.descriptor = copy.deepcopy(LAT_LONG_OBSERVATION_SCHEMA)
+        self.descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
 
     def test_cast_observation_date_happy_path(self):
         descriptor = self.descriptor
@@ -877,7 +1093,12 @@ class TestObservationSchemaCast(TestCase):
             self.assertEqual(schema.cast_record_observation_date(record), datetime.date(2016, 12, 23))
 
     def test_cast_point_happy_path(self):
-        descriptor = self.descriptor
+        """
+        Test a simple lat/long record. No datum provided.
+        The datum should be the default.
+        :return:
+        """
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
         schema = ObservationSchema(descriptor)
         record = {
             'Latitude': "-32", 'Observation Date': '23/12/2016', 'Longitude': "115.3"
@@ -887,6 +1108,41 @@ class TestObservationSchemaCast(TestCase):
         self.assertTrue(isinstance(point, GEOSGeometry))
         self.assertTrue(isinstance(point, Point))
         self.assertEquals((115.3, -32), point.coords)
-        self.assertEquals(4326, point.get_srid())
+        self.assertEquals(MODEL_SRID, point.get_srid())
 
+    def test_cast_point_with_datum(self):
+        """
+        Happy path: Lat/Long with datum provided.
+        Test that the geometry has the correct datum
+        :return:
+        """
+        datum = 'GDA94'
+        descriptor = clone(LAT_LONG_WITH_DATUM_OBSERVATION_SCHEMA)
+        schema = ObservationSchema(descriptor)
+        self.assertIsNotNone(schema.datum_field)
+        record = {
+            'Observation Date': '23/12/2016', 'Latitude': "-32", 'Longitude': "115.3", 'Datum': datum
+        }
+        point = schema.cast_geometry(record)
+        self.assertIsNotNone(point)
+        self.assertTrue(isinstance(point, Point))
+        self.assertEquals((115.3, -32), point.coords)
+        expected_srid = get_datum_srid(record['Datum'])
+        self.assertEquals(expected_srid, point.get_srid())
 
+    def test_cast_point_with_invalid_datum(self):
+        """
+        Sad path: Lat/Long with unsupported datum.
+        This should throw an exception instead of reverting to the default DATUM
+        :return:
+        """
+        datum = 'GDA2064'
+        self.assertFalse(is_supported_datum(datum))
+        descriptor = clone(LAT_LONG_WITH_DATUM_OBSERVATION_SCHEMA)
+        schema = ObservationSchema(descriptor)
+        self.assertIsNotNone(schema.datum_field)
+        record = {
+            'Observation Date': '23/12/2016', 'Latitude': "-32", 'Longitude': "115.3", 'Datum': datum
+        }
+        with self.assertRaises(Exception):
+            schema.cast_geometry(record)
