@@ -150,6 +150,21 @@ EASTING_NORTHING_OBSERVATION_SCHEMA = {
     ]
 }
 
+SPECIES_NAME_FIELD = {
+    "name": "Species Name",
+    "type": "string",
+    "format": "default",
+    "constraints": {
+        "required": True
+    },
+    "biosys": {
+        "type": "speciesName"
+    }
+}
+
+SPECIES_OBSERVATION_SCHEMA = clone(LAT_LONG_OBSERVATION_SCHEMA)
+SPECIES_OBSERVATION_SCHEMA['fields'].append(clone(SPECIES_NAME_FIELD))
+
 
 class TestSchemaConstraints(TestCase):
     def test_none_or_empty(self):
@@ -1232,3 +1247,201 @@ class TestObservationSchemaCast(TestCase):
         record.refresh_from_db()
         self.assertEqual(MODEL_SRID, record.geometry.get_srid())
         self.assertEqual((116, -31), (int(record.geometry.x), int(record.geometry.y)))
+
+
+class TestSpeciesObservationSchema(TestCase):
+    def test_happy_path_column_name(self):
+        """
+        Happy path: One field named Species Name and required
+        :return:
+        """
+        field_desc = {
+            "name": "Species Name",
+            "type": "string",
+            "constraints": {
+                'required': True
+            }
+        }
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+        descriptor['fields'].append(field_desc)
+        try:
+            field = SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
+            self.assertEqual(field.name, field_desc['name'])
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_happy_path_biosys_type(self):
+        """
+        Happy path: columns not name Species Name but tagged as biosys type = longitude
+        :return:
+        """
+        field_desc = {
+            "name": "Species",
+            "type": "string",
+            "constraints": {
+                'required': True
+            }
+        }
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+        descriptor['fields'].append(field_desc)
+        # as it is it should throw an exception
+        with self.assertRaises(SpeciesObservationSchemaError):
+            SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
+
+        # add biosys type
+        field_desc['biosys'] = {
+            'type': 'speciesName'
+        }
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+        descriptor['fields'].append(field_desc)
+        try:
+            field = SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
+            self.assertEqual(field.name, field_desc['name'])
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_must_be_required1(self):
+        """
+        The Species Name field must be set as required
+        """
+        field_desc = {
+            "name": "Species Name",
+            "type": "string",
+            "constraints": {
+                'required': True
+            }
+        }
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+        descriptor['fields'].append(field_desc)
+
+        try:
+            self.assertEqual(SpeciesObservationSchema.find_species_name_field_or_throws(descriptor).name, field_desc['name'])
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+        # set the required to False
+        field_desc['constraints']['required'] = False
+        with self.assertRaises(SpeciesObservationSchemaError):
+            SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
+
+    def test_must_be_required2(self):
+        """
+        The biosys speciesName field must be set as required
+        """
+        field_desc = {
+            "name": "Species",
+            "type": "string",
+            "constraints": {
+                'required': True
+            },
+            "biosys": {
+                "type": "speciesName"
+            }
+        }
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+        descriptor['fields'].append(field_desc)
+        try:
+            self.assertEqual(SpeciesObservationSchema.find_species_name_field_or_throws(descriptor).name, field_desc['name'])
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+        # set the required to False
+        field_desc['constraints']['required'] = False
+        with self.assertRaises(SpeciesObservationSchemaError):
+            SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
+
+    def test_biosys_type_has_precedence(self):
+        """
+        Two fields one name 'Species Name' and another one tagged as biosys type speciesName
+        The biosys one is chosen
+        :return:
+        """
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+        descriptor['fields'].append({
+            "name": "The Real Species Name",
+            "type": "string",
+            "constraints": {
+                'required': True
+            },
+            "biosys": {
+                "type": "speciesName"
+            }
+        })
+        descriptor['fields'].append({
+            "name": "Species Name",
+            "type": "string",
+            "constraints": {
+                'required': True
+            },
+        })
+        try:
+            field = SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
+            self.assertEqual(field.name, "The Real Species Name")
+        except Exception as e:
+            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
+
+    def test_two_biosys_type_throws(self):
+        """
+        Two fields tagged as biosys type speciesName should throw
+        :return:
+        """
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+        descriptor['fields'].append({
+            "name": "The Real Species Name",
+            "type": "string",
+            "constraints": {
+                'required': True
+            },
+            "biosys": {
+                "type": "speciesName"
+            }
+        })
+        descriptor['fields'].append({
+            "name": "Species Name",
+            "type": "string",
+            "constraints": {
+                'required': True
+            },
+            "biosys": {
+                "type": "speciesName"
+            }
+        })
+        with self.assertRaises(SpeciesObservationSchemaError):
+            SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
+
+    def test_two_species_name_column_throws(self):
+        """
+        Two fields named Species Name (no biosys) should throw
+        :return:
+        """
+        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
+        descriptor['fields'].append({
+            "name": "Species Name",
+            "type": "string",
+            "constraints": {
+                'required': True
+            },
+        })
+        descriptor['fields'].append({
+            "name": "Species Name",
+            "type": "string",
+            "constraints": {
+                'required': True
+            },
+        })
+        with self.assertRaises(SpeciesObservationSchemaError):
+            SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
+
+
+class TestSpeciesObservationSchemaCast(TestCase):
+    def test_happy_path(self):
+        descriptor = clone(SPECIES_OBSERVATION_SCHEMA)
+        species_name = 'Chubby Bat'
+        record = {
+            'Observation Date': "18/08/2016",
+            'Latitude': -32,
+            'Longitude': 115,
+            'Species Name': 'Chubby Bat'
+        }
+        schema = SpeciesObservationSchema(descriptor)
+        self.assertEqual(species_name, schema.cast_species_name(record))
