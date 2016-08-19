@@ -83,9 +83,7 @@ class Dataset(models.Model):
         """
         Validate the data descriptor
         """
-        if self.type == self.TYPE_SPECIES_OBSERVATION:
-            raise ValidationError('The support for {} is not yet implemented'.format(self.type))
-        #  Validate the data package
+        # Validate the data package
         validator = datapackage.DataPackage(self.data_package)
         try:
             validator.validate()
@@ -187,11 +185,9 @@ class SpeciesObservation(AbstractObservationRecord):
     """
     site = models.ForeignKey('Site', null=True, blank=True)
     input_name = models.CharField(max_length=500, null=False, blank=False,
-                                  verbose_name="Species", help_text="")
+                                  verbose_name="Species Name", help_text="Species Name (as imported)")
     name_id = models.IntegerField(default=-1,
-                                  verbose_name="Name ID", help_text="The unique ID from the herbarium database")
-    uncertainty = models.CharField(max_length=50, blank=True,
-                                   verbose_name="Species uncertainty", help_text="")
+                                  verbose_name="Name ID", help_text="The unique ID from the species database")
 
     def __str__(self):
         return self.input_name

@@ -19,6 +19,7 @@ from main.admin import readonly_user
 from main.forms import FeedbackForm, UploadDataForm
 from main.models import Dataset, DatasetFile, Site, MODEL_SRID
 from main.utils_zip import zip_dir_to_temp_zip, export_zip
+from main.utils_species import get_all_species, name_id_by_species_name
 from upload.validation import DATASHEET_MODELS_MAPPING
 
 
@@ -118,7 +119,7 @@ class FeedbackView(FormMessagesMixin, ContactView):
 
 
 class UploadDataSetView(LoginRequiredMixin, FormView):
-    # TODO: implement Observation and SpeciesObservation upload
+    # TODO: refactor this messy view
     template_name = 'main/data_upload.html'
     form_class = UploadDataForm
     success_url = reverse_lazy('admin:main_dataset_changelist')
@@ -132,15 +133,17 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
         dataset = get_object_or_404(Dataset, pk=pk)
 
         error_url = reverse_lazy('admin:main_dataset_change', args=[pk])
-        if dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
-            messages.error(self.request, 'Import of data set of type ' + dataset.type + " is not yet implemented")
-            return HttpResponseRedirect(reverse_lazy('admin:main_dataset_change', args=[pk]))
         src_file = DatasetFile(file=self.request.FILES['file'], dataset=dataset, uploaded_by=self.request.user)
         src_file.save()
         is_append = form.cleaned_data['append_mode']
         create_site = form.cleaned_data['create_site']
         schema = dataset.schema_model(dataset.schema)
-        Record = dataset.record_model
+        record_model = dataset.record_model
+        # if species. First load species list from herbie. Should raise an exception if problem.
+        species_id_by_name = None
+        if dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
+            species_id_by_name = name_id_by_species_name()
+
         with open(src_file.path, 'rb') as csvfile:
             reader = csv.DictReader(csvfile)
             records = []
@@ -182,7 +185,7 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                             else:
                                 msg = "Row #{}: could not find the site '{}':".format(row_number, data)
                                 errors.append(msg)
-                    record = Record(
+                    record = record_model(
                         site=site,
                         dataset=dataset,
                         data=row,
@@ -199,6 +202,13 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                             # geometry
                             geometry = schema.cast_geometry(row, default_srid=MODEL_SRID)
                             record.geometry = geometry
+                            if dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
+                                # species stuff. Lookup for species match in herbie
+                                input_name = schema.cast_species_name(row)
+                                name_id = int(species_id_by_name.get(input_name, -1))
+                                record.input_name = input_name
+                                record.name_id = name_id
+
                     except Exception as e:
                         msg = "> Row #{}: problem while extracting the Observation data: {}. [{}]".format(row_number, e,
                                                                                                           row)
@@ -206,8 +216,8 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                     records.append(record)
             if not errors:
                 if not is_append:
-                    Record.objects.filter(dataset=dataset).delete()
-                Record.objects.bulk_create(records)
+                    record_model.objects.filter(dataset=dataset).delete()
+                record_model.objects.bulk_create(records)
                 if warnings:
                     msg = "{} records imported but with the following warnings: \n {}".format(
                         len(records),
