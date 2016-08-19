@@ -27,7 +27,7 @@ class ObservationSchemaError(Exception):
     pass
 
 
-class SpeciesSchemaError(Exception):
+class SpeciesObservationSchemaError(Exception):
     pass
 
 
@@ -97,6 +97,7 @@ class BiosysSchema:
     LATITUDE_TYPE_NAME = 'latitude'
     LONGITUDE_TYPE_NAME = 'longitude'
     DATUM_TYPE_NAME = 'datum'
+    SPECIES_NAME_TYPE_NAME = 'speciesName'
 
     BIOSYS_TYPE_MAP = {
         OBSERVATION_DATE_TYPE_NAME: DayFirstDateType,
@@ -131,6 +132,8 @@ class BiosysSchema:
     def is_datum(self):
         return self.type == self.DATUM_TYPE_NAME
 
+    def is_species_name(self):
+        return self.type == self.SPECIES_NAME_TYPE_NAME
 
 @python_2_unicode_compatible
 class SchemaField:
@@ -448,7 +451,7 @@ class ObservationSchema(GenericSchema):
         4- If there's only one field of type date it's this one.
         5- Throw exception if not found
         :param schema: a dict descriptor or a Schema instance
-        :return: the SchemaField
+        :return: The SchemaField or raise an exception if none or more than one
         """
         if not isinstance(schema, GenericSchema):
             schema = GenericSchema(schema)
@@ -501,7 +504,7 @@ class ObservationSchema(GenericSchema):
         2- Look for biosys.type = 'latitude'
         3- Look for a field with name 'Latitude' case insensitive
         :param schema: a dict descriptor or a Schema instance
-        :return: None if not found or raise an exception if more than one
+        :return: The SchemaField or raise an exception if none or more than one
         """
         if not isinstance(schema, GenericSchema):
             schema = GenericSchema(schema)
@@ -540,7 +543,7 @@ class ObservationSchema(GenericSchema):
         1- Look for biosys.type = 'longitude'
         2- Look for a field with name 'Longitude' case insensitive
         :param schema: a dict descriptor or a Schema instance
-        :return: None if not found or raise an exception if more than one
+        :return: The SchemaField or raise an exception if none or more than one
         """
         if not isinstance(schema, GenericSchema):
             schema = GenericSchema(schema)
@@ -625,8 +628,54 @@ class SpeciesObservationSchema(ObservationSchema):
     """
     An ObservationSchema with a Species Name
     """
-    # TODO: implement the species stuff
-    pass
+    SPECIES_NAME_FIELD_NAME = 'Species Name'
+
+    def __init__(self, schema):
+        ObservationSchema.__init__(self, schema)
+        self.species_name_field = self.find_species_name_field_or_throws(self)
+
+    @staticmethod
+    def find_species_name_field_or_throws(schema):
+        """
+        Precedence Rules:
+        2- Look for biosys.type = 'speciesName'
+        3- Look for a field with name 'Species Name' case insensitive
+        :param schema: a dict descriptor or a Schema instance
+        :return: The SchemaField or raise an exception if none or more than one
+        """
+        if not isinstance(schema, GenericSchema):
+            schema = GenericSchema(schema)
+        fields = [f for f in schema.fields if f.biosys.is_species_name()]
+        if len(fields) > 1:
+            msg = "More than one Biosys speciesName field found!. {}".format(fields)
+            raise SpeciesObservationSchemaError(msg)
+        if len(fields) == 1:
+            field = fields[0]
+            if not field.required:
+                msg = "The Biosys speciesName field must be set as 'required'. {}".format(field)
+                raise SpeciesObservationSchemaError(msg)
+            else:
+                return field
+        # no Biosys species_name field found look for column name
+        fields = [f for f in schema.fields if f.name.lower() == SpeciesObservationSchema.SPECIES_NAME_FIELD_NAME.lower()]
+        if len(fields) > 1:
+            msg = "More than one 'Species Name' field found!. {}".format(fields)
+            raise SpeciesObservationSchemaError(msg)
+        if len(fields) == 1:
+            field = fields[0]
+            if not field.required:
+                msg = "The 'Species Name' field must be set as 'required'. {}".format(field)
+                raise SpeciesObservationSchemaError(msg)
+            else:
+                return field
+        msg = "The schema doesn't include a required 'Species Name' field. " \
+              "It must have a field named {} or with biosys type {}". \
+            format(SpeciesObservationSchema.SPECIES_NAME_FIELD_NAME, BiosysSchema.SPECIES_NAME_TYPE_NAME)
+        raise SpeciesObservationSchemaError(msg)
+
+    def cast_species_name(self, record):
+        field = self.species_name_field
+        return field.cast(record.get(field.name))
 
 
 class Exporter:

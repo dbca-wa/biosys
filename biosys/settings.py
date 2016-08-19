@@ -33,7 +33,7 @@ if not DEBUG:
 # Application definition
 # The variables below are added to all responses in biosys/context_processors.py
 SITE_TITLE = 'BioSys - WA Biological Survey Database'
-APPLICATION_VERSION_NO = '2.0.b3'
+APPLICATION_VERSION_NO = '2.0.0'
 
 INSTALLED_APPS = (
     'grappelli',  # Must be before django.contrib.admin
@@ -170,6 +170,10 @@ BOOTSTRAP3 = {
     'required_css_class': 'required-form-field',
     'set_placeholder': False,
 }
+
+HERBIE_SPECIES_WFS_URL = env('HERBIE_SPECIES_WFS_URL',
+                             'https://kmi.dpaw.wa.gov.au/geoserver/ows?service=wfs&version=1.1.0&'
+                             'request=GetFeature&typeNames=public:herbie_hbvspecies_public&outputFormat=application/json')
 
 # Logging settings
 # Ensure that the logs directory exists:
