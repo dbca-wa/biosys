@@ -3,9 +3,7 @@ from django.test import TestCase
 from django.test.client import Client
 from mixer.backend.django import mixer
 from django.contrib.auth.models import User
-from main.models import (Project, Site, Visit, SiteVisit,
-                         SiteVisitDataFile, GeologyGroupLookup,
-                         OldSpeciesObservation, SiteCharacteristic)
+from main.models import Project, Site
 
 
 class BaseTestCase(TestCase):
@@ -30,10 +28,6 @@ class BaseTestCase(TestCase):
         # Create some data
         self.project = mixer.blend(Project)
         self.site = mixer.blend(Site, site_ID=mixer.RANDOM, project=mixer.SELECT)
-        self.visit = mixer.blend(Visit, project=mixer.SELECT)
-        self.site_visit = mixer.blend(SiteVisit, site=mixer.SELECT)
-        self.species_obs = mixer.blend(OldSpeciesObservation, site_visit=mixer.SELECT)
-        self.site_char = mixer.blend(SiteCharacteristic, site_visit=mixer.SELECT)
 
 
 class AdminTest(BaseTestCase):
@@ -66,60 +60,18 @@ class AdminTest(BaseTestCase):
             self.client.login(username=user, password='test')
             url = reverse('admin:app_list', args=('main',))
             response = self.client.get(url)
-            for m in [Project, Site, Visit]:
+            for m in [Project, Site]:
                 url = reverse('admin:main_{}_changelist'.format(m._meta.model_name))
                 self.assertContains(response, url, msg_prefix=user)
-
-    def test_render_main_index_links_absent(self):
-        """Test that defined links do not render on main app index
-        """
-        for user in ['custodian', 'uploader']:
-            self.client.login(username=user, password='test')
-            url = reverse('admin:app_list', args=('main',))
-            response = self.client.get(url)
-            for m in [SiteVisit, SiteVisitDataFile, GeologyGroupLookup]:
-                url = reverse('admin:main_{}_changelist'.format(m._meta.model_name))
-                self.assertNotContains(response, url, msg_prefix=user)
 
     def test_permission_main_changelists(self):
         """Test that users in each group can/cannot view main app model changelists
         """
         for user, code in [('custodian', 200), ('uploader', 200), ('normaluser', 302)]:
             self.client.login(username=user, password='test')
-            for m in [Project, Site, Visit]:
+            for m in [Project, Site]:
                 url = reverse('admin:main_{}_changelist'.format(m._meta.model_name))
                 response = self.client.get(url)
                 self.assertEqual(
                     response.status_code, code,
                     '{} wrong permission for {} ({})'.format(user, m._meta.object_name, response.status_code))
-
-    def test_permission_visit_changeform(self):
-        """Test that users in each group can/cannot view Visit change form
-        """
-        for user, code in [('custodian', 200), ('uploader', 200), ('normaluser', 302)]:
-            self.client.login(username=user, password='test')
-            url = reverse('admin:main_visit_change', args=[self.visit.pk])
-            response = self.client.get(url)
-            self.assertEqual(
-                response.status_code, code, '{} wrong permission ({})'.format(user, response.status_code))
-
-    def test_render_visit_changeform(self):
-        for user in ['custodian', 'uploader']:
-            self.client.login(username=user, password='test')
-            url = reverse('admin:main_visit_change', args=[self.visit.pk])
-            response = self.client.get(url)
-            self.assertTemplateUsed(response, 'main/visit_change_form.html')
-            # 'Download blank datasheets' URL
-            url = reverse('admin:main_visit_download_datasheet', kwargs={'pk': self.visit.pk})
-            self.assertContains(response, url, msg_prefix=user)
-            # 'Upload completed datasheet' URL
-            url = reverse('admin:main_visit_upload_datasheet', args=[self.visit.pk])
-            self.assertContains(response, url, msg_prefix=user)
-
-    def test_permission_visit_upload_datasheet_view(self):
-        for user, code in [('custodian', 200), ('uploader', 200), ('normaluser', 302)]:
-            self.client.login(username=user, password='test')
-            url = reverse('admin:main_visit_upload_datasheet', args=[self.visit.pk])
-            response = self.client.get(url)
-            self.assertEqual(
-                response.status_code, code, '{} wrong permission ({})'.format(user, response.status_code))

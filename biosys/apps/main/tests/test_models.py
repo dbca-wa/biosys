@@ -121,24 +121,3 @@ class TestSite(TestCase):
         site.longitude = 125.0
         site.save()
         self.assertIsNotNone(site.geometry)
-
-
-class TestSiteVisit(TestCase):
-    def setUp(self):
-        self.sv = mixer.blend(SiteVisit)
-
-    def test_approve(self):
-        """Test the is_approved property and approve class method.
-        """
-        # Newly-created SiteVisit should be of quarantined status.
-        self.assertFalse(self.sv.is_approved)
-        self.sv.approve()
-        self.assertTrue(self.sv.is_approved)
-
-    def test_quarantine(self):
-        """Test the is_quarantined property and quarantine class method.
-        """
-        self.sv.approve()
-        self.assertFalse(self.sv.is_quarantined)
-        self.sv.quarantine()
-        self.assertTrue(self.sv.is_quarantined)

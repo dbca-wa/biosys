@@ -57,16 +57,7 @@ INSTALLED_APPS = (
 
 PROJECT_APPS = (
     'main',
-    'species',
     'publish',
-
-
-    # legacy apps
-    'vegetation',
-    'animals',
-    'upload',
-    'download',
-    'old_publish',
 )
 
 INSTALLED_APPS += PROJECT_APPS

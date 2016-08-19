@@ -7,8 +7,6 @@ from django.conf import settings
 from django.apps import apps
 from django.core import serializers
 
-from animals.models import *
-
 
 def flatten(d, parent_key='', sep=' '):
     """Utility function to flatten nested dictionaries recursively.
