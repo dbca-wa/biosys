@@ -33,7 +33,7 @@ if not DEBUG:
 # Application definition
 # The variables below are added to all responses in biosys/context_processors.py
 SITE_TITLE = 'BioSys - WA Biological Survey Database'
-APPLICATION_VERSION_NO = '2.0.0'
+APPLICATION_VERSION_NO = '3.0.b1'
 
 INSTALLED_APPS = (
     'grappelli',  # Must be before django.contrib.admin
@@ -47,10 +47,10 @@ INSTALLED_APPS = (
     'django.contrib.postgres',
     # Third-party apps.
     'django_extensions',
-    'envelope',
+    # 'envelope',
     'reversion',
-    'tastypie',
-    'webtemplate_dpaw',
+    # 'tastypie',
+    # 'webtemplate_dpaw',
     'bootstrap3',
     'timezone_field'
 )

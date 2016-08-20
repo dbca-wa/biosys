@@ -41,6 +41,5 @@ urlpatterns = [
     url(r'^$', home_view_selection_view, name='home'),
     url(r'^dashboard/', login_required(DashboardView.as_view()), name='dashboard'),
     url(r'^about/', TemplateView.as_view(template_name='main/about.html'), name='about'),
-    url(r'^contact/$',  login_required(FeedbackView.as_view()), name='contact'),
-    url(r'^contact/', include('envelope.urls')),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
