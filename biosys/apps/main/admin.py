@@ -69,6 +69,7 @@ class MainAppAdmin(VersionAdmin):
 
 @admin.register(Project)
 class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
+    fields = ('title', 'code', 'datum', 'timezone', 'attributes', 'geometry', 'comments', 'site_data_package')
     list_display = ('title', 'id', 'code')
     readonly_fields = ['id']
     search_fields = ['title', 'code']
@@ -92,6 +93,7 @@ class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
 @admin.register(Site)
 class SiteAdmin(MainAppAdmin, GeoModelAdmin):
     change_form_template = 'main/site_change_form.html'
+    fields = ('project', 'site_ID', 'parent_site',  'site_code', 'site_name', 'geometry', 'comments', 'attributes')
     list_display = [
         'site_code', 'project', 'site_ID', 'site_name', 'parent_site']
     list_filter = ['project', 'parent_site']

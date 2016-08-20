@@ -197,11 +197,12 @@ class SpeciesObservation(AbstractObservationRecord):
         return self.name_id > 0
 
 
+@python_2_unicode_compatible
 class Project(models.Model):
     DEFAULT_TIMEZONE = settings.TIME_ZONE
 
     title = models.CharField(max_length=300, null=False, blank=False, unique=True,
-                             verbose_name="Title", help_text="Enter a brief title for the project (required).")
+                             verbose_name="Title", help_text="Enter a name for the project (required).")
     code = models.CharField(max_length=30, null=True, blank=True,
                             verbose_name="Code",
                             help_text="Provide a brief code or acronym for this project. This code could be used for prefixing site codes.")
@@ -211,28 +212,25 @@ class Project(models.Model):
 
     timezone = TimeZoneField(default=DEFAULT_TIMEZONE)
 
+    attributes = JSONField(null=True, blank=True,
+                           help_text="Define here all specific attributes of your project in the form of json "
+                                     "'attribute name': 'attribute value")
     comments = models.TextField(null=True, blank=True,
                                 verbose_name="Comments", help_text="")
 
-    attributes = JSONField(null=True, blank=True)
-    attributes_schema = JSONField(null=True, blank=True)
+    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
+                                    verbose_name="Extent",
+                                    help_text="The boundary of your project (not required). "
+                                              "Can also be calculated from the extents of the project sites")
+    site_data_package = JSONField(null=True, blank=True,
+                                  verbose_name='Site attributes schema',
+                                  help_text='Define here the attributes that all your sites will share.')
 
     class Meta:
         pass
 
     def __str__(self):
-        return self.__unicode__()
-
-    def __unicode__(self):
         return self.title
-
-    def save(self, *args, **kwargs):
-        if self.extent_lat_min is not None and self.extent_long_min is not None and self.extent_lat_max is not None and \
-                        self.extent_long_max is not None:
-            self.geometry = Polygon.from_bbox((self.extent_long_min, self.extent_lat_min,
-                                               self.extent_long_max, self.extent_lat_max))
-
-        super(Project, self).save(*args, **kwargs)
 
 
 def _calculate_site_ID():  # @NoSelf
@@ -242,6 +240,7 @@ def _calculate_site_ID():  # @NoSelf
         return Site.objects.aggregate(Max('site_ID'))['site_ID__max'] + 1
 
 
+@python_2_unicode_compatible
 class Site(models.Model):
     project = models.ForeignKey('Project', null=False, blank=False,
                                 verbose_name="Project", help_text="Select the project this site is part of (required)")
@@ -250,37 +249,20 @@ class Site(models.Model):
     parent_site = models.ForeignKey('self', null=True, blank=True,
                                     verbose_name="Parent Site",
                                     help_text="Sites can be grouped together. If you have a subregion within the project that contains a number of sites, create that region as a parent site first, then select that parent when you're creating this site.")
-    site_code = models.CharField(max_length=100, null=False, blank=False,
-                                 verbose_name="Site Code",
-                                 help_text="Local site code must be unique to this project. e.g. LCI123 (required)")
     site_name = models.CharField(max_length=150, blank=True,
-                                 verbose_name="Site Name",
+                                 verbose_name="Name",
                                  help_text="Enter a more descriptive name for this site, if one exists.")
-    latitude = models.FloatField(null=True, blank=True,
-                                 help_text="Latitude of site origin (e.g. corner, centroid, etc., required)")
-    longitude = models.FloatField(null=True, blank=True,
-                                  help_text="Longitude of site origin (e.g. corner, centroid, etc., required)")
+    site_code = models.CharField(max_length=100, null=False, blank=False,
+                                 verbose_name="Code",
+                                 help_text="Local site code must be unique to this project. e.g. LCI123 (required)")
+    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
+                                    verbose_name="Location", help_text="")
     comments = models.TextField(null=True, blank=True,
                                 verbose_name="Comments", help_text="")
-    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
-                                    verbose_name="Geometry", help_text="")
     attributes = JSONField(null=True, blank=True)
-    attributes_schema = JSONField(null=True, blank=True)
 
     class Meta:
         unique_together = ('project', 'site_code')
 
     def __str__(self):
-        return self.__unicode__()
-
-    def __unicode__(self):
         return self.site_code
-
-    def save(self, *args, **kwargs):
-        """
-        Calculate and save the geometry from the quadrant attributes
-        """
-        if self.latitude and self.longitude:
-            point = Point(self.longitude, self.latitude, srid=self.datum)
-            self.geometry = point
-        super(Site, self).save(*args, **kwargs)

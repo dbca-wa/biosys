@@ -72,8 +72,9 @@ class DataSetForm(forms.ModelForm):
 
 
 class ProjectForm(forms.ModelForm):
-    attributes_schema = BetterJSONField(required=False)
     attributes = BetterJSONField(required=False)
+    attributes_data_package = BetterJSONField(required=False)
+    site_data_package = BetterJSONField(required=False)
     timezone = BetterTimeZoneFormField(initial=Project.DEFAULT_TIMEZONE)
 
     class Meta:
