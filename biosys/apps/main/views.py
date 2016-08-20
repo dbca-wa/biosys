@@ -1,7 +1,6 @@
 import csv
 import datetime
 
-from braces.views import FormMessagesMixin
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.urlresolvers import reverse_lazy
@@ -9,10 +8,9 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.generic import TemplateView, FormView
-from envelope.views import ContactView
 
 from main.admin import readonly_user
-from main.forms import FeedbackForm, UploadDatasetForm
+from main.forms import UploadDatasetForm
 from main.models import Dataset, DatasetFile, Site, MODEL_SRID
 from main.utils_species import name_id_by_species_name
 
@@ -24,14 +22,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context = super(DashboardView, self).get_context_data(**kwargs)
         context['readonly_user'] = readonly_user(self.request.user)
         return context
-
-
-class FeedbackView(FormMessagesMixin, ContactView):
-    form_valid_message = 'Thank you for your feedback.'
-    form_invalid_message = 'Oh snap, something went wrong!'
-    form_class = FeedbackForm
-    template_name = 'envelope/feedback.html'
-    success_url = 'home'
 
 
 class UploadDataSetView(LoginRequiredMixin, FormView):

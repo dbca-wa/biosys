@@ -36,7 +36,7 @@ SITE_TITLE = 'BioSys - WA Biological Survey Database'
 APPLICATION_VERSION_NO = '3.0.b1'
 
 INSTALLED_APPS = (
-    'grappelli',  # Must be before django.contrib.admin
+    # 'grappelli',  # Must be before django.contrib.admin
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

@@ -6,8 +6,6 @@ from django import forms
 from django.contrib.postgres.forms import JSONField
 from django.core.exceptions import ValidationError
 
-from envelope.forms import ContactForm
-
 from .models import Project, Site, Dataset
 
 DATUM_BOUNDS = {
@@ -43,6 +41,7 @@ class BetterTimeZoneFormField(forms.TypedChoiceField):
     A fixed version of the TimeZoneFormField from timezone_field (but when updating a model)
     It just ensure that the coerce test if it is already a timezone.
     """
+
     def __init__(self, *args, **kwargs):
 
         def coerce_to_pytz(val):
@@ -229,8 +228,3 @@ class UploadDatasetForm(forms.Form):
                 msg = '{} is not an allowed file type'.format(f)
                 self._errors['file'] = self.error_class([msg])
             return self.cleaned_data
-
-
-class FeedbackForm(ContactForm):
-    subject_intro = '[BioSys Feedback]  '
-    template_name = 'envelope/email_body.txt'
