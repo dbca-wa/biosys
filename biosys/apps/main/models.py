@@ -15,30 +15,24 @@ from django.contrib.gis.geos import Point
 from django.contrib.auth.models import User
 from django.contrib.gis.geos.polygon import Polygon
 from django.core.exceptions import ValidationError
+from django.conf import settings
 
+from timezone_field import TimeZoneField
 
-MODEL_SRID = 4326
-DATUM_CHOICES = [
-    (MODEL_SRID, 'WGS84'),
-    (4283, 'GDA94'),
-    (4203, 'AGD84'),
-    (4202, 'AGD66'),
-]
-DEFAULT_SITE_ID = 16120
+from main.constants import DATUM_CHOICES, MODEL_SRID, DEFAULT_SITE_ID
+from utils_data_package import GenericSchema, ObservationSchema, SpeciesObservationSchema
 
 
 @python_2_unicode_compatible
-class DataSet(models.Model):
-    TYPE_PROJECT = 'project'
-    TYPE_SITE = 'site'
+class Dataset(models.Model):
     TYPE_GENERIC = 'generic'
     TYPE_OBSERVATION = 'observation'
     TYPE_SPECIES_OBSERVATION = 'species_observation'
-    TYPE_CHOICES = [(TYPE_PROJECT, TYPE_PROJECT.capitalize()),
-                    (TYPE_SITE, TYPE_SITE.capitalize()),
-                    (TYPE_GENERIC, TYPE_GENERIC.capitalize()),
-                    (TYPE_OBSERVATION, TYPE_OBSERVATION.capitalize()),
-                    (TYPE_SPECIES_OBSERVATION, 'Species observation')]
+    TYPE_CHOICES = [
+        (TYPE_GENERIC, TYPE_GENERIC.capitalize()),
+        (TYPE_OBSERVATION, TYPE_OBSERVATION.capitalize()),
+        (TYPE_SPECIES_OBSERVATION, 'Species observation')
+    ]
     project = models.ForeignKey('Project', null=False, blank=False, related_name='projects',
                                 related_query_name='project')
     name = models.CharField(max_length=200, null=False, blank=False)
@@ -56,6 +50,24 @@ class DataSet(models.Model):
         return '{}'.format(self.name)
 
     @property
+    def record_model(self):
+        if self.type == Dataset.TYPE_SPECIES_OBSERVATION:
+            return SpeciesObservation
+        elif self.type == Dataset.TYPE_OBSERVATION:
+            return Observation
+        else:
+            return GenericRecord
+
+    @property
+    def schema_model(self):
+        if self.type == Dataset.TYPE_SPECIES_OBSERVATION:
+            return SpeciesObservationSchema
+        elif self.type == Dataset.TYPE_OBSERVATION:
+            return ObservationSchema
+        else:
+            return GenericSchema
+
+    @property
     def schema(self):
         return self.resource.get('schema', {})
 
@@ -71,7 +83,7 @@ class DataSet(models.Model):
         """
         Validate the data descriptor
         """
-        #  Validate the data package
+        # Validate the data package
         validator = datapackage.DataPackage(self.data_package)
         try:
             validator.validate()
@@ -88,23 +100,38 @@ class DataSet(models.Model):
         else:
             schema = self.schema
             try:
+                # use frictionless validator
                 jsontableschema.validate(schema)
             except Exception as e:
                 raise ValidationError(
                     'Schema errors for resource "{}": {}'.format(
                         self.resource.get('name'),
                         [e.message for e in jsontableschema.validator.iter_errors(schema)]))
+            try:
+                # use our own schema class to validate.
+                # The constructor should raise an exception if error
+                if self.type == self.TYPE_SPECIES_OBSERVATION:
+                    SpeciesObservationSchema(schema)
+                elif self.type == self.TYPE_OBSERVATION:
+                    ObservationSchema(schema)
+                else:
+                    GenericSchema(schema)
+            except Exception as e:
+                raise ValidationError(
+                    'Schema errors for resource "{}": {}'.format(
+                        self.resource.get('name'),
+                        e))
 
     class Meta:
         unique_together = ('project', 'name')
 
 
 @python_2_unicode_compatible
-class DataSetFile(models.Model):
+class DatasetFile(models.Model):
     file = models.FileField(upload_to='%Y/%m/%d')
     uploaded_date = models.DateTimeField(auto_now_add=True)
     uploaded_by = models.ForeignKey(User, null=True, blank=True)
-    dataset = models.ForeignKey(DataSet, blank=False, null=True)
+    dataset = models.ForeignKey(Dataset, blank=False, null=True)
 
     def __str__(self):
         return self.file.name
@@ -121,7 +148,7 @@ class DataSetFile(models.Model):
 @python_2_unicode_compatible
 class AbstractRecord(models.Model):
     data = JSONField()
-    dataset = models.ForeignKey(DataSet, null=False, blank=False)
+    dataset = models.ForeignKey(Dataset, null=False, blank=False)
 
     def __str__(self):
         return "{0}: {1}".format(self.dataset.name, Truncator(self.data).chars(100))
@@ -134,32 +161,33 @@ class AbstractRecord(models.Model):
         abstract = True
 
 
+class AbstractObservationRecord(AbstractRecord):
+    datetime = models.DateTimeField(null=True, blank=True)
+    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+
 class GenericRecord(AbstractRecord):
     site = models.ForeignKey('Site', null=True, blank=True)
 
 
-class Observation(AbstractRecord):
+class Observation(AbstractObservationRecord):
     site = models.ForeignKey('Site', null=True, blank=True)
-    date_time = models.DateTimeField(null=True, blank=True)
-    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
 
 
 @python_2_unicode_compatible
-class SpeciesObservation(AbstractRecord):
+class SpeciesObservation(AbstractObservationRecord):
     """
     If the input_name has been validated against the species database the name_id is populated with the value from the
-    database
+    databasedate
     """
     site = models.ForeignKey('Site', null=True, blank=True)
-    date_time = models.DateTimeField(null=True, blank=True)
-    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
-
     input_name = models.CharField(max_length=500, null=False, blank=False,
-                                  verbose_name="Species", help_text="")
+                                  verbose_name="Species Name", help_text="Species Name (as imported)")
     name_id = models.IntegerField(default=-1,
-                                  verbose_name="Name ID", help_text="The unique ID from the herbarium database")
-    uncertainty = models.CharField(max_length=50, blank=True,
-                                   verbose_name="Species uncertainty", help_text="")
+                                  verbose_name="Name ID", help_text="The unique ID from the species database")
 
     def __str__(self):
         return self.input_name
@@ -170,11 +198,19 @@ class SpeciesObservation(AbstractRecord):
 
 
 class Project(models.Model):
+    DEFAULT_TIMEZONE = settings.TIME_ZONE
+
     title = models.CharField(max_length=300, null=False, blank=False, unique=True,
                              verbose_name="Title", help_text="Enter a brief title for the project (required).")
     code = models.CharField(max_length=30, null=True, blank=True,
                             verbose_name="Code",
                             help_text="Provide a brief code or acronym for this project. This code could be used for prefixing site codes.")
+    datum = models.IntegerField(null=True, blank=True, choices=DATUM_CHOICES, default=MODEL_SRID,
+                                verbose_name="Default Datum",
+                                help_text="The datum all locations will be assumed to have unless otherwise specified.")
+
+    timezone = TimeZoneField(default=DEFAULT_TIMEZONE)
+
     custodian = models.CharField(max_length=100, null=True, blank=True,
                                  verbose_name="Custodian",
                                  help_text="The person responsible for the content of this project.")
@@ -188,9 +224,6 @@ class Project(models.Model):
                                verbose_name="Funding", help_text="")
     duration = models.CharField(max_length=100, null=True, blank=True,
                                 verbose_name="Duration", help_text="The likely duration of the project.")
-    datum = models.IntegerField(null=True, blank=True, choices=DATUM_CHOICES, default=MODEL_SRID,
-                                verbose_name="Default Datum",
-                                help_text="The datum all locations will be assumed to have unless otherwise specified.")
     extent_lat_min = models.FloatField(null=True, blank=True,
                                        verbose_name="Extent latitude min",
                                        help_text="The southernmost extent of the project (-90 - 0)")
@@ -207,9 +240,8 @@ class Project(models.Model):
                                 verbose_name="Comments", help_text="")
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Extent Geometry", help_text="")
-    # can't extend AbstractRecord directly because we need to change the related name and possible null
     attributes = JSONField(null=True, blank=True)
-    attributes_descriptor = JSONField(null=True, blank=True)
+    attributes_schema = JSONField(null=True, blank=True)
 
     class Meta:
         pass
@@ -314,8 +346,8 @@ class Site(models.Model):
                                 verbose_name="Comments", help_text="")
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Geometry", help_text="")
-    data = JSONField(null=True, blank=True)
-    dataset = models.ForeignKey(DataSet, null=True, blank=True)
+    attributes = JSONField(null=True, blank=True)
+    attributes_schema = JSONField(null=True, blank=True)
 
     class Meta:
         unique_together = ('project', 'site_code')

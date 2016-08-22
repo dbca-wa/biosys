@@ -5,7 +5,7 @@ from django.core import serializers
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.urlresolvers import reverse_lazy
 
-from main.models import Project, DataSet, GenericRecord, Observation, SpeciesObservation
+from main.models import Project, Dataset, GenericRecord, Observation, SpeciesObservation
 
 
 class DataView(LoginRequiredMixin, TemplateView):
@@ -20,7 +20,7 @@ class DataView(LoginRequiredMixin, TemplateView):
 
 class JSONDataTableView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
-        ds = get_object_or_404(DataSet, pk=kwargs.get('pk'))
+        ds = get_object_or_404(Dataset, pk=kwargs.get('pk'))
         rows = []
         records = GenericRecord.objects.filter(dataset=ds)
         for record in records:

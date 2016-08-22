@@ -4,6 +4,7 @@ import logging
 import requests
 
 from django.db import models
+from django.conf import settings
 
 from main.models import AbstractDataFile
 
@@ -20,9 +21,8 @@ class SpeciesManager(models.Manager):
         """
         source = 'herbie'
         logger.info('Querying HERBIE.HBVSPECIES for species names')
-        url = os.environ['KMI_WFS_URL'].format('dpaw:herbie_hbvspecies')
-        auth = (os.environ['KMI_USER'], os.environ['KMI_PASSWORD'])
-        r = requests.post(url, auth=auth)
+        url = settings.HERBIE_SPECIES_WFS_URL
+        r = requests.post(url)
         if r.status_code != 200:
             r.raise_for_status()
 
