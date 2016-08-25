@@ -35,37 +35,6 @@ class MainAppAdmin(VersionAdmin):
     change_form_template = 'main/main_change_form.html'
     change_list_template = 'main/main_change_list.html'
 
-    def get_readonly_fields(self, request, obj=None):
-        if not readonly_user(request.user):
-            return self.readonly_fields
-        else:  # Return all model fields.
-            return [f.name for f in self.model._meta.fields]
-
-    def get_actions(self, request):
-        actions = super(MainAppAdmin, self).get_actions(request)
-        # Conditionally remove the "Delete selected" action.
-        if readonly_user(request.user) and 'delete_selected' in actions:
-            del actions['delete_selected']
-        return actions
-
-    def changelist_view(self, request, extra_context=None):
-        # Override changelist_view to add context.
-        extra_context = extra_context or {}
-        if readonly_user(request.user):
-            extra_context.update({
-                'title': self.model._meta.verbose_name_plural.capitalize(),
-                'readonly_user': True})
-        return super(MainAppAdmin, self).changelist_view(request, extra_context)
-
-    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
-        # Override changeform_view to add extra context.
-        extra_context = extra_context or {}
-        if readonly_user(request.user):
-            extra_context.update({
-                'title': self.model._meta.verbose_name.capitalize(),
-                'readonly_user': True})
-        return super(MainAppAdmin, self).changeform_view(request, object_id, form_url, extra_context)
-
 
 @admin.register(Project)
 class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
@@ -76,18 +45,6 @@ class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
     modifiable = False
     openlayers_url = '//static.dpaw.wa.gov.au/static/libs/openlayers/2.13.1/OpenLayers.js'
     form = forms.ProjectForm
-
-    def get_fields(self, request, obj=None):
-        if obj is None:
-            fields = self.fields
-        else:
-            fields = ['id'] + self.fields
-
-            if obj.geometry is not None:
-                # if there is a geometry, insert it as second to last field
-                fields = fields[:-1] + ['geometry'] + fields[-1:]
-
-        return fields
 
 
 @admin.register(Site)

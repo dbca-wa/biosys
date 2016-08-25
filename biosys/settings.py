@@ -36,7 +36,7 @@ SITE_TITLE = 'BioSys - WA Biological Survey Database'
 APPLICATION_VERSION_NO = '3.0.b1'
 
 INSTALLED_APPS = (
-    # 'grappelli',  # Must be before django.contrib.admin
+    'grappelli',  # Must be before django.contrib.admin
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -46,6 +46,7 @@ INSTALLED_APPS = (
     'django.contrib.gis',
     'django.contrib.postgres',
     # Third-party apps.
+    'rest_framework',
     'django_extensions',
     # 'envelope',
     'reversion',
@@ -88,13 +89,14 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': [
                 "django.contrib.auth.context_processors.auth",
-                "django.core.context_processors.debug",
-                "django.core.context_processors.i18n",
-                "django.core.context_processors.media",
-                "django.core.context_processors.static",
-                "django.core.context_processors.tz",
+                "django.template.context_processors.debug",
+                "django.template.context_processors.i18n",
+                "django.template.context_processors.media",
+                "django.template.context_processors.static",
+                "django.template.context_processors.request",
+                "django.template.context_processors.tz",
+                "django.template.context_processors.csrf",
                 "django.contrib.messages.context_processors.messages",
-                "django.core.context_processors.request",
                 "biosys.context_processors.standard",
             ],
         },
@@ -149,6 +151,15 @@ STATICFILES_FINDERS = (
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ],
+    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
+}
 
 BOOTSTRAP3 = {
     'jquery_url': '//static.dpaw.wa.gov.au/static/libs/jquery/2.2.1/jquery.min.js',

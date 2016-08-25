@@ -493,7 +493,7 @@ class ObservationSchema(GenericSchema):
                       "One should be tagged as a biosys type=observationDate "
                 raise ObservationSchemaError(msg)
             msg = "The schema doesn't include a required Observation Date field. " \
-                  "It must have a field named {} or with biosys type {}". \
+                  "It must have a field named {} or tagged with biosys type {}". \
                 format(ObservationSchema.OBSERVATION_DATE_FIELD_NAME, BiosysSchema.OBSERVATION_DATE_TYPE_NAME)
             raise ObservationSchemaError(msg)
 
@@ -532,7 +532,7 @@ class ObservationSchema(GenericSchema):
             else:
                 return field
         msg = "The schema doesn't include a required latitude field. " \
-              "It must have a field named {} or with biosys type {}". \
+              "It must have a field named {} or tagged with biosys type {}". \
             format(ObservationSchema.LATITUDE_FIELD_NAME, BiosysSchema.LATITUDE_TYPE_NAME)
         raise ObservationSchemaError(msg)
 
@@ -571,7 +571,7 @@ class ObservationSchema(GenericSchema):
             else:
                 return field
         msg = "The schema doesn't include a required longitude field. " \
-              "It must have a field named {} or with biosys type {}". \
+              "It must have a field named {} or tagged with biosys type {}". \
             format(ObservationSchema.LONGITUDE_FIELD_NAME, BiosysSchema.LONGITUDE_TYPE_NAME)
         raise ObservationSchemaError(msg)
 
@@ -669,7 +669,7 @@ class SpeciesObservationSchema(ObservationSchema):
             else:
                 return field
         msg = "The schema doesn't include a required 'Species Name' field. " \
-              "It must have a field named {} or with biosys type {}". \
+              "It must have a field named {} or tagged with biosys type {}". \
             format(SpeciesObservationSchema.SPECIES_NAME_FIELD_NAME, BiosysSchema.SPECIES_NAME_TYPE_NAME)
         raise SpeciesObservationSchemaError(msg)
 

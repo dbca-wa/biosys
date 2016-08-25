@@ -1,7 +1,5 @@
 Django>=1.9.4,<2.0
 psycopg2>=2.6.2,<3.0
-djangorestframework>=3.4.5,<4.0
-Markdown>=2.6.6,<3.0
 django-confy>=1.0.4,<2.0
 django-bootstrap3==6.2.2
 django-auth-ldap==1.2.8
@@ -13,9 +11,25 @@ pytz>=2016.6.1
 django-timezone-field>=2.0rc1
 requests>=2.11,<3.0
 Unipath>=1.1,<2.0
+
+# rest API
+djangorestframework>=3.4.5,<4.0
+Markdown>=2.6.6,<3.0
+django-filter>=0.14.0,<1.0
+django-crispy-forms>=1.6.0,<2.0
+
+
+# dpaw for SSO login
+https://static.dpaw.wa.gov.au/static/py/dpaw-utils/dist/dpaw-utils-0.3a9.tar.gz
+
+# TODO: to get rid of
+django-grappelli>=2.8.1
+
+
 # suspicious dependencies
 dj-static==0.0.6
-# deploy and dev
+
+# test, deploy and dev
 Fabric>=1.10.1,<2.0
 coverage>=3.7.1,<4.0
 flake8>=2.4.0,<3.0
@@ -23,5 +37,7 @@ mixer>=5.4.1,<6.0
 django-extensions>=1.7.2,<1.8
 ipython>=5.1.0
 Werkzeug>=0.10.4,<1.0
+
+
 
 
