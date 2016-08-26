@@ -8,11 +8,12 @@ from django.views.generic import TemplateView
 from django.contrib.auth import views as auth_views
 
 from main.views import DashboardView
-from main.api import urls as main_api_urls
+from .api import router, schema_view
 
 
 def home_view_selection_view(request):
-    if request.user.is_authenticated() and request.user.is_staff:
+    print('home selection', request)
+    if request.user.is_authenticated():
         return redirect('dashboard')
     else:
         return redirect('login')
@@ -21,21 +22,16 @@ def home_view_selection_view(request):
 def admin_view_selection_view(request):
     if request.user.is_superuser:
         return admin.site.index(request)
-    elif request.user.is_authenticated() and request.user.is_staff:
+    elif request.user.is_authenticated():
         return redirect('dashboard')
     else:
         return redirect('login')
-
-rest_api_urlpatterns = \
-    [
-        url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-    ] \
-    + main_api_urls.urlpatterns
 
 urlpatterns = \
     [
         # Authentication URLs
         url(r'^logout/$', auth_views.logout, {'next_page': '/login/'}),
+        # url(r'^login/$', auth_views.login),
         url('^', include('django.contrib.auth.urls')),
         # Application URLs
         url(r'^main/', include('main.urls', namespace='main')),
@@ -48,9 +44,12 @@ urlpatterns = \
         url(r'^dashboard/', login_required(DashboardView.as_view()), name='dashboard'),
         url(r'^about/', TemplateView.as_view(template_name='main/about.html'), name='about'),
 
+        # api
+        url(r'^api/', include(router.urls, namespace='api')),
+        url(r'^api/explorer/', schema_view, name='api_explorer'),
+
         # legacy
         url(r'^grappelli/', include('grappelli.urls')),  # Grappelli URLS
 
     ] \
-    + rest_api_urlpatterns \
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

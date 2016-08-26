@@ -18,7 +18,7 @@
 	    <div class="row login">
 	    	<div class="col-md-4 col-md-offset-4">
 	    		<p>Please enter your username and password</p>
-			    <form id="loginForm" role="login_form" method="post" action="{% url 'django.contrib.auth.views.login' %}">
+			    <form id="loginForm" role="login_form" method="post" action="{% url 'login' %}">
 			        {% csrf_token %}
 			        <div class="form-group {% if form.username.errors %} has-error has-feedback {% endif %}">
 			            <label for="{{ form.username.auto_id }}">{{ form.username.label }}</label> 

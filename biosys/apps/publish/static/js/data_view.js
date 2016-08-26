@@ -29,17 +29,15 @@ biosys.view_data = function ($, _, moduleOptions) {
             allowClear: true
         });
         $select.on('change', function (e) {
-            var url = '/api/v2/dataset/?project__id=' + $(e.target).val();
-            $.ajax(url, {
-                    data: 'json'
-                }
-            ).then(function (data) {
-                showDatasets(data.objects || []);
+            var url = '/api/dataset/?project=' + $(e.target).val();
+            $.getJSON(url).then(function (data) {
+                showDatasets(data|| []);
             });
         });
     }
 
     function showDatasets(dss) {
+        console.log('dss', dss);
         var nodeTemplate = _.template(
             '<li role="presentation" id="id-nav-<%= name %>" data-view="<%= name %>" class=""><a href="#"><%= name %></a></li>'
             ),

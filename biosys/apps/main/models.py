@@ -1,22 +1,17 @@
 from __future__ import unicode_literals
-import datetime
-from os import path
-from reversion import revisions as reversion
-import jsontableschema
-import datapackage
 
-from django.db import transaction
-from django.utils.encoding import python_2_unicode_compatible
-from django.utils.text import Truncator
-from django.db.models import Max
+from os import path
+
+import datapackage
+import jsontableschema
+from django.conf import settings
+from django.contrib.auth.models import User
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import JSONField
-from django.contrib.gis.geos import Point
-from django.contrib.auth.models import User
-from django.contrib.gis.geos.polygon import Polygon
 from django.core.exceptions import ValidationError
-from django.conf import settings
-
+from django.db.models import Max
+from django.utils.encoding import python_2_unicode_compatible
+from django.utils.text import Truncator
 from timezone_field import TimeZoneField
 
 from main.constants import DATUM_CHOICES, MODEL_SRID, DEFAULT_SITE_ID
@@ -244,17 +239,20 @@ def _calculate_site_ID():  # @NoSelf
 class Site(models.Model):
     project = models.ForeignKey('Project', null=False, blank=False,
                                 verbose_name="Project", help_text="Select the project this site is part of (required)")
-    site_ID = models.IntegerField(null=False, blank=False, unique=True, default=_calculate_site_ID,
-                                  verbose_name="Site ID", help_text="Site ID from Scientific Site Register.")
     parent_site = models.ForeignKey('self', null=True, blank=True,
                                     verbose_name="Parent Site",
-                                    help_text="Sites can be grouped together. If you have a subregion within the project that contains a number of sites, create that region as a parent site first, then select that parent when you're creating this site.")
-    site_name = models.CharField(max_length=150, blank=True,
-                                 verbose_name="Name",
-                                 help_text="Enter a more descriptive name for this site, if one exists.")
-    site_code = models.CharField(max_length=100, null=False, blank=False,
-                                 verbose_name="Code",
-                                 help_text="Local site code must be unique to this project. e.g. LCI123 (required)")
+                                    help_text="Sites can be grouped together. "
+                                              "If you have a subregion within the project that contains a number "
+                                              "of sites, create that region as a parent site first, "
+                                              "then select that parent when you're creating this site.")
+    name = models.CharField(max_length=150, blank=True,
+                            verbose_name="Name",
+                            help_text="Enter a more descriptive name for this site, if one exists.")
+    code = models.CharField(max_length=100, null=False, blank=False,
+                            verbose_name="Code",
+                            help_text="Local site code must be unique to this project. e.g. LCI123 (required)")
+    site_ID = models.IntegerField(null=False, blank=False, unique=True, default=_calculate_site_ID,
+                                  verbose_name="Site ID", help_text="Site ID from Scientific Site Register.")
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Location", help_text="")
     comments = models.TextField(null=True, blank=True,
@@ -262,7 +260,7 @@ class Site(models.Model):
     attributes = JSONField(null=True, blank=True)
 
     class Meta:
-        unique_together = ('project', 'site_code')
+        unique_together = ('project', 'code')
 
     def __str__(self):
-        return self.site_code
+        return self.code

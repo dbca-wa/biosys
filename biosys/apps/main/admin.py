@@ -31,7 +31,7 @@ def user_can_approve(user):
     return user.is_superuser or user.groups.filter(name=CUSTODIANS).exists()
 
 
-class MainAppAdmin(VersionAdmin):
+class MainAppAdmin(admin.ModelAdmin):
     change_form_template = 'main/main_change_form.html'
     change_list_template = 'main/main_change_list.html'
 
@@ -50,9 +50,9 @@ class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
 @admin.register(Site)
 class SiteAdmin(MainAppAdmin, GeoModelAdmin):
     change_form_template = 'main/site_change_form.html'
-    fields = ('project', 'site_ID', 'parent_site',  'site_code', 'site_name', 'geometry', 'comments', 'attributes')
+    fields = ('project', 'site_ID', 'parent_site',  'code', 'name', 'geometry', 'comments', 'attributes')
     list_display = [
-        'site_code', 'project', 'site_ID', 'site_name', 'parent_site']
+        'code', 'project', 'site_ID', 'name', 'parent_site']
     list_filter = ['project', 'parent_site']
     readonly_fields = ['site_ID']
     form = forms.SiteForm

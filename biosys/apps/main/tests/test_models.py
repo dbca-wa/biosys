@@ -91,7 +91,7 @@ class TestSite(TestCase):
         site2 = Site(
             project=project2,
             site_ID=site1.site_ID + 1,
-            site_code=site1.site_code,
+            site_code=site1.code,
         )
         try:
             site2.save()
@@ -100,7 +100,7 @@ class TestSite(TestCase):
                              "Same site code on a different project should not throw an exception:{}".format(str(e)))
 
         # same code on same project, should throw an exception
-        site2.site_code = site1.site_code
+        site2.code = site1.code
         site2.project = site1.project
         with self.assertRaises(Exception):
             site2.save()

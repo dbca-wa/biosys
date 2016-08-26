@@ -45,13 +45,12 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.gis',
     'django.contrib.postgres',
-    # Third-party apps.
+
     'rest_framework',
+    'rest_framework_swagger',
+
     'django_extensions',
-    # 'envelope',
     'reversion',
-    # 'tastypie',
-    # 'webtemplate_dpaw',
     'bootstrap3',
     'timezone_field'
 )
@@ -73,7 +72,6 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.gzip.GZipMiddleware',
-    'reversion.middleware.RevisionMiddleware',
     'dpaw_utils.middleware.SSOLoginMiddleware',
 )
 
@@ -102,6 +100,21 @@ TEMPLATES = [
         },
     },
 ]
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    # TODO: why setting the permission below breaks the swagger explorer
+    'DEFAULT_PERMISSION_CLASSES': [
+        # 'rest_framework.permissions.DjangoModelPermissions' # this permission breaks the explorer.
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        # 'rest_framework.renderers.BrowsableAPIRenderer', # use swagger explorer
+    ),
+    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
+}
 
 WSGI_APPLICATION = 'biosys.wsgi.application'
 
@@ -151,15 +164,6 @@ STATICFILES_FINDERS = (
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
-
-REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
-    ],
-    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
-}
 
 BOOTSTRAP3 = {
     'jquery_url': '//static.dpaw.wa.gov.au/static/libs/jquery/2.2.1/jquery.min.js',
