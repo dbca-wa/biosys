@@ -8,10 +8,6 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="description" content="{{ page_description }}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    {% block polyfill_js %}
-        <script async src="//static.dpaw.wa.gov.au/static/libs/modernizr/2.8.3/modernizr.min.js"></script>
-    {% endblock %}
-    <!-- CSS styling blocks -->
     {% block base_style %}
         <link rel="stylesheet" href="//static.dpaw.wa.gov.au/static/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css">
         <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700' rel='stylesheet' type='text/css'>
@@ -23,6 +19,16 @@
     {% block favicon %}
         <link rel="shortcut icon" href="{% static 'favicon.ico' %}">
     {% endblock %}
+
+    <script type="text/javascript" src="//static.dpaw.wa.gov.au/static/libs/require.js/2.2.0/require.min.js"></script>
+    <script type="text/javascript">
+        require(["{% static 'js/config.js' %}"], function () {
+            console.log('config loaded');
+            {% block requirements %}
+            {% endblock %}
+        });
+    </script>
+
     {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -128,13 +134,13 @@
 {% endblock %}
 
 <!-- JavaScript blocks -->
-{% block base_js %}
-    <script src="//static.dpaw.wa.gov.au/static/libs/jquery/2.1.4/jquery.min.js"></script>
-    <script src="//static.dpaw.wa.gov.au/static/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
-    <script src='//static.dpaw.wa.gov.au/static/libs/lodash.js/4.5.1/lodash.min.js'></script>
+{#{% block base_js %}#}
+{#    <script src="//static.dpaw.wa.gov.au/static/libs/jquery/2.1.4/jquery.min.js"></script>#}
+{#    <script src="//static.dpaw.wa.gov.au/static/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>#}
+{#    <script src='//static.dpaw.wa.gov.au/static/libs/lodash.js/4.5.1/lodash.min.js'></script>#}
     {# The project library#}
-    <script src="{% static 'js/biosys.js' %}"></script>
-{% endblock %}
-{% block extra_js %}{% endblock %}
+{#    <script src="{% static 'js/biosys.datatables.js' %}"></script>#}
+{#{% endblock %}#}
+{#{% block extra_js %}{% endblock %}#}
 </body>
 </html>
