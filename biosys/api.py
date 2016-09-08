@@ -20,8 +20,8 @@ router = routers.DefaultRouter()
 router.register(r'projects?', main_views.ProjectViewSet)
 router.register(r'sites?', main_views.SiteViewSet)
 router.register(r'datasets?', main_views.DatasetViewSet)
-router.register(r'generics?', main_views.GenericRecordViewSet)
+router.register(r'genericRecords?', main_views.GenericRecordViewSet)
 router.register(r'observations?', main_views.ObservationViewSet)
-router.register(r'species', main_views.SpeciesObservationViewSet)
+router.register(r'speciesObservations?', main_views.SpeciesObservationViewSet)
 
 
