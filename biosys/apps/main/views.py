@@ -88,7 +88,7 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                                 except Exception as e:
                                     errors.append("Error while creating the site '{}': {}".format(
                                         data,
-                                        e.message
+                                        e
                                     ))
                             else:
                                 msg = "Row #{}: could not find the site '{}':".format(row_number, data)

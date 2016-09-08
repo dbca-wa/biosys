@@ -231,7 +231,7 @@ class SchemaField:
         try:
             self.cast(value)
         except Exception as e:
-            error = e.message
+            error = "{}".format(e)
         return error
 
     def __str__(self):
