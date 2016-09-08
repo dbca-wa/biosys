@@ -44,7 +44,8 @@ All species information are in the properties field.
 }
 
 """
-import json
+from __future__ import absolute_import, unicode_literals, print_function, division
+
 import logging
 import requests
 

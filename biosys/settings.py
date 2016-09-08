@@ -1,6 +1,8 @@
 """
 Django settings for biosys project.
 """
+from __future__ import absolute_import, unicode_literals, print_function, division
+
 from confy import env, database
 import os
 import sys

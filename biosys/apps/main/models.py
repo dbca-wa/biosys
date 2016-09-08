@@ -1,4 +1,4 @@
-from __future__ import unicode_literals
+from __future__ import absolute_import, unicode_literals, print_function, division
 
 from os import path
 
@@ -15,7 +15,7 @@ from django.utils.text import Truncator
 from timezone_field import TimeZoneField
 
 from main.constants import DATUM_CHOICES, MODEL_SRID, DEFAULT_SITE_ID
-from utils_data_package import GenericSchema, ObservationSchema, SpeciesObservationSchema
+from main.utils_data_package import GenericSchema, ObservationSchema, SpeciesObservationSchema
 
 
 @python_2_unicode_compatible

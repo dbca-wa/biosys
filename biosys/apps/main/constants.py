@@ -1,3 +1,5 @@
+from __future__ import absolute_import, unicode_literals, print_function, division
+
 MODEL_SRID = 4326
 DATUM_CHOICES = [
     (MODEL_SRID, 'WGS84'),

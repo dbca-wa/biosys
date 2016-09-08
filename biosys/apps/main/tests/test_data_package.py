@@ -1,14 +1,14 @@
 import copy
 import datetime
 
+from django.contrib.gis.geos import GEOSGeometry
 from django.test import TestCase
-from django.contrib.gis.geos import Point, GEOSGeometry
 from django.utils import timezone
+from django.utils import six
 from jsontableschema.exceptions import *
 
-from main.utils_data_package import *
-from main.constants import MODEL_SRID, get_datum_srid
 from main.models import Dataset, Observation, Project
+from main.utils_data_package import *
 
 
 def clone(descriptor):
@@ -301,7 +301,7 @@ class TestSchemaFieldCast(TestCase):
         for v in valid_values:
             date = f.cast(v)
             self.assertIsInstance(date, datetime.date)
-            self.assertEqual(datetime.date(2016, 07, 29), date)
+            self.assertEqual(datetime.date(2016, 7, 29), date)
         invalid_value = ['29/07/2016', '07/29/2016', '2016-07-29 15:28:37']
         for v in invalid_value:
             with self.assertRaises(Exception):
@@ -321,7 +321,7 @@ class TestSchemaFieldCast(TestCase):
             '29-07-2016',
             '29-07-16'
         ]
-        expected_date = datetime.date(2016, 07, 29)
+        expected_date = datetime.date(2016, 7, 29)
         for v in valid_values:
             date = f.cast(v)
             self.assertIsInstance(date, datetime.date)
@@ -359,7 +359,7 @@ class TestSchemaFieldCast(TestCase):
 
         # test non unicode (python 2)
         value = 'not unicode'
-        self.assertIsInstance(f.cast(value), unicode)  # will fail on python 3 (type = str)
+        self.assertIsInstance(f.cast(value), six.text_type)  # will fail on python 3 (type = str)
         self.assertEqual(f.cast(value), value)
 
 

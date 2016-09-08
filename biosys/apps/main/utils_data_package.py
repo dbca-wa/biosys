@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import absolute_import, unicode_literals, print_function, division
 
 import io
 import json
@@ -8,6 +8,7 @@ from os.path import join
 import jsontableschema
 from dateutil.parser import parse as date_parse
 from django.utils.encoding import python_2_unicode_compatible
+from django.utils import six
 from future.utils import raise_with_traceback
 from jsontableschema.exceptions import InvalidDateType
 from jsontableschema.model import SchemaModel, types
@@ -215,10 +216,9 @@ class SchemaField:
         :param value:
         :return:
         """
-        # TODO: delete in python3
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
             # the StringType accepts only unicode
-            value = unicode(value)
+            value = six.u(value)
         return self.type.cast(value)
 
     def validation_error(self, value):
@@ -281,7 +281,7 @@ class SchemaForeignKey:
     def _as_list(value):
         if isinstance(value, list):
             return value
-        elif isinstance(value, basestring):
+        elif isinstance(value, six.string_types):
             return [value]
         else:
             return list(value)

@@ -1,3 +1,5 @@
+from __future__ import absolute_import, unicode_literals, print_function, division
+
 import json
 import pytz
 import datetime
@@ -5,6 +7,7 @@ import datetime
 from django import forms
 from django.contrib.postgres.forms import JSONField
 from django.core.exceptions import ValidationError
+from django.utils import six
 
 from .models import Project, Site, Dataset
 
@@ -29,7 +32,7 @@ class BetterJSONField(JSONField):
     def prepare_value(self, value):
         if value is None:
             return ""
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
             # already a string
             return value
         else:

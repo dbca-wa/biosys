@@ -1,3 +1,5 @@
+from __future__ import absolute_import, unicode_literals, print_function, division
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth.decorators import login_required

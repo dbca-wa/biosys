@@ -1,4 +1,5 @@
-from django.contrib.auth.models import User, Group
+from __future__ import absolute_import, unicode_literals, print_function, division
+
 from rest_framework import serializers
 
 from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
