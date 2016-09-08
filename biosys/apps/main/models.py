@@ -83,7 +83,9 @@ class Dataset(models.Model):
         try:
             validator.validate()
         except Exception:
-            raise ValidationError('Data package errors: {}'.format([e.message for e in validator.iter_errors()]))
+            raise ValidationError('Data package errors:<br>{}'.format(
+                "<br>".join([e.message for e in validator.iter_errors()])
+            ))
         # Check that there is at least one resources defined (not required by the standard)
         if len(self.resources) == 0:
             raise ValidationError('You must define at least one resource')
@@ -99,9 +101,10 @@ class Dataset(models.Model):
                 jsontableschema.validate(schema)
             except Exception:
                 raise ValidationError(
-                    'Schema errors for resource "{}": {}'.format(
+                    'Schema errors for resource "{}":<br>{}'.format(
                         self.resource.get('name'),
-                        [e.message for e in jsontableschema.validator.iter_errors(schema)]))
+                        "<br>".join([e.message for e in jsontableschema.validator.iter_errors(schema)])
+                    ))
             try:
                 # use our own schema class to validate.
                 # The constructor should raise an exception if error
