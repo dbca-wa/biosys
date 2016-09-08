@@ -84,14 +84,14 @@ class TestSite(TestCase):
         site1 = Site(
             project=project1,
             site_ID=1000,
-            site_code="Site 001",
+            code="Site 001",
         )
         site1.save()
         # same code on different project
         site2 = Site(
             project=project2,
             site_ID=site1.site_ID + 1,
-            site_code=site1.code,
+            code=site1.code,
         )
         try:
             site2.save()
@@ -104,20 +104,3 @@ class TestSite(TestCase):
         site2.project = site1.project
         with self.assertRaises(Exception):
             site2.save()
-
-    def test_geometry_created(self):
-        """
-        Test that a geometry is created when the site is saved
-        This doesn't test the validity of the geometry
-        """
-        site = Site(
-            project=self.project,
-            site_ID=1000,
-            site_code="Site 001",
-        )
-        site.save()
-        self.assertIsNone(site.geometry)
-        site.latitude = -18.0
-        site.longitude = 125.0
-        site.save()
-        self.assertIsNotNone(site.geometry)

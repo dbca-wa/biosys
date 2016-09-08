@@ -3,6 +3,7 @@ import datetime
 
 from django.test import TestCase
 from django.contrib.gis.geos import Point, GEOSGeometry
+from django.utils import timezone
 from jsontableschema.exceptions import *
 
 from main.utils_data_package import *
@@ -1230,7 +1231,7 @@ class TestObservationSchemaCast(TestCase):
         self.assertEquals((easting, northing), point.coords)
         self.assertEquals(get_datum_srid(datum), point.get_srid())
 
-        # create a db record and check geometry conversion
+        # create a db record with geometry = east/north and check geometry conversion
         # create dataset
         project = Project.objects.create(
             title="Test"
@@ -1242,6 +1243,7 @@ class TestObservationSchemaCast(TestCase):
         )
         record = Observation.objects.create(
             dataset=ds,
+            datetime=timezone.now(),
             geometry=point,
             data=record)
         record.refresh_from_db()

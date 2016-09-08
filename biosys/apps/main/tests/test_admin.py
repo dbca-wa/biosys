@@ -7,7 +7,7 @@ from main.models import Project, Site
 
 
 class BaseTestCase(TestCase):
-    fixtures = ['groups.json', 'test-users.json']
+    fixtures = ['test-users.json']
     client = Client()
 
     def setUp(self):
@@ -16,12 +16,6 @@ class BaseTestCase(TestCase):
         self.superuser = User.objects.get(username='admin')
         self.superuser.set_password('test')
         self.superuser.save()
-        self.custodian = User.objects.get(username='custodian')
-        self.custodian.set_password('test')
-        self.custodian.save()
-        self.uploader = User.objects.get(username='uploader')
-        self.uploader.set_password('test')
-        self.uploader.save()
         self.n_user = User.objects.get(username='normaluser')
         self.n_user.set_password('test')
         self.n_user.save()
@@ -45,7 +39,7 @@ class AdminTest(BaseTestCase):
     def test_permission_main_index(self):
         """Test that users in each group can/cannot view the main app index
         """
-        for user, code in [('custodian', 200), ('uploader', 200), ('normaluser', 302)]:
+        for user, code in [('normaluser', 302)]:
             self.client.login(username=user, password='test')
             url = reverse('admin:app_list', args=('main',))
             response = self.client.get(url)
@@ -53,21 +47,10 @@ class AdminTest(BaseTestCase):
                 response.status_code, code,
                 '{} wrong permission for main app index ({})'.format(user, response.status_code))
 
-    def test_render_main_index_links_present(self):
-        """Test that required links render on main app index
-        """
-        for user in ['custodian', 'uploader']:
-            self.client.login(username=user, password='test')
-            url = reverse('admin:app_list', args=('main',))
-            response = self.client.get(url)
-            for m in [Project, Site]:
-                url = reverse('admin:main_{}_changelist'.format(m._meta.model_name))
-                self.assertContains(response, url, msg_prefix=user)
-
     def test_permission_main_changelists(self):
         """Test that users in each group can/cannot view main app model changelists
         """
-        for user, code in [('custodian', 200), ('uploader', 200), ('normaluser', 302)]:
+        for user, code in [('normaluser', 302)]:
             self.client.login(username=user, password='test')
             for m in [Project, Site]:
                 url = reverse('admin:main_{}_changelist'.format(m._meta.model_name))
