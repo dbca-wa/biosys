@@ -691,7 +691,7 @@ class Exporter:
         for record in self.records:
             row = []
             for field in self.schema.field_names:
-                row.append(unicode(record.data.get(field, '')))
+                row.append(six.u(record.data.get(field, '')))
             yield row
 
     def to_csv(self):
@@ -727,7 +727,7 @@ def infer_csv(csv_file, outfile, row_limit=0):
             headers = stream.readline().rstrip('\n').split(',')
             values = jsontableschema.compat.csv_reader(stream)
             schema = jsontableschema.infer(headers, values, row_limit=row_limit)
-            fp.write(unicode(json.dumps(schema, indent=2, ensure_ascii=False)))
+            fp.write(six.u(json.dumps(schema, indent=2, ensure_ascii=False)))
 
 
 def infer_csvs(path, row_limit=0):
