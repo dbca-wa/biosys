@@ -22,7 +22,7 @@ define(
             table.populate = function (data, append) {
                 if (data) {
                     if (typeof data === 'string') {
-                        data = $.parseJSON(json);
+                        data = $.parseJSON(data);
                     }
                     if (!append) {
                         table.clear();

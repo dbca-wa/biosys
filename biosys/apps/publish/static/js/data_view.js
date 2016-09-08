@@ -1,10 +1,10 @@
-require(
+define(
     [
         'jQuery',
         'lodash',
         'js/biosys.datatables',
         'select2'
-    ], function ($, _, biosys) {
+    ], function ($, _, dt) {
         "use strict";
 
         return function (moduleOptions) {
@@ -22,9 +22,8 @@ require(
                     scrollx: true
                 },
                 selectors = options.selectors,
-                data = options.data,
                 $tablePanel = $(selectors.tablePanel),
-                $tabletitle = $(selectors.tableTitle),
+                $tableTitle = $(selectors.tableTitle),
                 $downloadButton = $(selectors.downloadButton),
                 dataTable,
                 datasets;
@@ -44,7 +43,6 @@ require(
             }
 
             function showDatasets(dss) {
-                console.log('dss', dss);
                 var nodeTemplate = _.template(
                     '<li role="presentation" id="id-nav-<%= name %>" data-view="<%= name %>" class=""><a href="#"><%= name %></a></li>'
                     ),
@@ -64,7 +62,7 @@ require(
 
             function clearDataPanel() {
                 $tablePanel.children().remove();
-                $tabletitle.text('');
+                $tableTitle.text('');
                 $downloadButton.addClass('hide');
             }
 
@@ -117,8 +115,8 @@ require(
                             }
                         }
                     });
-                    dataTable = biosys.dataTable.initTable($tableNode, tableOptions, colDefs);
-                    $tabletitle.text(name);
+                    dataTable = dt.initTable($tableNode, tableOptions, colDefs);
+                    $tableTitle.text(name);
                     $downloadButton.attr('href', '/publish/export/' + ds.id);
                     $downloadButton.removeClass('hide');
                 }

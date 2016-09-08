@@ -15,8 +15,7 @@
 
 {% block requirements %}
     require(['js/data_view'], function(module) {
-    console.log('module', module);
-        module().init({
+        module({
                 selectors: {
                     projectFilter: '#filter-project',
                     navPanel: '#id-div-nav-panel',
@@ -26,7 +25,7 @@
                     downloadButton: '#id-button-download'
                 },
                 data: {% if dataJSON %} {{ dataJSON|safe }} {% else %} {} {% endif %}
-        });
+        }).init();
     });
 {% endblock %}
 
