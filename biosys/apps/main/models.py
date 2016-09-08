@@ -82,7 +82,7 @@ class Dataset(models.Model):
         validator = datapackage.DataPackage(self.data_package)
         try:
             validator.validate()
-        except Exception as e:
+        except Exception:
             raise ValidationError('Data package errors: {}'.format([e.message for e in validator.iter_errors()]))
         # Check that there is at least one resources defined (not required by the standard)
         if len(self.resources) == 0:
@@ -97,7 +97,7 @@ class Dataset(models.Model):
             try:
                 # use frictionless validator
                 jsontableschema.validate(schema)
-            except Exception as e:
+            except Exception:
                 raise ValidationError(
                     'Schema errors for resource "{}": {}'.format(
                         self.resource.get('name'),
