@@ -52,7 +52,7 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
         if dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
             species_id_by_name = name_id_by_species_name()
 
-        with open(src_file.path, 'rb') as csvfile:
+        with open(src_file.path) as csvfile:
             reader = csv.DictReader(csvfile)
             records = []
             row_number = 1
