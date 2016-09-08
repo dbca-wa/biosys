@@ -12,7 +12,6 @@ from .api import router, schema_view
 
 
 def home_view_selection_view(request):
-    print('home selection', request)
     if request.user.is_authenticated():
         return redirect('dashboard')
     else:
