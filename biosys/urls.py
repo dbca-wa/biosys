@@ -10,7 +10,7 @@ from django.views.generic import TemplateView
 from django.contrib.auth import views as auth_views
 
 from main.views import DashboardView
-from .api import router, schema_view
+from .api import schema_view, urls as api_urls
 
 
 def home_view_selection_view(request):
@@ -46,7 +46,7 @@ urlpatterns = \
         url(r'^about/', TemplateView.as_view(template_name='main/about.html'), name='about'),
 
         # api
-        url(r'^api/', include(router.urls, namespace='api')),
+        url(r'^api/', include(api_urls, namespace='api')),
         url(r'^api/explorer/', schema_view, name='api_explorer'),
 
         # legacy

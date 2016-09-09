@@ -2,9 +2,21 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 
 from rest_framework import viewsets
 from rest_framework import filters
+from rest_framework import mixins
+from rest_framework_bulk import ListBulkCreateAPIView
 
 from main import models
 from main.api import serializers
+
+
+class BulkCreateModelViewSet(
+    ListBulkCreateAPIView,
+    mixins.RetrieveModelMixin,
+    # mixins.UpdateModelMixin,
+    # mixins.DestroyModelMixin,
+    viewsets.GenericViewSet
+):
+    pass
 
 
 class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
@@ -14,14 +26,14 @@ class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
     filter_fields = ('id', 'title',)
 
 
-class SiteViewSet(viewsets.ReadOnlyModelViewSet):
+class SiteViewSet(BulkCreateModelViewSet):
     queryset = models.Site.objects.all()
     serializer_class = serializers.SiteSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filter_fields = ('id', 'name', 'code')
 
 
-class DatasetViewSet(viewsets.ReadOnlyModelViewSet):
+class DatasetViewSet(BulkCreateModelViewSet):
     queryset = models.Dataset.objects.all()
     serializer_class = serializers.DatasetSerializer
     filter_backends = (filters.DjangoFilterBackend,)

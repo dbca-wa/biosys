@@ -113,7 +113,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
-        # 'rest_framework.renderers.BrowsableAPIRenderer', # use swagger explorer
+        # 'rest_framework.renderers.BrowsableAPIRenderer', # commented because we use the swagger explorer
     ),
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
 }
