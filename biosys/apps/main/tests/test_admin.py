@@ -16,7 +16,7 @@ class BaseTestCase(TestCase):
         self.superuser = User.objects.get(username='admin')
         self.superuser.set_password('test')
         self.superuser.save()
-        self.n_user = User.objects.get(username='normaluser')
+        self.n_user = User.objects.get(username='normal')
         self.n_user.set_password('test')
         self.n_user.save()
         # Create some data
@@ -31,7 +31,7 @@ class AdminTest(BaseTestCase):
         url = reverse('admin:index')
         response = self.client.get(url)  # Anonymous user
         self.assertEqual(response.status_code, 302)
-        for user in ['custodian', 'uploader', 'normaluser']:
+        for user in ['normal']:
             self.client.login(username=user, password='test')
             response = self.client.get(url)
             self.assertEqual(response.status_code, 302)
@@ -39,7 +39,7 @@ class AdminTest(BaseTestCase):
     def test_permission_main_index(self):
         """Test that users in each group can/cannot view the main app index
         """
-        for user, code in [('normaluser', 302)]:
+        for user, code in [('normal', 302)]:
             self.client.login(username=user, password='test')
             url = reverse('admin:app_list', args=('main',))
             response = self.client.get(url)
@@ -50,7 +50,7 @@ class AdminTest(BaseTestCase):
     def test_permission_main_changelists(self):
         """Test that users in each group can/cannot view main app model changelists
         """
-        for user, code in [('normaluser', 302)]:
+        for user, code in [('normal', 302)]:
             self.client.login(username=user, password='test')
             for m in [Project, Site]:
                 url = reverse('admin:main_{}_changelist'.format(m._meta.model_name))

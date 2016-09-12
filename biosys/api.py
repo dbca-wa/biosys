@@ -3,6 +3,7 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 from django.conf.urls import url
 from rest_framework import routers
 from rest_framework.decorators import api_view, renderer_classes
+from rest_framework.authtoken.views import obtain_auth_token
 from rest_framework import response, schemas
 from rest_framework_swagger.renderers import OpenAPIRenderer, SwaggerUIRenderer
 
@@ -18,11 +19,15 @@ def schema_view(request):
 
 
 router = routers.DefaultRouter()
-router.register(r'projects?', main_views.ProjectViewSet)
-router.register(r'sites?', main_views.SiteViewSet)
-router.register(r'datasets?/?', main_views.DatasetViewSet)
-router.register(r'genericRecords?', main_views.GenericRecordViewSet)
-router.register(r'observations?', main_views.ObservationViewSet)
-router.register(r'speciesObservations?', main_views.SpeciesObservationViewSet)
+router.register(r'projects?', main_views.ProjectViewSet, 'project')
+router.register(r'sites?', main_views.SiteViewSet, 'site')
+router.register(r'datasets?', main_views.DatasetViewSet, 'dataset')
+router.register(r'genericRecords?', main_views.GenericRecordViewSet, 'genericRecord')
+router.register(r'observations?', main_views.ObservationViewSet, 'observation')
+router.register(r'speciesObservations?', main_views.SpeciesObservationViewSet, 'speciesObservation')
 
-urls = router.urls
+url_patterns = [
+    url(r'auth-token/', obtain_auth_token, name="auth_token")
+]
+
+urls = router.urls + url_patterns

@@ -9,14 +9,14 @@
         "is_staff": true,
         "groups": [],
         "user_permissions": [],
-        "password": "",
-        "email": "asi@dpaw.wa.gov.au"
+        "password": "pbkdf2_sha256$30000$sh82SHstGuNY$vPPUvKVaihrximdyjBSNzema6EfQSvqjY9fr9BZw+o4=",
+        "email": "asi@test.com"
     },
     "model": "auth.user"
 },
 {
     "fields": {
-        "username": "normaluser",
+        "username": "normal",
         "first_name": "Normal",
         "last_name": "User",
         "is_active": true,
@@ -24,8 +24,8 @@
         "is_staff": false,
         "groups": [],
         "user_permissions": [],
-        "password": "",
-        "email": "normaluser@dpaw.wa.gov.au"
+        "password": "pbkdf2_sha256$30000$sh82SHstGuNY$vPPUvKVaihrximdyjBSNzema6EfQSvqjY9fr9BZw+o4=",
+        "email": "normaluser@test.com"
     },
     "model": "auth.user"
 }

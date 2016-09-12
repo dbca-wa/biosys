@@ -50,6 +50,7 @@ INSTALLED_APPS = (
 
     'rest_framework',
     'rest_framework_swagger',
+    'rest_framework.authtoken',
 
     'django_extensions',
     'reversion',
@@ -104,6 +105,11 @@ TEMPLATES = [
 ]
 
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ),
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
     # TODO: why setting the permission below breaks the swagger explorer
