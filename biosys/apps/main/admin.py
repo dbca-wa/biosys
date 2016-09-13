@@ -11,27 +11,6 @@ from main.models import *
 
 logger = logging.getLogger(__name__)
 
-UPLOADERS = 'Uploaders'
-CUSTODIANS = 'Data custodians'
-
-
-def readonly_user(user):
-    """Function to return True or False if the passed-in user is not in a
-    BioSys user group or a superuser.
-    """
-    if user.is_superuser or \
-            user.groups.filter(name=UPLOADERS).exists() or \
-            user.groups.filter(name=CUSTODIANS).exists():
-        return False
-    return True
-
-
-def user_can_approve(user):
-    """Returns True if the passed-in user is in the 'Data custodians' group,
-    or is a superuser.
-    """
-    return user.is_superuser or user.groups.filter(name=CUSTODIANS).exists()
-
 
 class MainAppAdmin(admin.ModelAdmin):
     change_form_template = 'main/main_change_form.html'
@@ -40,11 +19,12 @@ class MainAppAdmin(admin.ModelAdmin):
 
 @admin.register(Project)
 class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
-    fields = ('title', 'code', 'datum', 'timezone', 'attributes', 'geometry', 'comments', 'site_data_package')
+    fields = ('title', 'code', 'datum', 'timezone', 'custodians', 'attributes',
+              'comments', 'site_data_package', 'geometry')
+    filter_horizontal = ('custodians',)  # TODO: why it's not working?
     list_display = ('title', 'id', 'code')
     readonly_fields = ['id']
     search_fields = ['title', 'code']
-    modifiable = False
     openlayers_url = '//static.dpaw.wa.gov.au/static/libs/openlayers/2.13.1/OpenLayers.js'
     form = forms.ProjectForm
 
@@ -54,14 +34,12 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
     change_form_template = 'main/site_change_form.html'
     fields = ('project', 'site_ID', 'parent_site',  'code', 'name', 'geometry', 'comments', 'attributes')
     list_display = [
-        'code', 'project', 'site_ID', 'name', 'parent_site']
+        'code', 'project', 'name', 'parent_site']
     list_filter = ['project', 'parent_site']
-    readonly_fields = ['site_ID']
     form = forms.SiteForm
     default_lon = 125.0
     default_lat = -18.0
     default_zoom = 6
-    modifiable = False
 
     openlayers_url = '//static.dpaw.wa.gov.au/static/libs/openlayers/2.13.1/OpenLayers.js'
 

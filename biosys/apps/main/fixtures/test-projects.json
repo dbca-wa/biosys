@@ -1,0 +1,22 @@
+[
+  {
+    "model": "main.project",
+    "pk": 1,
+    "fields": {
+      "title": "Test",
+      "code": "test",
+      "datum": 4326,
+      "timezone": "Australia/Perth",
+      "attributes": {
+        "Description": "A project for testing purpose",
+        "Established By": "Serge Le Breton"
+      },
+      "comments": "Project comment",
+      "geometry": "SRID=4326;LINESTRING (111.8847656094253 -13.92340389582337, 128.0566406071753 -13.92340389582337, 127.7050781072203 -35.02999636475785, 111.9726562344118 -36.24427318056795, 111.9726562344118 -14.09395717591408)",
+      "site_data_package": null,
+      "custodians": [
+        1
+      ]
+    }
+  }
+]

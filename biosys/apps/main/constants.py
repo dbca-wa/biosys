@@ -21,6 +21,3 @@ def get_datum_srid(datum):
         if datum_name.lower() == datum.lower():
             return srid
     return None
-
-
-DEFAULT_SITE_ID = 16120

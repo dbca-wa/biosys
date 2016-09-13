@@ -20,12 +20,12 @@ class TestBasicAuth(TestCase):
         resp = client.get(url)
         self.assertEquals(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
-        user = User.objects.filter(username="normal").first()
+        user = User.objects.filter(username="readonly").first()
         self.assertIsNotNone(user)
         self.assertTrue(user.check_password('password'))
 
         # build the Authorization Header for basic for user=normaluser password=password
-        basic_key = base64.b64encode(six.b("normal:password")).decode('utf-8')
+        basic_key = base64.b64encode(six.b("readonly:password")).decode('utf-8')
         client.credentials(HTTP_AUTHORIZATION='Basic ' + basic_key)
         resp = client.get(url)
         self.assertEquals(resp.status_code, status.HTTP_200_OK)
@@ -38,11 +38,11 @@ class TestBasicAuth(TestCase):
         client = APIClient()
         # request token
         url = reverse('api:auth_token')
-        user = User.objects.filter(username="normal").first()
+        user = User.objects.filter(username="readonly").first()
         self.assertIsNotNone(user)
         self.assertTrue(user.check_password('password'))
         data = {
-            'username': "normal",
+            'username': "readonly",
             "password": "password"
         }
         resp = client.post(url, data=data, format='json')
@@ -60,7 +60,7 @@ class TestBasicAuth(TestCase):
         client = APIClient()
         url = reverse('api:auth_token')
         data = {
-            'username': "normal",
+            'username': "readonly",
             "password": "password"
         }
         resp = client.post(url, data=data, format='json')
@@ -85,6 +85,6 @@ class TestBasicAuth(TestCase):
         self.assertEquals(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
         # The login of the client uses the session mechanism
-        client.login(username="normal", password="password")
+        client.login(username="readonly", password="password")
         resp = client.get(url)
         self.assertEquals(resp.status_code, status.HTTP_200_OK)

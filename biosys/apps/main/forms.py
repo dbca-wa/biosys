@@ -182,24 +182,6 @@ class SiteForm(forms.ModelForm):
 
         return longitude
 
-    def clean_bearing(self):
-        bearing = self.cleaned_data['bearing']
-
-        if bearing is not None:
-            if bearing < 0.0 or bearing > 360.0:
-                raise forms.ValidationError('Bearing must be between 0.0 and 360.0')
-
-        return bearing
-
-    def clean_slope(self):
-        slope = self.cleaned_data['slope']
-
-        if slope is not None:
-            if slope < 0.0 or slope > 90.0:
-                raise forms.ValidationError('Slope must be between 0.0 and 90.0')
-
-        return slope
-
     def clean(self):
         if 'project' in self.cleaned_data and 'parent_site' in self.cleaned_data:
             project = self.cleaned_data.get('project')

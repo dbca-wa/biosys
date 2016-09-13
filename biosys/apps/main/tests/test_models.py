@@ -53,6 +53,8 @@ class TestGlobalAppModels(TestCase):
 
 
 class TestProject(TestCase):
+    fixtures = ['test-users', 'test-projects']
+
     def setUp(self):
         pass
 
@@ -83,14 +85,12 @@ class TestSite(TestCase):
         project2.save()
         site1 = Site(
             project=project1,
-            site_ID=1000,
             code="Site 001",
         )
         site1.save()
         # same code on different project
         site2 = Site(
             project=project2,
-            site_ID=site1.site_ID + 1,
             code=site1.code,
         )
         try:

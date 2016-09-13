@@ -3,7 +3,9 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 from rest_framework import viewsets
 from rest_framework import filters
 from rest_framework import mixins
+from rest_framework.permissions import IsAuthenticated
 from rest_framework_bulk import ListBulkCreateAPIView
+from dry_rest_permissions.generics import DRYPermissions
 
 from main import models
 from main.api import serializers
@@ -12,14 +14,15 @@ from main.api import serializers
 class BulkCreateModelViewSet(
     ListBulkCreateAPIView,
     mixins.RetrieveModelMixin,
-    # mixins.UpdateModelMixin,
+    mixins.UpdateModelMixin,
     # mixins.DestroyModelMixin,
     viewsets.GenericViewSet
 ):
     pass
 
 
-class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
+class ProjectViewSet(BulkCreateModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
     filter_backends = (filters.DjangoFilterBackend,)

@@ -11,7 +11,6 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.generic import TemplateView, FormView
 
-from main.admin import readonly_user
 from main.forms import UploadDatasetForm
 from main.models import Dataset, DatasetFile, Site, MODEL_SRID
 from main.utils_species import name_id_by_species_name
@@ -19,11 +18,6 @@ from main.utils_species import name_id_by_species_name
 
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'main/dashboard.html'
-
-    def get_context_data(self, **kwargs):
-        context = super(DashboardView, self).get_context_data(**kwargs)
-        context['readonly_user'] = readonly_user(self.request.user)
-        return context
 
 
 class UploadDataSetView(LoginRequiredMixin, FormView):

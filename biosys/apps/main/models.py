@@ -5,17 +5,17 @@ from os import path
 import datapackage
 import jsontableschema
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ValidationError
-from django.db.models import Max
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.text import Truncator
 from timezone_field import TimeZoneField
 
-from main.constants import DATUM_CHOICES, MODEL_SRID, DEFAULT_SITE_ID
+from main.constants import DATUM_CHOICES, MODEL_SRID
 from main.utils_data_package import GenericSchema, ObservationSchema, SpeciesObservationSchema
+from main.utils_auth import is_admin, belongs_to
 
 
 @python_2_unicode_compatible
@@ -203,12 +203,15 @@ class Project(models.Model):
                              verbose_name="Title", help_text="Enter a name for the project (required).")
     code = models.CharField(max_length=30, null=True, blank=True,
                             verbose_name="Code",
-                            help_text="Provide a brief code or acronym for this project. This code could be used for prefixing site codes.")
+                            help_text="Provide a brief code or acronym for this project. "
+                                      "This code could be used for prefixing site codes.")
+
     datum = models.IntegerField(null=True, blank=True, choices=DATUM_CHOICES, default=MODEL_SRID,
                                 verbose_name="Default Datum",
                                 help_text="The datum all locations will be assumed to have unless otherwise specified.")
 
-    timezone = TimeZoneField(default=DEFAULT_TIMEZONE)
+    timezone = TimeZoneField(blank=True, default=DEFAULT_TIMEZONE,
+                             help_text="The Timezone of your project e.g 'Australia/Perth.")
 
     attributes = JSONField(null=True, blank=True,
                            help_text="Define here all specific attributes of your project in the form of json "
@@ -222,20 +225,54 @@ class Project(models.Model):
                                               "Can also be calculated from the extents of the project sites")
     site_data_package = JSONField(null=True, blank=True,
                                   verbose_name='Site attributes schema',
-                                  help_text='Define here the attributes that all your sites will share.')
+                                  help_text='Define here the attributes that all your sites will share. '
+                                            'This allows validation when importing sites.')
+
+    custodians = models.ManyToManyField(Group, blank=True, help_text="Add group of users that have write access"
+                                                                     " to the data of this project.")
+
+    def is_custodian(self, user):
+        # TODO: should be done in one query
+        for group in self.custodians.all():
+            if belongs_to(user, group.name):
+                return True
+        return False
+
+    # API permissions
+    @staticmethod
+    def has_read_permission(request):
+        return True
+
+    def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_write_permission(request):
+        print('has_write')
+        return is_admin(request.user)
+
+    @staticmethod
+    def has_update_permission(request):
+        result = is_admin(request.user)
+        print('has_update', result)
+        return result
+
+    def has_object_update_permission(self, request):
+        print('user', request.user)
+        result = is_admin(request.user) or self.is_custodian(request.user)
+        print('has_object_update', result)
+        return result
+
+    @staticmethod
+    def has_create_permission(request):
+        print('has_create_permission')
+        return is_admin(request.user)
 
     class Meta:
         pass
 
     def __str__(self):
         return self.title
-
-
-def _calculate_site_ID():  # @NoSelf
-    if Site.objects.count() == 0:
-        return DEFAULT_SITE_ID
-    else:
-        return Site.objects.aggregate(Max('site_ID'))['site_ID__max'] + 1
 
 
 @python_2_unicode_compatible
@@ -254,8 +291,6 @@ class Site(models.Model):
     code = models.CharField(max_length=100, null=False, blank=False,
                             verbose_name="Code",
                             help_text="Local site code must be unique to this project. e.g. LCI123 (required)")
-    site_ID = models.IntegerField(null=False, blank=False, unique=True, default=_calculate_site_ID,
-                                  verbose_name="Site ID", help_text="Site ID from Scientific Site Register.")
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Location", help_text="")
     comments = models.TextField(null=True, blank=True,
