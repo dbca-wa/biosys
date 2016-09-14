@@ -12,7 +12,10 @@ class TestBasicAuth(TestCase):
     """
     Basic Auth is currently turned on.
     """
-    fixtures = ['test-users']
+    fixtures = [
+        'test-groups',
+        'test-users'
+    ]
 
     def test_basic_auth(self):
         client = APIClient()

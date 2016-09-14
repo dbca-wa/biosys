@@ -1,21 +1,5 @@
 [
   {
-    "model": "auth.group",
-    "pk": 1,
-    "fields": {
-      "name": "Custodians1",
-      "permissions": []
-    }
-  },
-  {
-    "model": "auth.group",
-    "pk": 2,
-    "fields": {
-      "name": "Custodians2",
-      "permissions": []
-    }
-  },
-  {
     "model": "auth.user",
     "pk": 1,
     "fields": {
@@ -58,7 +42,7 @@
       "password": "pbkdf2_sha256$30000$ve0dUMpwbwxV$gvdbZNMpGj9irq4GQcnMQZccmptSHL7nPEOPryIgULA=",
       "last_login": null,
       "is_superuser": false,
-      "username": "custodian",
+      "username": "custodian1",
       "first_name": "Cust",
       "last_name": "Odian",
       "email": "custodian@test.com",

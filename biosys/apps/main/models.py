@@ -1,5 +1,6 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
+import logging
 from os import path
 
 import datapackage
@@ -16,6 +17,8 @@ from timezone_field import TimeZoneField
 from main.constants import DATUM_CHOICES, MODEL_SRID
 from main.utils_data_package import GenericSchema, ObservationSchema, SpeciesObservationSchema
 from main.utils_auth import is_admin, belongs_to
+
+logger = logging.getLogger(__name__)
 
 
 @python_2_unicode_compatible
@@ -74,12 +77,15 @@ class Dataset(models.Model):
     def resources(self):
         return self.data_package.get('resources', [])
 
-    def clean(self):
+    @staticmethod
+    def validate_data_package(data_package, dataset_type):
         """
-        Validate the data descriptor
+        Will throw a validation error if any problem
+        :param data_package:
+        :param dataset_type:
+        :return:
         """
-        # Validate the data package
-        validator = datapackage.DataPackage(self.data_package)
+        validator = datapackage.DataPackage(data_package)
         try:
             validator.validate()
         except Exception:
@@ -87,38 +93,96 @@ class Dataset(models.Model):
                 "<br>".join([e.message for e in validator.iter_errors()])
             ))
         # Check that there is at least one resources defined (not required by the standard)
-        if len(self.resources) == 0:
+        resources = data_package.get('resources', [])
+        if len(resources) == 0:
             raise ValidationError('You must define at least one resource')
-        if len(self.resources) > 1:
+        if len(resources) > 1:
             raise ValidationError('Only one resource per DataSet')
         # Validate the schema
-        if 'schema' not in self.resource:
+        resource = resources[0]
+        if 'schema' not in resource:
             raise ValidationError("Resource without a 'schema'.")
         else:
-            schema = self.schema
+            schema = resource.get('schema', {})
             try:
                 # use frictionless validator
                 jsontableschema.validate(schema)
             except Exception:
                 raise ValidationError(
                     'Schema errors for resource "{}":<br>{}'.format(
-                        self.resource.get('name'),
+                        resource.get('name'),
                         "<br>".join([e.message for e in jsontableschema.validator.iter_errors(schema)])
                     ))
             try:
                 # use our own schema class to validate.
                 # The constructor should raise an exception if error
-                if self.type == self.TYPE_SPECIES_OBSERVATION:
+                if dataset_type == Dataset.TYPE_SPECIES_OBSERVATION:
                     SpeciesObservationSchema(schema)
-                elif self.type == self.TYPE_OBSERVATION:
+                elif dataset_type == Dataset.TYPE_OBSERVATION:
                     ObservationSchema(schema)
                 else:
                     GenericSchema(schema)
             except Exception as e:
                 raise ValidationError(
                     'Schema errors for resource "{}": {}'.format(
-                        self.resource.get('name'),
+                        resource.get('name'),
                         e))
+
+    def clean(self):
+        """
+        Validate the data descriptor
+        """
+        # Validate the data package
+        self.validate_data_package(self.data_package, self.type)
+
+    def is_custodian(self, user):
+        return self.project.is_custodian(user)
+
+    # API permissions
+    @staticmethod
+    def has_read_permission(request):
+        return True
+
+    def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_create_permission(request):
+        """
+        Custodian and admin only
+        Check that the user is a custodian of the project pk passed in the POST data
+        :param request:
+        :return:
+        """
+        result = False
+        if is_admin(request.user):
+            result = True
+        else:
+            try:
+                project = Project.objects.get(pk=request.data['project'])
+                result = project.is_custodian(request.user)
+            except:
+                pass
+        return result
+
+    @staticmethod
+    def has_update_permission(request):
+        """
+        The update is managed at the object level (see below)
+        :param request:
+        :return:
+        """
+        return True
+
+    def has_object_update_permission(self, request):
+        return is_admin(request.user) or self.is_custodian(request.user)
+
+    @staticmethod
+    def has_destroy_permission(request):
+        return True
+
+    def has_object_destroy_permission(self, request):
+        return is_admin(request.user) or self.is_custodian(request.user)
 
     class Meta:
         unique_together = ('project', 'name')
@@ -154,6 +218,55 @@ class AbstractRecord(models.Model):
     @property
     def data_with_id(self):
         return dict({'id': self.id}, **self.data)
+
+    def is_custodian(self, user):
+        return self.dataset.is_custodian(user)
+
+    # API permissions
+    @staticmethod
+    def has_read_permission(request):
+        return True
+
+    def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_create_permission(request):
+        """
+        Custodian and admin only
+        Check that the user is a custodian of the project pk passed in the POST data
+        :param request:
+        :return:
+        """
+        result = False
+        if is_admin(request.user):
+            result = True
+        else:
+            try:
+                dataset = Dataset.objects.get(pk=request.data['dataset'])
+                result = dataset.is_custodian(request.user)
+            except:
+                pass
+        return result
+
+    @staticmethod
+    def has_update_permission(request):
+        """
+        The update is managed at the object level (see below)
+        :param request:
+        :return:
+        """
+        return True
+
+    def has_object_update_permission(self, request):
+        return is_admin(request.user) or self.is_custodian(request.user)
+
+    @staticmethod
+    def has_destroy_permission(request):
+        return True
+
+    def has_object_destroy_permission(self, request):
+        return is_admin(request.user) or self.is_custodian(request.user)
 
     class Meta:
         abstract = True
@@ -247,26 +360,27 @@ class Project(models.Model):
         return True
 
     @staticmethod
-    def has_write_permission(request):
-        print('has_write')
+    def has_create_permission(request):
         return is_admin(request.user)
 
     @staticmethod
     def has_update_permission(request):
-        result = is_admin(request.user)
-        print('has_update', result)
-        return result
+        """
+        The update is managed at the object level (see below)
+        :param request:
+        :return:
+        """
+        return True
 
     def has_object_update_permission(self, request):
-        print('user', request.user)
-        result = is_admin(request.user) or self.is_custodian(request.user)
-        print('has_object_update', result)
-        return result
+        return is_admin(request.user) or self.is_custodian(request.user)
 
     @staticmethod
-    def has_create_permission(request):
-        print('has_create_permission')
-        return is_admin(request.user)
+    def has_destroy_permission(request):
+        return False
+
+    def has_object_destroy_permission(self, request):
+        return False
 
     class Meta:
         pass
@@ -296,6 +410,55 @@ class Site(models.Model):
     comments = models.TextField(null=True, blank=True,
                                 verbose_name="Comments", help_text="")
     attributes = JSONField(null=True, blank=True)
+
+    def is_custodian(self, user):
+        return self.project.is_custodian(user)
+
+    # API permissions
+    @staticmethod
+    def has_read_permission(request):
+        return True
+
+    def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_create_permission(request):
+        """
+        Custodian and admin only
+        Check that the user is a custodian of the project pk passed in the POST data
+        :param request:
+        :return:
+        """
+        result = False
+        if is_admin(request.user):
+            result = True
+        else:
+            try:
+                project = Project.objects.get(pk=request.data['project'])
+                result = project.is_custodian(request.user)
+            except:
+                pass
+        return result
+
+    @staticmethod
+    def has_update_permission(request):
+        """
+        The update is managed at the object level (see below)
+        :param request:
+        :return:
+        """
+        return True
+
+    def has_object_update_permission(self, request):
+        return is_admin(request.user) or self.is_custodian(request.user)
+
+    @staticmethod
+    def has_destroy_permission(request):
+        return True
+
+    def has_object_destroy_permission(self, request):
+        return is_admin(request.user) or self.is_custodian(request.user)
 
     class Meta:
         unique_together = ('project', 'code')

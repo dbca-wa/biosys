@@ -1,11 +1,18 @@
-from django.test import TestCase, override_settings
-from django.core.urlresolvers import reverse
-from rest_framework.test import APIClient
-from rest_framework import status
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
+from django.test import TestCase, override_settings
+from rest_framework import status
+from rest_framework.test import APIClient
 
-from main.models import Project
+from main.models import Project, Site, Dataset, GenericRecord
 from main.utils_auth import is_admin
+
+from main.tests.test_data_package import (
+    clone,
+    GENERIC_DATA_PACKAGE,
+    LAT_LONG_OBSERVATION_DATA_PACKAGE,
+    SPECIES_OBSERVATION_DATA_PACKAGE,
+)
 
 
 class TestPermissions(TestCase):
@@ -13,13 +20,16 @@ class TestPermissions(TestCase):
     Test Permissions
     Get: authenticated
     Update: admin, custodians
-    Create: admin
-    Delete: forbidden through API
+    Create: admin, custodians
+    Delete: admin, custodians
     """
     fixtures = [
         'test-groups',
         'test-users',
-        'test-projects'
+        'test-projects',
+        'test-sites',
+        'test-datasets',
+        'test-generic-records'
     ]
 
     @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
@@ -40,7 +50,13 @@ class TestPermissions(TestCase):
         self.custodian_1_client = APIClient()
         self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
         self.project_1 = Project.objects.filter(title="Project1").first()
-        self.assertTrue(self.project_1.is_custodian(self.custodian_1_user))
+        self.site_1 = Site.objects.filter(code="Site1").first()
+        self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
+        self.assertIsNotNone(self.ds_1)
+        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
+        self.record_1 = GenericRecord.objects.filter(dataset=self.ds_1).first()
+        self.assertIsNotNone(self.record_1)
+        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
 
         self.custodian_2_user = User.objects.filter(username="custodian2").first()
         self.assertIsNotNone(self.custodian_2_user)
@@ -49,13 +65,15 @@ class TestPermissions(TestCase):
         self.custodian_2_client = APIClient()
         self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
         self.project_2 = Project.objects.filter(title="Project2").first()
-        self.assertTrue(self.project_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.project_1.is_custodian(self.custodian_2_user))
+        self.site_2 = Site.objects.filter(code="Site2").first()
+        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
+        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
+        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
 
         self.readonly_user = User.objects.filter(username="readonly").first()
         self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.project_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.project_1.is_custodian(self.readonly_user))
+        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
+        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
         self.readonly_user.set_password(password)
         self.readonly_user.save()
         self.readonly_client = APIClient()
@@ -65,8 +83,8 @@ class TestPermissions(TestCase):
 
     def test_get(self):
         urls = [
-            reverse('api:project-list'),
-            reverse('api:project-detail', kwargs={'pk': 1})
+            reverse('api:genericRecord-list'),
+            reverse('api:genericRecord-detail', kwargs={'pk': 1})
         ]
         access = {
             "forbidden": [self.anonymous_client],
@@ -88,18 +106,19 @@ class TestPermissions(TestCase):
 
     def test_create(self):
         """
-        Only admin can create
+        Admin and custodians
         :return:
         """
-        urls = [reverse('api:project-list')]
+        urls = [reverse('api:genericRecord-list')]
+        rec = self.record_1
         data = {
-            "title": "A new project for Unit test",
-            "code": "T1234",
-            "timezone": "Australia/Perth"
+            "dataset": rec.dataset.pk,
+            "site": rec.site.pk,
+            "data": rec.data
         }
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client],
-            "allowed": [self.admin_client]
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
+            "allowed": [self.admin_client, self.custodian_1_client]
         }
         for client in access['forbidden']:
             for url in urls:
@@ -110,23 +129,25 @@ class TestPermissions(TestCase):
 
         for client in access['allowed']:
             for url in urls:
+                count = GenericRecord.objects.count()
                 self.assertEqual(
                     client.post(url, data, format='json').status_code,
                     status.HTTP_201_CREATED
                 )
+                self.assertEqual(GenericRecord.objects.count(), count + 1)
 
-    def test_update1(self):
+    def test_update(self):
         """
-        admin + custodian of project for project 1
+        admin + custodian of project for site 1
         :return:
         """
-        project = self.project_1
-        self.assertIsNotNone(project)
-        previous_code = project.code
-        updated_code = previous_code + "-updated"
-        urls = [reverse('api:project-detail', kwargs={'pk': project.pk})]
+        rec = self.record_1
+        previous_data = clone(rec.data)
+        updated_data = clone(previous_data)
+        updated_data['Longitude'] = '118.78'
+        urls = [reverse('api:genericRecord-detail', kwargs={'pk': rec.pk})]
         data = {
-            "code": updated_code,
+            "data": updated_data,
         }
         access = {
             "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
@@ -142,62 +163,26 @@ class TestPermissions(TestCase):
 
         for client in access['allowed']:
             for url in urls:
-                project.code = previous_code
-                project.save()
+                rec.data = previous_data
+                rec.save()
                 self.assertEqual(
                     client.patch(url, data, format='json').status_code,
                     status.HTTP_200_OK
                 )
-                project.refresh_from_db()
-                self.assertEqual(project.code, updated_code)
-
-    def test_update2(self):
-        """
-        admin + custodian of project for project 2
-        :return:
-        """
-        project = self.project_2
-        previous_code = project.code
-        updated_code = previous_code + "-updated"
-
-        urls = [reverse('api:project-detail', kwargs={'pk': project.pk})]
-        data = {
-            "code": updated_code,
-        }
-        access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client],
-            "allowed": [self.admin_client, self.custodian_2_client]
-        }
-
-        for client in access['forbidden']:
-            for url in urls:
-                self.assertIn(
-                    client.patch(url, data, format='json').status_code,
-                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
-                )
-
-        for client in access['allowed']:
-            for url in urls:
-                project.code = previous_code
-                project.save()
-                self.assertEqual(
-                    client.patch(url, data, format='json').status_code,
-                    status.HTTP_200_OK
-                )
-                project.refresh_from_db()
-                self.assertEqual(project.code, updated_code)
+                rec.refresh_from_db()
+                self.assertEqual(rec.data, updated_data)
 
     def test_delete(self):
         """
-        Currently forbidden through API
+        Currently admin + custodian
         :return:
         """
-        project = self.project_1
-        urls = [reverse('api:project-detail', kwargs={'pk': project.pk})]
+        rec = self.record_1
+        urls = [reverse('api:genericRecord-detail', kwargs={'pk': rec.pk})]
         data = None
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client,self.admin_client, self.custodian_2_client],
-            "allowed": []
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
+            "allowed": [self.admin_client, self.custodian_1_client]
         }
 
         for client in access['forbidden']:
@@ -209,7 +194,11 @@ class TestPermissions(TestCase):
 
         for client in access['allowed']:
             for url in urls:
+                rec.save()
+                count = Dataset.objects.count()
                 self.assertEqual(
                     client.delete(url, data, format='json').status_code,
-                    status.HTTP_200_OK
+                    status.HTTP_204_NO_CONTENT
                 )
+                self.assertTrue(Dataset.objects.count(), count - 1)
+

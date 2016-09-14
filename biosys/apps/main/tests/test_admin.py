@@ -7,7 +7,7 @@ from main.models import Project, Site
 
 
 class BaseTestCase(TestCase):
-    fixtures = ['test-users.json']
+    fixtures = ['test-groups', 'test-users.json']
     client = Client()
 
     def setUp(self):

@@ -15,7 +15,7 @@ class BulkCreateModelViewSet(
     ListBulkCreateAPIView,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
-    # mixins.DestroyModelMixin,
+    mixins.DestroyModelMixin,
     viewsets.GenericViewSet
 ):
     pass
@@ -30,6 +30,7 @@ class ProjectViewSet(BulkCreateModelViewSet):
 
 
 class SiteViewSet(BulkCreateModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Site.objects.all()
     serializer_class = serializers.SiteSerializer
     filter_backends = (filters.DjangoFilterBackend,)
@@ -37,13 +38,15 @@ class SiteViewSet(BulkCreateModelViewSet):
 
 
 class DatasetViewSet(BulkCreateModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Dataset.objects.all()
     serializer_class = serializers.DatasetSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filter_fields = ('name', 'project')
 
 
-class GenericRecordViewSet(viewsets.ReadOnlyModelViewSet):
+class GenericRecordViewSet(BulkCreateModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.GenericRecord.objects.all()
     serializer_class = serializers.GenericRecordSerializer
     filter_backends = (filters.DjangoFilterBackend,)
@@ -53,12 +56,10 @@ class GenericRecordViewSet(viewsets.ReadOnlyModelViewSet):
 class ObservationViewSet(GenericRecordViewSet):
     queryset = models.Observation.objects.all()
     serializer_class = serializers.ObservationSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
     filter_fields = GenericRecordViewSet.filter_fields + ('datetime',)
 
 
 class SpeciesObservationViewSet(ObservationViewSet):
     queryset = models.SpeciesObservation.objects.all()
     serializer_class = serializers.SpeciesObservationSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
     filter_fields = ObservationViewSet.filter_fields + ('input_name', 'name_id',)

@@ -102,6 +102,9 @@ DATUM_FIELD = {
     }
 }
 
+LAT_LONG_OBSERVATION_DATA_PACKAGE = clone(GENERIC_DATA_PACKAGE)
+LAT_LONG_OBSERVATION_DATA_PACKAGE['resources'][0]['schema'] = clone(LAT_LONG_OBSERVATION_SCHEMA)
+
 LAT_LONG_WITH_DATUM_OBSERVATION_SCHEMA = clone(LAT_LONG_OBSERVATION_SCHEMA)
 LAT_LONG_WITH_DATUM_OBSERVATION_SCHEMA['fields'].append(clone(DATUM_FIELD))
 
@@ -165,6 +168,9 @@ SPECIES_NAME_FIELD = {
 
 SPECIES_OBSERVATION_SCHEMA = clone(LAT_LONG_OBSERVATION_SCHEMA)
 SPECIES_OBSERVATION_SCHEMA['fields'].append(clone(SPECIES_NAME_FIELD))
+
+SPECIES_OBSERVATION_DATA_PACKAGE = clone(GENERIC_DATA_PACKAGE)
+SPECIES_OBSERVATION_DATA_PACKAGE['resources'][0]['schema'] = clone(SPECIES_OBSERVATION_SCHEMA)
 
 
 class TestSchemaConstraints(TestCase):
@@ -1317,7 +1323,8 @@ class TestSpeciesObservationSchema(TestCase):
         descriptor['fields'].append(field_desc)
 
         try:
-            self.assertEqual(SpeciesObservationSchema.find_species_name_field_or_throws(descriptor).name, field_desc['name'])
+            self.assertEqual(SpeciesObservationSchema.find_species_name_field_or_throws(descriptor).name,
+                             field_desc['name'])
         except Exception as e:
             self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
 
@@ -1343,7 +1350,8 @@ class TestSpeciesObservationSchema(TestCase):
         descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
         descriptor['fields'].append(field_desc)
         try:
-            self.assertEqual(SpeciesObservationSchema.find_species_name_field_or_throws(descriptor).name, field_desc['name'])
+            self.assertEqual(SpeciesObservationSchema.find_species_name_field_or_throws(descriptor).name,
+                             field_desc['name'])
         except Exception as e:
             self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
 

@@ -32,7 +32,7 @@ class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
 @admin.register(Site)
 class SiteAdmin(MainAppAdmin, GeoModelAdmin):
     change_form_template = 'main/site_change_form.html'
-    fields = ('project', 'site_ID', 'parent_site',  'code', 'name', 'geometry', 'comments', 'attributes')
+    fields = ('project', 'parent_site',  'code', 'name', 'geometry', 'comments', 'attributes')
     list_display = [
         'code', 'project', 'name', 'parent_site']
     list_filter = ['project', 'parent_site']
