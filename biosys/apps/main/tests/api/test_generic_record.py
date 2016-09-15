@@ -202,3 +202,34 @@ class TestPermissions(TestCase):
                 )
                 self.assertTrue(Dataset.objects.count(), count - 1)
 
+
+class TestDataValidation(TestCase):
+    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
+    def setUp(self):
+        password = 'password'
+        self.admin_user = User.objects.filter(username="admin").first()
+        self.assertIsNotNone(self.admin_user)
+        self.assertTrue(is_admin(self.admin_user))
+        self.admin_user.set_password(password)
+        self.admin_user.save()
+        self.admin_client = APIClient()
+        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
+
+        self.custodian_1_user = User.objects.filter(username="custodian1").first()
+        self.assertIsNotNone(self.custodian_1_user)
+        self.custodian_1_user.set_password(password)
+        self.custodian_1_user.save()
+        self.custodian_1_client = APIClient()
+        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
+        self.project_1 = Project.objects.filter(title="Project1").first()
+        self.site_1 = Site.objects.filter(code="Site1").first()
+        self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
+        self.assertIsNotNone(self.ds_1)
+        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
+        self.record_1 = GenericRecord.objects.filter(dataset=self.ds_1).first()
+        self.assertIsNotNone(self.record_1)
+        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
+
+
+    def test_create_happy_path(self):
+        pass
