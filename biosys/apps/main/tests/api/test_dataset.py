@@ -134,6 +134,55 @@ class TestPermissions(TestCase):
                 )
                 self.assertEqual(Dataset.objects.count(), count + 1)
 
+    def test_bulk_create_forbidden(self):
+        """
+        Bulk create is not authorized for Datasets
+        :return:
+        """
+        """
+        Admin and custodians
+        :return:
+        """
+        project = self.project_1
+        urls = [reverse('api:dataset-list')]
+        data = [
+            {
+                "name": "New1 for Unit test",
+                "type": Dataset.TYPE_GENERIC,
+                "project": project.pk,
+                'data_package': self.ds_1.data_package
+            },
+            {
+                "name": "New2 for Unit test",
+                "type": Dataset.TYPE_GENERIC,
+                "project": project.pk,
+                'data_package': self.ds_1.data_package
+            }
+        ]
+        access = {
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client, self.admin_client,
+                          self.custodian_1_client],
+            "allowed": []
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertIn(
+                    client.post(url, data, format='json').status_code,
+                    [status.HTTP_400_BAD_REQUEST, status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+                )
+
+        for client in access['allowed']:
+            for url in urls:
+                # name must be unique
+                for ds in data:
+                    ds['name'] += '1'
+                count = Dataset.objects.count()
+                self.assertEqual(
+                    client.post(url, data, format='json').status_code,
+                    status.HTTP_201_CREATED
+                )
+                self.assertEqual(Dataset.objects.count(), count + 1)
+
     def test_update(self):
         """
         admin + custodian of project for site 1

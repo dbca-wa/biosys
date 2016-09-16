@@ -11,17 +11,19 @@ from main import models
 from main.api import serializers
 
 
-class BulkCreateModelViewSet(
+class BulkModelViewSet(
     ListBulkCreateAPIView,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet
 ):
+    """ A model ViewSet that allows the bulk creation of object through list
+    """
     pass
 
 
-class ProjectViewSet(BulkCreateModelViewSet):
+class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
@@ -29,7 +31,7 @@ class ProjectViewSet(BulkCreateModelViewSet):
     filter_fields = ('id', 'title',)
 
 
-class SiteViewSet(BulkCreateModelViewSet):
+class SiteViewSet(BulkModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Site.objects.all()
     serializer_class = serializers.SiteSerializer
@@ -37,7 +39,7 @@ class SiteViewSet(BulkCreateModelViewSet):
     filter_fields = ('id', 'name', 'code')
 
 
-class DatasetViewSet(BulkCreateModelViewSet):
+class DatasetViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Dataset.objects.all()
     serializer_class = serializers.DatasetSerializer
@@ -45,7 +47,7 @@ class DatasetViewSet(BulkCreateModelViewSet):
     filter_fields = ('name', 'project')
 
 
-class GenericRecordViewSet(BulkCreateModelViewSet):
+class GenericRecordViewSet(BulkModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.GenericRecord.objects.all()
     serializer_class = serializers.GenericRecordSerializer

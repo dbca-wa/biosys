@@ -39,7 +39,7 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
         src_file.save()
         is_append = form.cleaned_data['append_mode']
         create_site = form.cleaned_data['create_site']
-        schema = dataset.schema_model(dataset.schema)
+        schema = dataset.schema_class(dataset.schema_data)
         record_model = dataset.record_model
         # if species. First load species list from herbie. Should raise an exception if problem.
         species_id_by_name = None

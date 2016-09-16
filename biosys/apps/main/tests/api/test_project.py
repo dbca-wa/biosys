@@ -115,6 +115,42 @@ class TestPermissions(TestCase):
                     status.HTTP_201_CREATED
                 )
 
+    def test_bulk_create(self):
+        """
+        Bulk create is not possible for project
+        :return:
+        """
+        urls = [reverse('api:project-list')]
+        data = [
+            {
+                "title": "Project1 for Unit test",
+                "code": "T1234",
+                "timezone": "Australia/Perth"
+            },
+            {
+                "title": "Project2 for Unit test",
+                "code": "T1234",
+                "timezone": "Australia/Perth"
+            },
+        ]
+        access = {
+            "forbidden": [self.admin_client, self.anonymous_client, self.readonly_client, self.custodian_1_client],
+            "allowed": []
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertIn(
+                    client.post(url, data, format='json').status_code,
+                    [status.HTTP_400_BAD_REQUEST, status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+                )
+
+        for client in access['allowed']:
+            for url in urls:
+                self.assertEqual(
+                    client.post(url, data, format='json').status_code,
+                    status.HTTP_201_CREATED
+                )
+
     def test_update1(self):
         """
         admin + custodian of project for project 1
@@ -196,7 +232,8 @@ class TestPermissions(TestCase):
         urls = [reverse('api:project-detail', kwargs={'pk': project.pk})]
         data = None
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client,self.admin_client, self.custodian_2_client],
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client, self.admin_client,
+                          self.custodian_2_client],
             "allowed": []
         }
 

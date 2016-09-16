@@ -57,7 +57,7 @@ class Dataset(models.Model):
             return GenericRecord
 
     @property
-    def schema_model(self):
+    def schema_class(self):
         if self.type == Dataset.TYPE_SPECIES_OBSERVATION:
             return SpeciesObservationSchema
         elif self.type == Dataset.TYPE_OBSERVATION:
@@ -66,8 +66,12 @@ class Dataset(models.Model):
             return GenericSchema
 
     @property
-    def schema(self):
+    def schema_data(self):
         return self.resource.get('schema', {})
+
+    @property
+    def schema(self):
+        return self.schema_class(self.schema_data)
 
     @property
     def resource(self):
@@ -127,6 +131,19 @@ class Dataset(models.Model):
                     'Schema errors for resource "{}": {}'.format(
                         resource.get('name'),
                         e))
+
+    def validate_data(self, data):
+        if not data:
+            msg = "field 'data' cannot be null or empty"
+            raise ValidationError(msg)
+        try:
+            field_errors = self.schema.get_error_fields(data)
+            if len(field_errors) > 0:
+                for field_name, data in field_errors:
+                    msg = "'{}': {}".format(field_name, data.get('error'))
+                    raise ValidationError(msg)
+        except Exception as e:
+            raise ValidationError(e)
 
     def clean(self):
         """
@@ -234,20 +251,27 @@ class AbstractRecord(models.Model):
     def has_create_permission(request):
         """
         Custodian and admin only
-        Check that the user is a custodian of the project pk passed in the POST data
+        Check that the user is a custodian of the project pk passed in the POST data.
+        Because bulk create is authorized we need to check that for every object.
         :param request:
         :return:
         """
-        result = False
         if is_admin(request.user):
-            result = True
+            return True
         else:
             try:
-                dataset = Dataset.objects.get(pk=request.data['dataset'])
-                result = dataset.is_custodian(request.user)
-            except:
-                pass
-        return result
+                if isinstance(request.data, list):
+                    dataset_pks = frozenset([_obj['dataset'] for _obj in request.data])
+                else:
+                    dataset_pks = [request.data['dataset']]
+                for pk in dataset_pks:
+                    ds = Dataset.objects.get(pk=pk)
+                    if not ds.is_custodian(request.user):
+                        return False
+            except Exception as e:
+                logger.exception(e)
+                return False
+        return True
 
     @staticmethod
     def has_update_permission(request):
@@ -267,6 +291,9 @@ class AbstractRecord(models.Model):
 
     def has_object_destroy_permission(self, request):
         return is_admin(request.user) or self.is_custodian(request.user)
+
+    def clean(self):
+        self.dataset.validate_data(self.data)
 
     class Meta:
         abstract = True
@@ -426,20 +453,28 @@ class Site(models.Model):
     def has_create_permission(request):
         """
         Custodian and admin only
-        Check that the user is a custodian of the project pk passed in the POST data
+        Check that the user is a custodian of the project pk passed in the POST data.
+        Note: bulk creation means that a list of data can be passed. We need to test that the user is the custodians
+        for every sites.
         :param request:
         :return:
         """
-        result = False
         if is_admin(request.user):
-            result = True
+            return True
         else:
             try:
-                project = Project.objects.get(pk=request.data['project'])
-                result = project.is_custodian(request.user)
-            except:
-                pass
-        return result
+                if isinstance(request.data, list):
+                    project_pks = frozenset([_obj['project'] for _obj in request.data])
+                else:
+                    project_pks = [request.data['project']]
+                for pk in project_pks:
+                    project = Project.objects.get(pk=pk)
+                    if not project.is_custodian(request.user):
+                        return False
+            except Exception as e:
+                logger.exception(e)
+                return False
+        return True
 
     @staticmethod
     def has_update_permission(request):

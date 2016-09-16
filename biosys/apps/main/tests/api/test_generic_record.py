@@ -136,6 +136,85 @@ class TestPermissions(TestCase):
                 )
                 self.assertEqual(GenericRecord.objects.count(), count + 1)
 
+    def test_bulk_create(self):
+        urls = [reverse('api:genericRecord-list')]
+        rec = self.record_1
+        data = [
+            {
+                "dataset": rec.dataset.pk,
+                "site": rec.site.pk,
+                "data": rec.data
+            },
+            {
+                "dataset": rec.dataset.pk,
+                "site": rec.site.pk,
+                "data": rec.data
+            }
+        ]
+        access = {
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
+            "allowed": [self.admin_client, self.custodian_1_client]
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertIn(
+                    client.post(url, data, format='json').status_code,
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+                )
+
+        for client in access['allowed']:
+            for url in urls:
+                count = GenericRecord.objects.count()
+                self.assertEqual(
+                    client.post(url, data, format='json').status_code,
+                    status.HTTP_201_CREATED
+                )
+                self.assertEqual(GenericRecord.objects.count(), count + len(data))
+
+    def test_bulk_create_sneaky(self):
+        """
+        User try to create a record on a dataset his not the custodian
+        :return:
+        """
+        urls = [reverse('api:genericRecord-list')]
+        rec = self.record_1
+        data = [
+            {
+                "dataset": rec.dataset.pk,
+                "site": rec.site.pk,
+                "data": rec.data
+            },
+            {
+                "dataset": rec.dataset.pk,
+                "site": rec.site.pk,
+                "data": rec.data
+            },
+            {
+                "dataset": self.ds_2.pk,
+                "site": rec.site.pk,
+                "data": rec.data
+            }
+        ]
+        access = {
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client, self.custodian_1_client],
+            "allowed": [self.admin_client]
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertIn(
+                    client.post(url, data, format='json').status_code,
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+                )
+
+        for client in access['allowed']:
+            for url in urls:
+                count = GenericRecord.objects.count()
+                self.assertEqual(
+                    client.post(url, data, format='json').status_code,
+                    status.HTTP_201_CREATED
+                )
+                self.assertEqual(GenericRecord.objects.count(), count + len(data))
+
     def test_update(self):
         """
         admin + custodian of project for site 1
@@ -204,6 +283,15 @@ class TestPermissions(TestCase):
 
 
 class TestDataValidation(TestCase):
+    fixtures = [
+        'test-groups',
+        'test-users',
+        'test-projects',
+        'test-sites',
+        'test-datasets',
+        'test-generic-records'
+    ]
+
     @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
     def setUp(self):
         password = 'password'
@@ -222,14 +310,134 @@ class TestDataValidation(TestCase):
         self.custodian_1_client = APIClient()
         self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
         self.project_1 = Project.objects.filter(title="Project1").first()
-        self.site_1 = Site.objects.filter(code="Site1").first()
+        self.site_1 = Site.objects.filter(code="Adolphus").first()
         self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
         self.assertIsNotNone(self.ds_1)
         self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
         self.record_1 = GenericRecord.objects.filter(dataset=self.ds_1).first()
         self.assertIsNotNone(self.record_1)
         self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
+        self.assertIsNotNone(self.record_1.site)
+        self.assertEquals(self.site_1, self.record_1.site)
+
+    def test_create_one_happy_path(self):
+        """
+        Test the create of one record
+        :return:
+        """
+        # grab one existing an re-inject it
+        record = self.record_1
+        data = {
+            "dataset": record.dataset.pk,
+            "data": record.data
+        }
+        url = reverse('api:genericRecord-list')
+        client = self.custodian_1_client
+        count = GenericRecord.objects.count()
+        self.assertEqual(
+            client.post(url, data, format='json').status_code,
+            status.HTTP_201_CREATED
+        )
+        self.assertEquals(GenericRecord.objects.count(), count + 1)
+
+    def test_empty_not_allowed(self):
+        record = self.record_1
+        data = {
+            "dataset": record.dataset.pk,
+            "data": {}
+        }
+        url = reverse('api:genericRecord-list')
+        client = self.custodian_1_client
+        count = GenericRecord.objects.count()
+        self.assertEqual(
+            client.post(url, data, format='json').status_code,
+            status.HTTP_400_BAD_REQUEST
+        )
+        self.assertEquals(GenericRecord.objects.count(), count)
+
+    def test_column_not_in_schema(self):
+        """
+        Test that if we introduce a column not in the the dataset it will not validate
+        :return:
+        """
+        record = self.record_1
+        incorrect_data = clone(record.data)
+        incorrect_data['Extra Column'] = "Extra Value"
+        data = {
+            "dataset": record.dataset.pk,
+            "data": incorrect_data
+        }
+        url = reverse('api:genericRecord-list')
+        client = self.custodian_1_client
+        count = GenericRecord.objects.count()
+        self.assertEqual(
+            client.post(url, data, format='json').status_code,
+            status.HTTP_400_BAD_REQUEST
+        )
+        self.assertEquals(GenericRecord.objects.count(), count)
 
 
-    def test_create_happy_path(self):
-        pass
+class TestSiteExtraction(TestCase):
+    fixtures = [
+        'test-groups',
+        'test-users',
+        'test-projects',
+        'test-sites',
+        'test-datasets',
+        'test-generic-records'
+    ]
+
+    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
+    def setUp(self):
+        password = 'password'
+        self.admin_user = User.objects.filter(username="admin").first()
+        self.assertIsNotNone(self.admin_user)
+        self.assertTrue(is_admin(self.admin_user))
+        self.admin_user.set_password(password)
+        self.admin_user.save()
+        self.admin_client = APIClient()
+        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
+
+        self.custodian_1_user = User.objects.filter(username="custodian1").first()
+        self.assertIsNotNone(self.custodian_1_user)
+        self.custodian_1_user.set_password(password)
+        self.custodian_1_user.save()
+        self.custodian_1_client = APIClient()
+        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
+        self.project_1 = Project.objects.filter(title="Project1").first()
+        self.site_1 = Site.objects.filter(code="Adolphus").first()
+        self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
+        self.assertIsNotNone(self.ds_1)
+        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
+        self.record_1 = GenericRecord.objects.filter(dataset=self.ds_1).first()
+        self.assertIsNotNone(self.record_1)
+        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
+        self.assertIsNotNone(self.record_1.site)
+        self.assertEquals(self.site_1, self.record_1.site)
+
+    def test_create_with_site(self):
+        """
+        The descriptor contains a foreign key to the site.
+        Test that the site is extracted from the data
+        :return:
+        """
+        # clear all records
+        GenericRecord.objects.all().delete()
+        self.assertEquals(GenericRecord.objects.count(), 0)
+        record = self.record_1
+        data = {
+            "dataset": record.dataset.pk,
+            "data": record.data
+        }
+        schema = self.ds_1.schema
+        self.assertTrue(schema.has_fk_for_model('Site'))
+        expected_site = self.site_1
+        url = reverse('api:genericRecord-list')
+        client = self.custodian_1_client
+        self.assertEqual(
+            client.post(url, data, format='json').status_code,
+            status.HTTP_201_CREATED
+        )
+        self.assertEquals(GenericRecord.objects.count(), 1)
+        self.assertEquals(GenericRecord.objects.first().site, expected_site)
+

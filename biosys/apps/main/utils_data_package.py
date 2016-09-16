@@ -681,7 +681,7 @@ class SpeciesObservationSchema(ObservationSchema):
 class Exporter:
     def __init__(self, dataset, records=None):
         self.ds = dataset
-        self.schema = GenericSchema(dataset.schema)
+        self.schema = GenericSchema(dataset.schema_data)
         self.headers = self.schema.headers
         self.warnings = []
         self.errors = []
