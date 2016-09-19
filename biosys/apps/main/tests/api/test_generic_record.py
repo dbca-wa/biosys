@@ -5,14 +5,8 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from main.models import Project, Site, Dataset, GenericRecord
+from main.tests.test_data_package import clone
 from main.utils_auth import is_admin
-
-from main.tests.test_data_package import (
-    clone,
-    GENERIC_DATA_PACKAGE,
-    LAT_LONG_OBSERVATION_DATA_PACKAGE,
-    SPECIES_OBSERVATION_DATA_PACKAGE,
-)
 
 
 class TestPermissions(TestCase):
@@ -96,7 +90,6 @@ class TestPermissions(TestCase):
                     client.get(url).status_code,
                     status.HTTP_401_UNAUTHORIZED
                 )
-        # authenticated
         for client in access['allowed']:
             for url in urls:
                 self.assertEqual(
@@ -137,43 +130,8 @@ class TestPermissions(TestCase):
                 self.assertEqual(GenericRecord.objects.count(), count + 1)
 
     def test_bulk_create(self):
-        urls = [reverse('api:genericRecord-list')]
-        rec = self.record_1
-        data = [
-            {
-                "dataset": rec.dataset.pk,
-                "site": rec.site.pk,
-                "data": rec.data
-            },
-            {
-                "dataset": rec.dataset.pk,
-                "site": rec.site.pk,
-                "data": rec.data
-            }
-        ]
-        access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
-            "allowed": [self.admin_client, self.custodian_1_client]
-        }
-        for client in access['forbidden']:
-            for url in urls:
-                self.assertIn(
-                    client.post(url, data, format='json').status_code,
-                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
-                )
-
-        for client in access['allowed']:
-            for url in urls:
-                count = GenericRecord.objects.count()
-                self.assertEqual(
-                    client.post(url, data, format='json').status_code,
-                    status.HTTP_201_CREATED
-                )
-                self.assertEqual(GenericRecord.objects.count(), count + len(data))
-
-    def test_bulk_create_sneaky(self):
         """
-        User try to create a record on a dataset his not the custodian
+        Cannot create bulk with this end point
         :return:
         """
         urls = [reverse('api:genericRecord-list')]
@@ -188,22 +146,18 @@ class TestPermissions(TestCase):
                 "dataset": rec.dataset.pk,
                 "site": rec.site.pk,
                 "data": rec.data
-            },
-            {
-                "dataset": self.ds_2.pk,
-                "site": rec.site.pk,
-                "data": rec.data
             }
         ]
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client, self.custodian_1_client],
-            "allowed": [self.admin_client]
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client,
+                          self.admin_client, self.custodian_1_client],
+            "allowed": []
         }
         for client in access['forbidden']:
             for url in urls:
                 self.assertIn(
                     client.post(url, data, format='json').status_code,
-                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+                    [status.HTTP_400_BAD_REQUEST, status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
                 )
 
         for client in access['allowed']:
@@ -355,7 +309,7 @@ class TestDataValidation(TestCase):
         )
         self.assertEquals(GenericRecord.objects.count(), count)
 
-    def test_column_not_in_schema(self):
+    def test_create_column_not_in_schema(self):
         """
         Test that if we introduce a column not in the the dataset it will not validate
         :return:
@@ -372,6 +326,32 @@ class TestDataValidation(TestCase):
         count = GenericRecord.objects.count()
         self.assertEqual(
             client.post(url, data, format='json').status_code,
+            status.HTTP_400_BAD_REQUEST
+        )
+        self.assertEquals(GenericRecord.objects.count(), count)
+
+    def test_update_column_not_in_schema(self):
+        """
+        Test that if we introduce a column not in the the dataset it will not validate
+        :return:
+        """
+        record = self.record_1
+        incorrect_data = clone(record.data)
+        incorrect_data['Extra Column'] = "Extra Value"
+        data = {
+            "dataset": record.dataset.pk,
+            "data": incorrect_data
+        }
+        url = reverse('api:genericRecord-detail', kwargs={"pk": record.pk})
+        client = self.custodian_1_client
+        count = GenericRecord.objects.count()
+        self.assertEqual(
+            client.put(url, data, format='json').status_code,
+            status.HTTP_400_BAD_REQUEST
+        )
+        self.assertEquals(GenericRecord.objects.count(), count)
+        self.assertEqual(
+            client.patch(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
         self.assertEquals(GenericRecord.objects.count(), count)
@@ -441,3 +421,27 @@ class TestSiteExtraction(TestCase):
         self.assertEquals(GenericRecord.objects.count(), 1)
         self.assertEquals(GenericRecord.objects.first().site, expected_site)
 
+    def test_update_site(self):
+        record = GenericRecord.objects.filter(site=self.site_1).first()
+        self.assertIsNotNone(record)
+        site = Site.objects.filter(name="Site1").first()
+        # need to test if the site belongs to the dataset project or the update won't happen
+        self.assertIsNotNone(site)
+        self.assertTrue(site.project == record.dataset.project)
+        self.assertNotEquals(record.site, site)
+        # update site value
+        schema = record.dataset.schema
+        site_column = schema.get_fk_for_model('Site').data_field
+        r_data = record.data
+        r_data[site_column] = site.code
+        data = {
+            "data": r_data
+        }
+        url = reverse('api:genericRecord-detail', kwargs={"pk": record.pk})
+        client = self.custodian_1_client
+        self.assertEqual(
+            client.patch(url, data, format='json').status_code,
+            status.HTTP_200_OK
+        )
+        record.refresh_from_db()
+        self.assertEqual(record.site, site)

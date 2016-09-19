@@ -75,7 +75,7 @@
                                                 {% if user.email %}{{ user.email }}{% else %}
                                                     {{ user.username }}{% endif %} <span class="caret"></span></a>
                                             <ul class="dropdown-menu" role="menu">
-                                                <li><a href="{% url 'api_explorer' %}">API Explorer</a></li>
+                                                <li><a href="{% url 'api:explorer' %}">API Explorer</a></li>
                                                 {% if user.is_superuser %}
                                                     <li><a href="{% url 'admin:index' %}">Admin</a></li>
                                                     <li class="divider"></li>

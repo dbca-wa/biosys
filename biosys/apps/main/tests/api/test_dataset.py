@@ -140,7 +140,7 @@ class TestPermissions(TestCase):
         :return:
         """
         """
-        Admin and custodians
+        Cannot create multiple dataset
         :return:
         """
         project = self.project_1
@@ -430,3 +430,5 @@ class TestDataPackageValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
+
+

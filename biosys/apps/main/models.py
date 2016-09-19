@@ -57,6 +57,10 @@ class Dataset(models.Model):
             return GenericRecord
 
     @property
+    def record_queryset(self):
+        return self.record_model.objects.filter(dataset=self)
+
+    @property
     def schema_class(self):
         if self.type == Dataset.TYPE_SPECIES_OBSERVATION:
             return SpeciesObservationSchema

@@ -47,7 +47,6 @@ urlpatterns = \
 
         # api
         url(r'^api/', include(api_urls, namespace='api')),
-        url(r'^api/explorer/', schema_view, name='api_explorer'),
 
         # legacy
         url(r'^grappelli/', include('grappelli.urls')),  # Grappelli URLS
