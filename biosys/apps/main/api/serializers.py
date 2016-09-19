@@ -127,7 +127,6 @@ class GenericRecordSerializer(serializers.ModelSerializer):
         return instance
 
     def create(self, validated_data):
-        print('ser create', validated_data)
         """
         Extract the Site from data if not specified
         :param validated_data:
@@ -138,7 +137,7 @@ class GenericRecordSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         instance = super(GenericRecordSerializer, self).update(instance, validated_data)
-        result = self.extract_site(instance, validated_data)
+        result = self.set_site(instance, validated_data)
         return result
 
     class Meta:
