@@ -216,7 +216,8 @@ class SchemaField:
         :param value:
         :return:
         """
-        if isinstance(value, six.string_types):
+        # TODO: remove that when running in Python3
+        if isinstance(value, six.string_types) and not isinstance(value, six.text_type):
             # the StringType accepts only unicode
             value = six.u(value)
         return self.type.cast(value)

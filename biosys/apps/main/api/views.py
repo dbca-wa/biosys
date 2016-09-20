@@ -1,16 +1,14 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets
-from rest_framework import filters
-from rest_framework import mixins
-from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import viewsets, filters, mixins, generics
+from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
 from rest_framework_bulk import ListBulkCreateAPIView
 from dry_rest_permissions.generics import DRYPermissions
 
 from main import models
 from main.api import serializers
+from main.utils_auth import is_admin
 
 
 class BulkModelViewSet(
@@ -49,8 +47,17 @@ class DatasetViewSet(viewsets.ModelViewSet):
     filter_fields = ('name', 'project', 'type')
 
 
+class DatasetDataPermission(BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        return \
+            request.method in SAFE_METHODS \
+            or is_admin(user) \
+            or (hasattr(view, 'dataset') and view.dataset.is_custodian(user))
+
+
 class DatasetDataView(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, DatasetDataPermission)
 
     def __init__(self, **kwargs):
         super(DatasetDataView, self).__init__(**kwargs)
