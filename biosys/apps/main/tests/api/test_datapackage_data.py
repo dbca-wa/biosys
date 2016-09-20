@@ -246,3 +246,95 @@ class TestBulkGenericCreate(TestCase):
         self.assertEqual(ds.record_queryset.count(), 2)
 
         # test site extraction
+
+
+class TestBulkGenericUpdate(TestCase):
+    fixtures = [
+        'test-groups',
+        'test-users',
+        'test-projects',
+        'test-sites',
+        'test-datasets',
+        'test-generic-records',
+    ]
+
+    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
+    def setUp(self):
+        password = 'password'
+        self.admin_user = User.objects.filter(username="admin").first()
+        self.assertIsNotNone(self.admin_user)
+        self.assertTrue(is_admin(self.admin_user))
+        self.admin_user.set_password(password)
+        self.admin_user.save()
+        self.admin_client = APIClient()
+        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
+
+        self.custodian_1_user = User.objects.filter(username="custodian1").first()
+        self.assertIsNotNone(self.custodian_1_user)
+        self.custodian_1_user.set_password(password)
+        self.custodian_1_user.save()
+        self.custodian_1_client = APIClient()
+        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
+        self.project_1 = Project.objects.filter(title="Project1").first()
+        self.site_1 = Site.objects.filter(code="Site1").first()
+        self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
+        self.assertIsNotNone(self.ds_1)
+        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
+        self.record_1 = GenericRecord.objects.filter(dataset=self.ds_1).first()
+        self.assertIsNotNone(self.record_1)
+        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
+
+        self.custodian_2_user = User.objects.filter(username="custodian2").first()
+        self.assertIsNotNone(self.custodian_2_user)
+        self.custodian_2_user.set_password(password)
+        self.custodian_2_user.save()
+        self.custodian_2_client = APIClient()
+        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
+        self.project_2 = Project.objects.filter(title="Project2").first()
+        self.site_2 = Site.objects.filter(code="Site2").first()
+        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
+        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
+        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
+
+        self.readonly_user = User.objects.filter(username="readonly").first()
+        self.assertIsNotNone(self.custodian_2_user)
+        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
+        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
+        self.readonly_user.set_password(password)
+        self.readonly_user.save()
+        self.readonly_client = APIClient()
+        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
+
+        self.anonymous_client = APIClient()
+
+    def test_bulk_update_not_allowed(self):
+        ds = self.ds_1
+        record_1 = self.record_1
+        url = reverse('api:dataset-data', kwargs={'pk': ds.pk})
+
+        data = [
+            {
+                "id": record_1.pk,
+                "data": record_1.data
+            },
+        ]
+
+        client = self.custodian_1_client
+        resp = client.put(url, data, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_bulk_patch_not_allowed(self):
+        ds = self.ds_1
+        record_1 = self.record_1
+        url = reverse('api:dataset-data', kwargs={'pk': ds.pk})
+
+        data = [
+            {
+                "id": record_1.pk,
+                "data": record_1.data
+            },
+        ]
+
+        client = self.custodian_1_client
+        resp = client.patch(url, data, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
