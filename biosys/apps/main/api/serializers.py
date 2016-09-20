@@ -85,7 +85,7 @@ class GenericRecordListSerializer(serializers.ListSerializer):
         model = self.child.Meta.model
         for data in validated_data:
             record = model(**data)
-            record.site = self.child.get_site(record.dataset, data, force_create=False)
+            self.child.set_site(record, data, force_create=False, commit=False)
             records.append(record)
         return model.objects.bulk_create(records)
 
@@ -113,7 +113,7 @@ class GenericRecordSerializer(serializers.ModelSerializer):
         site = None
         if site_fk:
             model_field = site_fk.model_field
-            site_value = data['data'].get(site_fk.data_field)
+            site_value = data.get(site_fk.data_field)
             kwargs = {
                 "project": dataset.project,
                 model_field: site_value
@@ -124,11 +124,12 @@ class GenericRecordSerializer(serializers.ModelSerializer):
         return site
 
     @staticmethod
-    def set_site(instance, validated_data, force_create=False):
-        site = GenericRecordSerializer.get_site(instance.dataset, validated_data, force_create=force_create)
+    def set_site(instance, validated_data, force_create=False, commit=True):
+        site = GenericRecordSerializer.get_site(instance.dataset, validated_data['data'], force_create=force_create)
         if site is not None and instance.site != site:
             instance.site = site
-            instance.save()
+            if commit:
+                instance.save()
         return instance
 
     def create(self, validated_data):
@@ -151,6 +152,21 @@ class GenericRecordSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class ObservationListSerializer(GenericRecordListSerializer):
+    def create(self, validated_data):
+        records = []
+        model = self.child.Meta.model
+        for data in validated_data:
+            record = model(**data)
+            self.child.set_site(record, data, commit=False, force_create=False)
+            self.child.set_date_and_geometry(record, data, commit=False)
+            records.append(record)
+        return model.objects.bulk_create(records)
+
+    def update(self, instance, validated_data):
+        return super(ObservationListSerializer, self).update(instance, validated_data)
+
+
 class ObservationSerializer(GenericRecordSerializer):
     @staticmethod
     def get_datetime(dataset, data):
@@ -161,7 +177,7 @@ class ObservationSerializer(GenericRecordSerializer):
         return dataset.schema.cast_geometry(data, default_srid=MODEL_SRID)
 
     @staticmethod
-    def set_date(instance, validated_data):
+    def set_date(instance, validated_data, commit=True):
         dataset = instance.dataset
         observation_date = ObservationSerializer.get_datetime(dataset, validated_data['data'])
         if observation_date:
@@ -171,20 +187,22 @@ class ObservationSerializer(GenericRecordSerializer):
             tz = dataset.project.timezone or timezone.get_current_timezone()
             observation_date = timezone.make_aware(observation_date, tz)
             instance.datetime = observation_date
-            instance.save()
+            if commit:
+                instance.save()
         return instance
 
     @staticmethod
-    def set_geometry(instance, validated_data):
+    def set_geometry(instance, validated_data, commit=True):
         geom = ObservationSerializer.get_geometry(instance.dataset, validated_data['data'])
         if geom:
             instance.geometry = geom
-            instance.save()
+            if commit:
+                instance.save()
         return instance
 
-    def post_serialization(self, instance, validated_data):
-        self.set_date(instance, validated_data)
-        self.set_geometry(instance, validated_data)
+    def set_date_and_geometry(self, instance, validated_data, commit=True):
+        self.set_date(instance, validated_data, commit=commit)
+        self.set_geometry(instance, validated_data, commit=commit)
         return instance
 
     def create(self, validated_data):
@@ -194,14 +212,15 @@ class ObservationSerializer(GenericRecordSerializer):
         :return:
         """
         instance = super(ObservationSerializer, self).create(validated_data)
-        return self.post_serialization(instance, validated_data)
+        return self.set_date_and_geometry(instance, validated_data)
 
     def update(self, instance, validated_data):
         instance = super(ObservationSerializer, self).update(instance, validated_data)
-        return self.post_serialization(instance, validated_data)
+        return self.set_date_and_geometry(instance, validated_data)
 
     class Meta:
         model = Observation
+        list_serializer_class = ObservationListSerializer
 
 
 class SpeciesObservationSerializer(ObservationSerializer):
