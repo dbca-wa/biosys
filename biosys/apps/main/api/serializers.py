@@ -1,10 +1,15 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
+import datetime
+
 from django.core.exceptions import ValidationError
+from django.utils import timezone
+
 from rest_framework import serializers
 from rest_framework_bulk import BulkSerializerMixin, BulkListSerializer
 
 from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
+from main.constants import MODEL_SRID
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -147,6 +152,54 @@ class GenericRecordSerializer(serializers.ModelSerializer):
 
 
 class ObservationSerializer(GenericRecordSerializer):
+    @staticmethod
+    def get_datetime(dataset, data):
+        return dataset.schema.cast_record_observation_date(data)
+
+    @staticmethod
+    def get_geometry(dataset, data):
+        return dataset.schema.cast_geometry(data, default_srid=MODEL_SRID)
+
+    @staticmethod
+    def set_date(instance, validated_data):
+        dataset = instance.dataset
+        observation_date = ObservationSerializer.get_datetime(dataset, validated_data['data'])
+        if observation_date:
+            # convert to datetime with timezone awareness
+            if isinstance(observation_date, datetime.date):
+                observation_date = datetime.datetime.combine(observation_date, datetime.time.min)
+            tz = dataset.project.timezone or timezone.get_current_timezone()
+            observation_date = timezone.make_aware(observation_date, tz)
+            instance.datetime = observation_date
+            instance.save()
+        return instance
+
+    @staticmethod
+    def set_geometry(instance, validated_data):
+        geom = ObservationSerializer.get_geometry(instance.dataset, validated_data['data'])
+        if geom:
+            instance.geometry = geom
+            instance.save()
+        return instance
+
+    def post_serialization(self, instance, validated_data):
+        self.set_date(instance, validated_data)
+        self.set_geometry(instance, validated_data)
+        return instance
+
+    def create(self, validated_data):
+        """
+        Extract the Site from data if not specified
+        :param validated_data:
+        :return:
+        """
+        instance = super(ObservationSerializer, self).create(validated_data)
+        return self.post_serialization(instance, validated_data)
+
+    def update(self, instance, validated_data):
+        instance = super(ObservationSerializer, self).update(instance, validated_data)
+        return self.post_serialization(instance, validated_data)
+
     class Meta:
         model = Observation
 

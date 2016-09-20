@@ -52,6 +52,7 @@ INSTALLED_APPS = (
     'rest_framework_swagger',
     'rest_framework.authtoken',
     'dry_rest_permissions',
+    'rest_framework_gis',
 
     'django_extensions',
     'reversion',

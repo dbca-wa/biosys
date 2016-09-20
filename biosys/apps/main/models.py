@@ -304,7 +304,7 @@ class AbstractRecord(models.Model):
 
 
 class AbstractObservationRecord(AbstractRecord):
-    datetime = models.DateTimeField(null=False, blank=False)
+    datetime = models.DateTimeField(null=True, blank=True)
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
 
     class Meta:
