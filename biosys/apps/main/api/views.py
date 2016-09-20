@@ -9,6 +9,7 @@ from dry_rest_permissions.generics import DRYPermissions
 from main import models
 from main.api import serializers
 from main.utils_auth import is_admin
+from main.utils_species import HerbieFacade
 
 
 class BulkModelViewSet(
@@ -56,7 +57,11 @@ class DatasetDataPermission(BasePermission):
             or (hasattr(view, 'dataset') and view.dataset.is_custodian(user))
 
 
-class DatasetDataView(generics.ListCreateAPIView):
+class SpeciesMixin:
+    species_facade_class = HerbieFacade
+
+
+class DatasetDataView(generics.ListCreateAPIView, SpeciesMixin):
     permission_classes = (IsAuthenticated, DatasetDataPermission)
 
     def __init__(self, **kwargs):
@@ -96,6 +101,8 @@ class DatasetDataView(generics.ListCreateAPIView):
         ctx = super(DatasetDataView, self).get_serializer_context()
         if self.dataset:
             ctx['dataset'] = self.dataset
+        if 'species_mapping' not in ctx:
+            ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
         return ctx
 
     def get_queryset(self):
@@ -137,7 +144,13 @@ class ObservationViewSet(GenericRecordViewSet):
     filter_fields = GenericRecordViewSet.filter_fields + ('datetime',)
 
 
-class SpeciesObservationViewSet(ObservationViewSet):
+class SpeciesObservationViewSet(ObservationViewSet, SpeciesMixin):
     queryset = models.SpeciesObservation.objects.all()
     serializer_class = serializers.SpeciesObservationSerializer
     filter_fields = ObservationViewSet.filter_fields + ('input_name', 'name_id',)
+
+    def get_serializer_context(self):
+        ctx = super(SpeciesObservationViewSet, self).get_serializer_context()
+        if 'species_mapping' not in ctx:
+            ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
+        return ctx

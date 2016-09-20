@@ -702,8 +702,6 @@ class TestDateTimeAndGeometryExtraction(TestCase):
         """
         # clear all records
         ds = self.ds_1
-        ds.record_queryset.delete()
-        self.assertEquals(ds.record_queryset.count(), 0)
         record = self.record_1
         new_data = clone(record.data)
         # change date
@@ -722,13 +720,14 @@ class TestDateTimeAndGeometryExtraction(TestCase):
             "dataset": record.dataset.pk,
             "data": new_data
         }
-        url = reverse('api:observation-list')
+        url = reverse('api:observation-detail', kwargs={"pk": record.pk})
         client = self.custodian_1_client
+        count = ds.record_queryset.count()
         self.assertEqual(
-            client.post(url, data, format='json').status_code,
-            status.HTTP_201_CREATED
+            client.patch(url, data, format='json').status_code,
+            status.HTTP_200_OK
         )
-        self.assertEquals(ds.record_queryset.count(), 1)
+        self.assertEquals(ds.record_queryset.count(), count)
         dtz = timezone.localtime(ds.record_queryset.first().datetime)
         self.assertEquals(dtz.date(), expected_date)
         self.assertEquals(ds.record_queryset.first().geometry.geojson, expected_geojson)

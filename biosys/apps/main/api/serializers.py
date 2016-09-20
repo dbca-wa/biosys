@@ -206,11 +206,6 @@ class ObservationSerializer(GenericRecordSerializer):
         return instance
 
     def create(self, validated_data):
-        """
-        Extract the Site from data if not specified
-        :param validated_data:
-        :return:
-        """
         instance = super(ObservationSerializer, self).create(validated_data)
         return self.set_date_and_geometry(instance, validated_data)
 
@@ -223,6 +218,62 @@ class ObservationSerializer(GenericRecordSerializer):
         list_serializer_class = ObservationListSerializer
 
 
+class SpeciesObservationListSerializer(ObservationListSerializer):
+    def create(self, validated_data):
+        records = []
+        model = self.child.Meta.model
+        for data in validated_data:
+            record = model(**data)
+            self.child.set_site(record, data, commit=False, force_create=False)
+            self.child.set_date_and_geometry(record, data, commit=False)
+            self.child.set_species_name_and_id(record, data, commit=False)
+            records.append(record)
+        return model.objects.bulk_create(records)
+
+    def update(self, instance, validated_data):
+        return super(ObservationListSerializer, self).update(instance, validated_data)
+
+
 class SpeciesObservationSerializer(ObservationSerializer):
+    @staticmethod
+    def get_species_name(dataset, data):
+        return dataset.schema.cast_species_name(data)
+
+    @classmethod
+    def set_species_name(cls, instance, validated_data, commit=True):
+        input_name = cls.get_species_name(instance.dataset, validated_data['data'])
+        if input_name:
+            instance.input_name = input_name
+            if commit:
+                instance.save()
+        return instance
+
+    def get_name_id(self, species_name):
+        name_id = -1
+        if 'species_mapping' in self.context and species_name:
+            name_id = int(self.context['species_mapping'].get(species_name, -1))
+        return name_id
+
+    def set_name_id(self, instance, commit=True):
+        name_id = self.get_name_id(instance.input_name)
+        instance.name_id = name_id
+        if commit:
+            instance.save()
+        return instance
+
+    def set_species_name_and_id(self, instance, validated_data, commit=True):
+        self.set_species_name(instance, validated_data, commit=commit)
+        self.set_name_id(instance, commit=commit)
+        return instance
+
+    def create(self, validated_data):
+        instance = super(SpeciesObservationSerializer, self).create(validated_data)
+        return self.set_species_name_and_id(instance, validated_data)
+
+    def update(self, instance, validated_data):
+        instance = super(SpeciesObservationSerializer, self).update(instance, validated_data)
+        return self.set_species_name_and_id(instance, validated_data)
+
     class Meta:
         model = SpeciesObservation
+        list_serializer_class = SpeciesObservationListSerializer

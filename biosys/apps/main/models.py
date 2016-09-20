@@ -326,7 +326,7 @@ class SpeciesObservation(AbstractObservationRecord):
     databasedate
     """
     site = models.ForeignKey('Site', null=True, blank=True)
-    input_name = models.CharField(max_length=500, null=False, blank=False,
+    input_name = models.CharField(max_length=500, null=True, blank=True,
                                   verbose_name="Species Name", help_text="Species Name (as imported)")
     name_id = models.IntegerField(default=-1,
                                   verbose_name="Name ID", help_text="The unique ID from the species database")

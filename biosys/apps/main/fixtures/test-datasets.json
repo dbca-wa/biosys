@@ -43,7 +43,7 @@
                   "constraints": {
                     "required": true
                   },
-                  "format": "fmt:%d %b %Y",
+                  "format": "any",
                   "title": "",
                   "description": ""
                 },
@@ -235,7 +235,7 @@
                   "constraints": {
                     "required": true
                   },
-                  "format": "fmt:%d %b %Y",
+                  "format": "any",
                   "title": "",
                   "description": ""
                 },

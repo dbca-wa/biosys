@@ -13,7 +13,7 @@ from django.views.generic import TemplateView, FormView
 
 from main.forms import UploadDatasetForm
 from main.models import Dataset, DatasetFile, Site, MODEL_SRID
-from main.utils_species import name_id_by_species_name
+from main.utils_species import HerbieFacade
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -21,7 +21,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
 
 class UploadDataSetView(LoginRequiredMixin, FormView):
-    # TODO: refactor this messy view
+    # TODO: use API for this view
     template_name = 'main/data_upload.html'
     form_class = UploadDatasetForm
     success_url = reverse_lazy('admin:main_dataset_changelist')
@@ -44,7 +44,7 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
         # if species. First load species list from herbie. Should raise an exception if problem.
         species_id_by_name = None
         if dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
-            species_id_by_name = name_id_by_species_name()
+            species_id_by_name = HerbieFacade().name_id_by_species_name()
 
         with open(src_file.path) as csvfile:
             reader = csv.DictReader(csvfile)
