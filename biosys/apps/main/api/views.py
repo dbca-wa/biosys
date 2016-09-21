@@ -10,6 +10,7 @@ from main import models
 from main.api import serializers
 from main.utils_auth import is_admin
 from main.utils_species import HerbieFacade
+from main.models import Dataset
 
 
 class BulkModelViewSet(
@@ -101,7 +102,7 @@ class DatasetDataView(generics.ListCreateAPIView, SpeciesMixin):
         ctx = super(DatasetDataView, self).get_serializer_context()
         if self.dataset:
             ctx['dataset'] = self.dataset
-        if 'species_mapping' not in ctx:
+        if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION and 'species_mapping' not in ctx:
             ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
         return ctx
 

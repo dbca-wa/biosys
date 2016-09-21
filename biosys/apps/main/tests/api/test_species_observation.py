@@ -32,11 +32,12 @@ class TestPermissions(TestCase):
         'test-datasets',
         'test-species-observations'
     ]
+    species_facade_class = NoSpeciesFacade
 
     @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
     def setUp(self):
         from main.api.views import SpeciesMixin
-        SpeciesMixin.species_facade_class = NoSpeciesFacade
+        SpeciesMixin.species_facade_class = self.species_facade_class
         password = 'password'
         self.admin_user = User.objects.filter(username="admin").first()
         self.assertIsNotNone(self.admin_user)
@@ -256,10 +257,12 @@ class TestDataValidation(TestCase):
         'test-species-observations'
     ]
 
+    species_facade_class = NoSpeciesFacade
+
     @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
     def setUp(self):
         from main.api.views import SpeciesMixin
-        SpeciesMixin.species_facade_class = NoSpeciesFacade
+        SpeciesMixin.species_facade_class = self.species_facade_class
         password = 'password'
         self.admin_user = User.objects.filter(username="admin").first()
         self.assertIsNotNone(self.admin_user)
@@ -550,10 +553,12 @@ class TestDateTimeAndGeometryExtraction(TestCase):
         'test-species-observations'
     ]
 
+    species_facade_class = NoSpeciesFacade
+
     @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
     def setUp(self):
         from main.api.views import SpeciesMixin
-        SpeciesMixin.species_facade_class = NoSpeciesFacade
+        SpeciesMixin.species_facade_class = self.species_facade_class
         password = 'password'
         self.admin_user = User.objects.filter(username="admin").first()
         self.assertIsNotNone(self.admin_user)
@@ -677,10 +682,12 @@ class TestSpeciesNameExtraction(TestCase):
         'test-species-observations'
     ]
 
+    species_facade_class = NoSpeciesFacade
+
     @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
     def setUp(self):
         from main.api.views import SpeciesMixin
-        SpeciesMixin.species_facade_class = NoSpeciesFacade
+        SpeciesMixin.species_facade_class = self.species_facade_class
         password = 'password'
         self.admin_user = User.objects.filter(username="admin").first()
         self.assertIsNotNone(self.admin_user)
@@ -795,10 +802,12 @@ class TestNameID(TestCase):
         'test-species-observations'
     ]
 
+    species_facade_class = helpers.LightSpeciesFacade
+
     @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
     def setUp(self):
         from main.api.views import SpeciesMixin
-        SpeciesMixin.species_facade_class = helpers.LightSpeciesFacade
+        SpeciesMixin.species_facade_class = self.species_facade_class
         password = 'password'
         self.admin_user = User.objects.filter(username="admin").first()
         self.assertIsNotNone(self.admin_user)
