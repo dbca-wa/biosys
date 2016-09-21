@@ -1,3 +1,27 @@
+from main.utils_species import SpeciesFacade
+
+SOME_SPECIES_NAME_NAME_ID_MAP = {
+    "Canis lupus subsp. familiaris": 30883,
+    "Canis lupus": 25454,
+    "Vespadelus douglasorum": 24204
+}
+
+
+class LightSpeciesFacade(SpeciesFacade):
+    def name_id_by_species_name(self):
+        """
+        :return: a dict where key is species_name and the value is name_id
+        """
+        return SOME_SPECIES_NAME_NAME_ID_MAP
+
+    def get_all_species(self, properties=None):
+        """
+        :param properties: a sequence of Property, e.g [PROPERTY_SPECIES_NAME, PROPERTY_NAME_ID] or None for all
+        attributes
+        :return: Return a list of species properties (see structure above) but with only the specified attributes.
+        NOTE: limiting the number of properties speed-up the request.
+        """
+        return []
 
 
 def set_site(record_data, dataset, site):
