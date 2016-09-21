@@ -856,7 +856,7 @@ class TestNameID(TestCase):
         record = self.record_1
         column = ds.schema.species_name_field.name
         new_data = clone(record.data)
-        for species_name, name_id in list(helpers.SOME_SPECIES_NAME_NAME_ID_MAP.items())[:2]:
+        for species_name, name_id in list(helpers.LightSpeciesFacade().name_id_by_species_name().items())[:2]:
             ds.record_queryset.delete()
             self.assertEquals(ds.record_queryset.count(), 0)
             new_data[column] = species_name
@@ -883,7 +883,7 @@ class TestNameID(TestCase):
         record = self.record_1
         column = ds.schema.species_name_field.name
         new_data = clone(record.data)
-        for species_name, name_id in list(helpers.SOME_SPECIES_NAME_NAME_ID_MAP.items())[:2]:
+        for species_name, name_id in list(helpers.LightSpeciesFacade().name_id_by_species_name().items())[:2]:
             new_data[column] = species_name
             data = {
                 "dataset": record.dataset.pk,
