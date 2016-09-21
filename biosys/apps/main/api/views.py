@@ -147,7 +147,7 @@ class ObservationViewSet(GenericRecordViewSet):
 class SpeciesObservationViewSet(ObservationViewSet, SpeciesMixin):
     queryset = models.SpeciesObservation.objects.all()
     serializer_class = serializers.SpeciesObservationSerializer
-    filter_fields = ObservationViewSet.filter_fields + ('input_name', 'name_id',)
+    filter_fields = ObservationViewSet.filter_fields + ('species_name', 'name_id',)
 
     def get_serializer_context(self):
         ctx = super(SpeciesObservationViewSet, self).get_serializer_context()

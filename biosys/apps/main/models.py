@@ -322,17 +322,17 @@ class Observation(AbstractObservationRecord):
 @python_2_unicode_compatible
 class SpeciesObservation(AbstractObservationRecord):
     """
-    If the input_name has been validated against the species database the name_id is populated with the value from the
+    If the species_name has been validated against the species database the name_id is populated with the value from the
     databasedate
     """
     site = models.ForeignKey('Site', null=True, blank=True)
-    input_name = models.CharField(max_length=500, null=True, blank=True,
-                                  verbose_name="Species Name", help_text="Species Name (as imported)")
+    species_name = models.CharField(max_length=500, null=True, blank=True,
+                                    verbose_name="Species Name", help_text="Species Name (as imported)")
     name_id = models.IntegerField(default=-1,
                                   verbose_name="Name ID", help_text="The unique ID from the species database")
 
     def __str__(self):
-        return self.input_name
+        return self.species_name
 
     @property
     def valid(self):

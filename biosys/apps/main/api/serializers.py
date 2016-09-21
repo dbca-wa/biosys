@@ -241,9 +241,9 @@ class SpeciesObservationSerializer(ObservationSerializer):
 
     @classmethod
     def set_species_name(cls, instance, validated_data, commit=True):
-        input_name = cls.get_species_name(instance.dataset, validated_data['data'])
-        if input_name:
-            instance.input_name = input_name
+        species_name = cls.get_species_name(instance.dataset, validated_data['data'])
+        if species_name:
+            instance.species_name = species_name
             if commit:
                 instance.save()
         return instance
@@ -255,7 +255,7 @@ class SpeciesObservationSerializer(ObservationSerializer):
         return name_id
 
     def set_name_id(self, instance, commit=True):
-        name_id = self.get_name_id(instance.input_name)
+        name_id = self.get_name_id(instance.species_name)
         instance.name_id = name_id
         if commit:
             instance.save()

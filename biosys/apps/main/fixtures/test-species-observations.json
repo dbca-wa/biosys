@@ -27,7 +27,7 @@
     "datetime": "2008-08-14T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
     "site": 3,
-    "input_name": "Chaerephon jobensis",
+    "species_name": "Chaerephon jobensis",
     "name_id": 24181
   }
 },
@@ -59,7 +59,7 @@
     "datetime": "2008-08-14T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
     "site": 3,
-    "input_name": "Chalinolobus nigrogriseus",
+    "species_name": "Chalinolobus nigrogriseus",
     "name_id": 24188
   }
 },
@@ -91,7 +91,7 @@
     "datetime": "2008-08-08T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
     "site": 3,
-    "input_name": "Chalinolobus nigrogriseus",
+    "species_name": "Chalinolobus nigrogriseus",
     "name_id": 24188
   }
 },
@@ -123,7 +123,7 @@
     "datetime": "2008-08-14T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
     "site": 3,
-    "input_name": "Macroderma gigas",
+    "species_name": "Macroderma gigas",
     "name_id": 24180
   }
 },
@@ -155,7 +155,7 @@
     "datetime": "2008-08-08T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
     "site": 3,
-    "input_name": "Macroderma gigas",
+    "species_name": "Macroderma gigas",
     "name_id": 24180
   }
 },
@@ -187,7 +187,7 @@
     "datetime": "2008-08-15T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.14111 -15.07833)",
     "site": 3,
-    "input_name": "Miniopterus schreibersii",
+    "species_name": "Miniopterus schreibersii",
     "name_id": 25493
   }
 },
@@ -219,7 +219,7 @@
     "datetime": "2008-08-14T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
     "site": 3,
-    "input_name": "Miniopterus schreibersii",
+    "species_name": "Miniopterus schreibersii",
     "name_id": 25493
   }
 },
@@ -251,7 +251,7 @@
     "datetime": "2008-08-09T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.15306 -15.10861)",
     "site": 3,
-    "input_name": "Miniopterus schreibersii",
+    "species_name": "Miniopterus schreibersii",
     "name_id": 25493
   }
 },
@@ -283,7 +283,7 @@
     "datetime": "2008-08-08T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
     "site": 3,
-    "input_name": "Miniopterus schreibersii",
+    "species_name": "Miniopterus schreibersii",
     "name_id": 25493
   }
 },
@@ -315,7 +315,7 @@
     "datetime": "2008-08-09T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.15306 -15.10861)",
     "site": 3,
-    "input_name": "Mormopterus beccarii",
+    "species_name": "Mormopterus beccarii",
     "name_id": 24182
   }
 },
@@ -347,7 +347,7 @@
     "datetime": "2008-08-15T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.14111 -15.07833)",
     "site": 3,
-    "input_name": "Nyctophilus arnhemensis",
+    "species_name": "Nyctophilus arnhemensis",
     "name_id": 24192
   }
 },
@@ -379,7 +379,7 @@
     "datetime": "2008-08-09T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.15306 -15.10861)",
     "site": 3,
-    "input_name": "Nyctophilus arnhemensis",
+    "species_name": "Nyctophilus arnhemensis",
     "name_id": 24192
   }
 },
@@ -411,7 +411,7 @@
     "datetime": "2008-08-15T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.14111 -15.07833)",
     "site": 3,
-    "input_name": "Nyctophilus walkeri",
+    "species_name": "Nyctophilus walkeri",
     "name_id": 24197
   }
 },
@@ -443,7 +443,7 @@
     "datetime": "2008-08-14T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
     "site": 3,
-    "input_name": "Nyctophilus walkeri",
+    "species_name": "Nyctophilus walkeri",
     "name_id": 24197
   }
 },
@@ -475,7 +475,7 @@
     "datetime": "2008-08-08T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
     "site": 3,
-    "input_name": "Pipistrellus westralis",
+    "species_name": "Pipistrellus westralis",
     "name_id": 24198
   }
 },
@@ -507,7 +507,7 @@
     "datetime": "2008-08-15T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.14111 -15.07833)",
     "site": 3,
-    "input_name": "Scotorepens greyi",
+    "species_name": "Scotorepens greyi",
     "name_id": -1
   }
 },
@@ -539,7 +539,7 @@
     "datetime": "2008-08-14T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
     "site": 3,
-    "input_name": "Scotorepens greyi",
+    "species_name": "Scotorepens greyi",
     "name_id": -1
   }
 },
@@ -571,7 +571,7 @@
     "datetime": "2008-08-15T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.14111 -15.07833)",
     "site": 3,
-    "input_name": "Taphozous georgianus",
+    "species_name": "Taphozous georgianus",
     "name_id": 24175
   }
 },
@@ -603,7 +603,7 @@
     "datetime": "2008-08-14T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
     "site": 3,
-    "input_name": "Taphozous georgianus",
+    "species_name": "Taphozous georgianus",
     "name_id": 24175
   }
 },
@@ -635,7 +635,7 @@
     "datetime": "2008-08-09T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.15306 -15.10861)",
     "site": 3,
-    "input_name": "Taphozous georgianus",
+    "species_name": "Taphozous georgianus",
     "name_id": 24175
   }
 },
@@ -667,7 +667,7 @@
     "datetime": "2008-08-08T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
     "site": 3,
-    "input_name": "Taphozous georgianus",
+    "species_name": "Taphozous georgianus",
     "name_id": 24175
   }
 },
@@ -699,7 +699,7 @@
     "datetime": "2008-08-09T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.15306 -15.10861)",
     "site": 3,
-    "input_name": "Vespadelus douglasorum",
+    "species_name": "Vespadelus douglasorum",
     "name_id": 24204
   }
 },
@@ -731,7 +731,7 @@
     "datetime": "2008-08-08T16:00:00Z",
     "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
     "site": 3,
-    "input_name": "Vespadelus douglasorum",
+    "species_name": "Vespadelus douglasorum",
     "name_id": 24204
   }
 }

@@ -106,9 +106,9 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                             record.geometry = geometry
                             if dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
                                 # species stuff. Lookup for species match in herbie
-                                input_name = schema.cast_species_name(row)
-                                name_id = int(species_id_by_name.get(input_name, -1))
-                                record.input_name = input_name
+                                species_name = schema.cast_species_name(row)
+                                name_id = int(species_id_by_name.get(species_name, -1))
+                                record.species_name = species_name
                                 record.name_id = name_id
 
                     except Exception as e:

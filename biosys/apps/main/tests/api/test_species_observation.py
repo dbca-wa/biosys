@@ -448,7 +448,7 @@ class TestSpeciesNamExtraction(TestCase):
             "dataset": record.dataset.pk,
             "data": record.data
         }
-        expected_name = record.input_name
+        expected_name = record.species_name
         url = reverse('api:speciesObservation-list')
         client = self.custodian_1_client
         self.assertEqual(
@@ -456,7 +456,7 @@ class TestSpeciesNamExtraction(TestCase):
             status.HTTP_201_CREATED
         )
         self.assertEquals(ds.record_queryset.count(), 1)
-        self.assertEquals(ds.record_queryset.first().input_name, expected_name)
+        self.assertEquals(ds.record_queryset.first().species_name, expected_name)
 
     def test_update(self):
         """
@@ -470,7 +470,7 @@ class TestSpeciesNamExtraction(TestCase):
         new_data = clone(record.data)
         # change species name
         name = 'Chubby Bat'
-        self.assertEqual(ds.record_queryset.filter(input_name=name).count(), 0)
+        self.assertEqual(ds.record_queryset.filter(species_name=name).count(), 0)
         new_data[ds.schema.species_name_field.name] = name
         data = {
             "dataset": record.dataset.pk,
@@ -484,4 +484,4 @@ class TestSpeciesNamExtraction(TestCase):
             status.HTTP_200_OK
         )
         self.assertEquals(ds.record_queryset.count(), count)
-        self.assertEqual(ds.record_queryset.filter(input_name=name).count(), 1)
+        self.assertEqual(ds.record_queryset.filter(species_name=name).count(), 1)
