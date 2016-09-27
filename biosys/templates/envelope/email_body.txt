@@ -1,7 +1,0 @@
-{% load i18n %}
-{% trans 'Feedback from BioSys Feedback form' %}
-
-{% trans "Sender" %}: {{ sender }} ({{ email }})
-
-{% trans "Message" %}:
-{{ message }}

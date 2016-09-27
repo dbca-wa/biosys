@@ -1,24 +1,33 @@
-{% extends "base_biosys.html" %}
+{% extends "base.html" %}
 {% load static %}
 {% load bootstrap3 %}
 
 
 {% block extra_style %}
     {{ block.super }}
-    <link rel="stylesheet"
-          href="//static.dpaw.wa.gov.au/static/libs/datatables/1.10.10/css/dataTables.bootstrap.css">
+    <link rel="stylesheet" href="//static.dpaw.wa.gov.au/static/libs/datatables/1.10.10/css/dataTables.bootstrap.css">
     <link href="//static.dpaw.wa.gov.au/static/libs/select2/3.5.3/select2.min.css" rel="stylesheet"/>
-    <link href="//static.dpaw.wa.gov.au/static/libs/select2-bootstrap-css/1.4.6/select2-bootstrap.css"
-          rel="stylesheet"/>
+    <link href="//static.dpaw.wa.gov.au/static/libs/select2-bootstrap-css/1.4.6/select2-bootstrap.css" rel="stylesheet"/>
     <link rel="stylesheet" type="text/css" href="{% static 'css/data_view.css' %}">
 {% endblock %}
 
+{% block requirements %}
+    require(['js/data_view'], function(module) {
+        module({
+                selectors: {
+                    projectFilter: '#filter-project',
+                    navPanel: '#id-div-nav-panel',
+                    tablePanel: '#id-div-datatable',
+                    tableTitle: '#id-datatable-title',
+                    dataTable: '#data-table',
+                    downloadButton: '#id-button-download'
+                },
+                data: {% if dataJSON %} {{ dataJSON|safe }} {% else %} {} {% endif %}
+        }).init();
+    });
+{% endblock %}
+
 {% block page_content_inner %}
-    <div class="row">
-        <div class="col-md-10">
-            <div><a href="{% url 'old_publish:publish_report' %}">legacy data view(LCI)</a></div>
-        </div>
-    </div>
     <div class="row">
         <div class="col-md-6 col-md-offset-3">
             <form class="form-horizontal" role="form">
@@ -92,37 +101,4 @@
             <div id="id-div-datatable"></div>
         </div>
     </div>
-{% endblock %}
-
-{% block extra_js %}
-    {{ block.super }}
-    <script type="text/javascript" charset="utf8"
-            src="//static.dpaw.wa.gov.au/static/libs/moment.js/2.9.0/moment.min.js"></script>
-    <script type="text/javascript" charset="utf8"
-            src="//static.dpaw.wa.gov.au/static/libs/datatables/1.10.11/js/jquery.dataTables.min.js"></script>
-    <script type="text/javascript" charset="utf8"
-            src="//static.dpaw.wa.gov.au/static/libs/datatables/1.10.11/js/dataTables.bootstrap.min.js"></script>
-    <script type="text/javascript" charset="utf8"
-            src="//static.dpaw.wa.gov.au/static/libs/select2/3.5.4/select2.min.js"></script>
-    <script type="text/javascript" charset="utf8"
-            src="//static.dpaw.wa.gov.au/static/libs/bootstrap-datetimepicker/4.7.14/js/bootstrap-datetimepicker.min.js"></script>
-    <script type="text/javascript" charset="utf8"
-            src="//cdn.datatables.net/plug-ins/1.10.11/sorting/datetime-moment.js"></script>
-    <script type="text/javascript" charset="utf8" src="{% static 'js/data_view.js' %}"></script>
-    <script type="text/javascript">
-        $(function () {
-            var module = biosys.view_data($, _, {
-                selectors: {
-                    projectFilter: '#filter-project',
-                    navPanel: '#id-div-nav-panel',
-                    tablePanel: '#id-div-datatable',
-                    tableTitle: '#id-datatable-title',
-                    dataTable: '#data-table',
-                    downloadButton: '#id-button-download'
-                },
-                data: {% if dataJSON %} {{ dataJSON|safe }} {% else %} {} {% endif %}
-            });
-            module.init();
-        });
-    </script>
 {% endblock %}

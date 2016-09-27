@@ -1,0 +1,140 @@
+{% load static from staticfiles %}
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>{{ page_title }}</title>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="description" content="{{ page_description }}">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        {% block base_style %}
+            <link rel="stylesheet"
+                  href="//static.dpaw.wa.gov.au/static/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css">
+        {% endblock %}
+        {% block extra_style %}
+            <link rel="stylesheet" href="{% static 'css/dpaw-custom.css' %}">
+            <link href="{% static 'css/biosys.css' %}" rel="stylesheet" type="text/css"/>
+        {% endblock %}
+        {% block favicon %}
+            <link rel="shortcut icon" href="{% static 'favicon.ico' %}">
+        {% endblock %}
+
+        <script type="text/javascript"
+                src="//static.dpaw.wa.gov.au/static/libs/require.js/2.2.0/require.min.js"></script>
+        <script type="text/javascript">
+            require(["{% static 'js/config.js' %}"], function (conf) {
+                require(['bootstrap']);
+                {% block requirements %}
+                {% endblock %}
+            });
+        </script>
+
+        {% block extra_head %}{% endblock %}
+    </head>
+    <body>
+        <!--[if lte IE 8]>
+        <p class="browserupgrade">You are using an <strong>outdated</strong> browser.
+        Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+
+        {% block top_navbar %}
+            <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        {% block navbar_logo %}
+                            <img class="navbar-brand hidden-xs" src="{% static 'img/dpaw_logo_small.png' %}">
+                        {% endblock %}
+                        {% block navbar_site_title %}
+                            <a class="navbar-brand" href="{% url 'home' %}">
+                                {{ site_title }}
+                            </a>
+                        {% endblock %}
+                        {% block navbar_button %}
+                            <button type="button" class="navbar-toggle" data-toggle="collapse"
+                                    data-target="#header-navbar-collapse">
+                                <span class="sr-only">Toggle navigation</span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                            </button>
+                        {% endblock %}
+                    </div><!-- /.navbar-header -->
+
+                    <!-- Collect the nav links for toggling -->
+                    <div class="collapse navbar-collapse navbar-right" id="header-navbar-collapse">
+                        <ul class="nav navbar-nav">
+                            <!-- Collect the nav links for toggling -->
+                            {% block navbar_links %}
+                                <li><a href="{% url 'about' %}" target="_">About BioSys</a></li>
+                                {% if user.is_authenticated %}
+                                    {% block navbar_auth %}
+                                        <li class="dropdown">
+                                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                                               aria-expanded="false">
+                                                {% if user.email %}{{ user.email }}{% else %}
+                                                    {{ user.username }}{% endif %} <span class="caret"></span></a>
+                                            <ul class="dropdown-menu" role="menu">
+                                                <li><a href="{% url 'api:explorer' %}">API Explorer</a></li>
+                                                {% if user.is_superuser %}
+                                                    <li><a href="{% url 'admin:index' %}">Admin</a></li>
+                                                    <li class="divider"></li>
+                                                {% endif %}
+                                                <li><a href="{% url 'logout' %}?next={% url 'home' %}">Log out</a></li>
+                                            </ul>
+                                        </li>
+                                    {% endblock %}<!-- /navbar_auth -->
+                                {% endif %}
+                            {% endblock %}<!-- /navbar_links -->
+                        </ul>
+                    </div><!-- /.navbar-collapse -->
+                </div><!-- /.container-fluid -->
+            </nav>
+        {% endblock %}<!-- /top_navbar -->
+
+        {% block page_content %}
+            <div class="container-fluid">
+                <!-- Breadcrumbs -->
+                {% if breadcrumb_trail %}
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <ol class="breadcrumb">
+                                {{ breadcrumb_trail|safe }}
+                            </ol>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Messages  -->
+                {% if messages %}
+                    <div class="row">
+                        <div class="col-xs-12">
+                            {% for message in messages %}
+                                <div class="alert{% if message.tags %} alert-{{ message.tags }}{% endif %}">
+                                    {{ message|safe }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% block page_content_inner %}{% endblock %}
+            </div>
+        {% endblock %}
+
+        {% block page_footer %}
+            <div class="container-fluid">
+                <div class="row">
+                    <hr>
+                    <div class="col-xs-6">
+                        Version: {{ application_version_no }}
+                    </div>
+                    <div class="col-xs-6">
+                        <p class="pull-right">&copy; 2015 Department of Parks and Wildlife</p>
+                    </div>
+                </div>
+            </div>
+        {% endblock %}
+
+    </body>
+</html>

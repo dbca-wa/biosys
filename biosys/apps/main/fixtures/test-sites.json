@@ -1,0 +1,41 @@
+[
+  {
+    "model": "main.site",
+    "pk": 1,
+    "fields": {
+      "project": 1,
+      "parent_site": null,
+      "name": "Site1",
+      "code": "Site1",
+      "geometry": "SRID=4326;LINESTRING (114.87060546875 -29.9970703125, 121.81396484375 -31.1396484375, 121.28662109375 -34.8310546875, 116.10107421875 -36.3251953125, 113.37646484375 -33.6005859375, 114.87060546875 -29.9970703125)",
+      "comments": "Site 1 comments",
+      "attributes": null
+    }
+  },
+  {
+    "model": "main.site",
+    "pk": 2,
+    "fields": {
+      "project": 2,
+      "parent_site": null,
+      "name": "Site2",
+      "code": "Site2",
+      "geometry": "SRID=4326;LINESTRING (124.18701171875 -17.6484375, 126.38427734375 -18.615234375, 123.35205078125 -20.65869140625, 124.1650390625 -17.71435546875)",
+      "comments": "",
+      "attributes": null
+    }
+  },
+  {
+    "model": "main.site",
+    "pk": 3,
+    "fields": {
+      "project": 1,
+      "parent_site": null,
+      "name": "Adolphus",
+      "code": "Adolphus",
+      "geometry": null,
+      "comments": "",
+      "attributes": null
+    }
+  }
+]
