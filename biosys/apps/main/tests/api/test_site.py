@@ -121,9 +121,9 @@ class TestPermissions(TestCase):
                     status.HTTP_201_CREATED
                 )
 
-    def test_bulk_create_happy_path(self):
+    def test_bulk_create(self):
         """
-        Admin and custodians
+        Cannot create bulk with this end point
         :return:
         """
         project = self.project_1
@@ -141,53 +141,15 @@ class TestPermissions(TestCase):
             }
         ]
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
-            "allowed": [self.admin_client, self.custodian_1_client]
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client, self.admin_client,
+                          self.custodian_1_client],
+            "allowed": []
         }
         for client in access['forbidden']:
             for url in urls:
                 self.assertIn(
                     client.post(url, data, format='json').status_code,
-                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
-                )
-
-        for client in access['allowed']:
-            for url in urls:
-                # site code must be unique
-                for site in data:
-                    site['code'] += '1'
-                self.assertEqual(
-                    client.post(url, data, format='json').status_code,
-                    status.HTTP_201_CREATED
-                )
-
-    def test_bulk_create_sneaky(self):
-        """
-        A user try to post 2 sites on different projects. One of them is not his project
-        :return:
-        """
-        urls = [reverse('api:site-list')]
-        data = [
-            {
-                "name": "A new project for Unit test",
-                "code": "C1111",
-                "project": self.project_1.pk
-            },
-            {
-                "name": "A new project for Unit test",
-                "code": "C2222",
-                "project": self.project_2.pk
-            }
-        ]
-        access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client, self.custodian_1_client],
-            "allowed": [self.admin_client]
-        }
-        for client in access['forbidden']:
-            for url in urls:
-                self.assertIn(
-                    client.post(url, data, format='json').status_code,
-                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+                    [status.HTTP_400_BAD_REQUEST, status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
                 )
 
         for client in access['allowed']:

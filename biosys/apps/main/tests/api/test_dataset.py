@@ -390,7 +390,7 @@ class TestDataPackageValidation(TestCase):
         }
         self.assertEqual(
             client.post(url, data, format='json').status_code,
-            status.HTTP_400_BAD_REQUEST
+            status.HTTP_400_BAD_REQUEST,
         )
 
     def test_update_empty_error(self):

@@ -15,7 +15,7 @@ router.register(r'observations?', main_views.ObservationViewSet, 'observation')
 router.register(r'species_observations?', main_views.SpeciesObservationViewSet, 'speciesObservation')
 
 url_patterns = [
-    url(r'dataset/(?P<pk>\d+)/data?', main_views.DatasetDataView.as_view(), name='dataset-data')
+    url(r'dataset/(?P<pk>\d+)/data/?', main_views.DatasetDataView.as_view(), name='dataset-data')  # bulk data upload
 ]
 
 urls = router.urls + url_patterns

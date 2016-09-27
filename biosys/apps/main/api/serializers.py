@@ -4,26 +4,23 @@ import datetime
 
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-
 from rest_framework import serializers
-from rest_framework_bulk import BulkSerializerMixin, BulkListSerializer
 
-from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
 from main.constants import MODEL_SRID
+from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-    timezone = serializers.CharField()
+    timezone = serializers.CharField(required=False)
 
     class Meta:
         model = Project
         fields = '__all__'
 
 
-class SiteSerializer(BulkSerializerMixin, serializers.ModelSerializer):
+class SiteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Site
-        list_serializer_class = BulkListSerializer
         fields = '__all__'
 
 

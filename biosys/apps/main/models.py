@@ -178,12 +178,9 @@ class Dataset(models.Model):
         result = False
         if is_admin(request.user):
             result = True
-        else:
-            try:
-                project = Project.objects.get(pk=request.data['project'])
-                result = project.is_custodian(request.user)
-            except:
-                pass
+        elif 'project' in request.data:
+            project = Project.objects.filter(pk=request.data['project']).first()
+            result = project is not None and project.is_custodian(request.user)
         return result
 
     @staticmethod
@@ -255,27 +252,17 @@ class AbstractRecord(models.Model):
     def has_create_permission(request):
         """
         Custodian and admin only
-        Check that the user is a custodian of the project pk passed in the POST data.
-        Because bulk create is authorized we need to check that for every object.
+        Check that the user is a custodian of the dataset pk passed in the POST data.
         :param request:
         :return:
         """
+        result = False
         if is_admin(request.user):
-            return True
-        else:
-            try:
-                if isinstance(request.data, list):
-                    dataset_pks = frozenset([_obj['dataset'] for _obj in request.data])
-                else:
-                    dataset_pks = [request.data['dataset']]
-                for pk in dataset_pks:
-                    ds = Dataset.objects.get(pk=pk)
-                    if not ds.is_custodian(request.user):
-                        return False
-            except Exception as e:
-                logger.exception(e)
-                return False
-        return True
+            result = True
+        elif 'dataset' in request.data:
+            ds = Dataset.objects.filter(pk=request.data['dataset']).first()
+            result = ds is not None and ds.is_custodian(request.user)
+        return result
 
     @staticmethod
     def has_update_permission(request):
@@ -458,27 +445,16 @@ class Site(models.Model):
         """
         Custodian and admin only
         Check that the user is a custodian of the project pk passed in the POST data.
-        Note: bulk creation means that a list of data can be passed. We need to test that the user is the custodians
-        for every sites.
         :param request:
         :return:
         """
+        result = False
         if is_admin(request.user):
-            return True
-        else:
-            try:
-                if isinstance(request.data, list):
-                    project_pks = frozenset([_obj['project'] for _obj in request.data])
-                else:
-                    project_pks = [request.data['project']]
-                for pk in project_pks:
-                    project = Project.objects.get(pk=pk)
-                    if not project.is_custodian(request.user):
-                        return False
-            except Exception as e:
-                logger.exception(e)
-                return False
-        return True
+            result = True
+        elif 'project' in request.data:
+            project = Project.objects.filter(pk=request.data['project']).first()
+            result = project is not None and project.is_custodian(request.user)
+        return result
 
     @staticmethod
     def has_update_permission(request):
