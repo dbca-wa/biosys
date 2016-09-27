@@ -102,8 +102,8 @@ class DatasetDataView(generics.ListCreateAPIView, SpeciesMixin):
         ctx = super(DatasetDataView, self).get_serializer_context()
         if self.dataset:
             ctx['dataset'] = self.dataset
-        if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION and 'species_mapping' not in ctx:
-            ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
+            if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION and 'species_mapping' not in ctx:
+                ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
         return ctx
 
     def get_queryset(self):
