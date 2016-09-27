@@ -64,8 +64,7 @@ class GenericDataValidator:
                     "project": self.dataset.project,
                     model_field: site_value
                 }
-                site = Site.objects.filter(**kwargs).first()
-                if site is None:
+                if not Site.objects.filter(**kwargs).exists():
                     msg = "Could not find the site '{} in: {}':".format(site_value, data)
                     raise ValidationError(msg)
 

@@ -33,8 +33,7 @@ class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
 class SiteAdmin(MainAppAdmin, GeoModelAdmin):
     change_form_template = 'main/site_change_form.html'
     fields = ('project', 'parent_site',  'code', 'name', 'geometry', 'comments', 'attributes')
-    list_display = [
-        'code', 'project', 'name', 'parent_site']
+    list_display = ['code', 'project', 'name', 'parent_site']
     list_filter = ['project', 'parent_site']
     form = forms.SiteForm
     default_lon = 125.0
