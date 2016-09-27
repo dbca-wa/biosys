@@ -269,12 +269,6 @@ AUTHENTICATION_BACKENDS = (
 )
 
 
-# django-tastypie settings
-TASTYPIE_ALLOW_MISSING_SLASH = True
-TASTYPIE_DATETIME_FORMATTING = 'iso-8601-strict'
-TASTYPIE_DEFAULT_FORMATS = ['json']
-API_LIMIT_PER_PAGE = 0
-
 # Grappelli settings
 GRAPPELLI_ADMIN_TITLE = SITE_TITLE + ' administration'
 
