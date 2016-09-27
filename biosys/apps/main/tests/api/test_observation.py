@@ -585,7 +585,7 @@ class TestSiteExtraction(TestCase):
         site = Site.objects.filter(name="Site1").first()
         # need to test if the site belongs to the dataset project or the update won't happen
         self.assertIsNotNone(site)
-        self.assertTrue(site.project == record.dataset.project)
+        self.assertEquals(site.project, record.dataset.project)
         self.assertNotEquals(record.site, site)
         # update site value
         schema = record.dataset.schema

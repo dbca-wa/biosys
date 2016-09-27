@@ -472,7 +472,7 @@ class TestDataValidation(TestCase):
             )
             self.assertEquals(ds.record_queryset.count(), count + 1)
 
-        invalid_values = [None, '', 'not a date']
+        invalid_values = [None, '', 'not a valid latitude']
         for value in invalid_values:
             new_data[lat_column] = value
             data = {
@@ -737,8 +737,7 @@ class TestSpeciesNameExtraction(TestCase):
 
     def test_create(self):
         """
-        Test that the date and geometry are extracted from the data
-        and saved in DB
+        Test that the species name is extracted from the data and saved in DB
         :return:
         """
         # clear all records
@@ -762,8 +761,7 @@ class TestSpeciesNameExtraction(TestCase):
 
     def test_update(self):
         """
-        Test that the date and geometry are extracted from the data
-        and saved in DB
+        Test that the species name is extracted from the data and saved in DB
         :return:
         """
         # clear all records
@@ -857,8 +855,7 @@ class TestNameID(TestCase):
 
     def test_create(self):
         """
-        Test that the date and geometry are extracted from the data
-        and saved in DB
+        Test that the name_id is retrieved from the species facade from the species_name
         :return:
         """
         ds = self.ds_1
@@ -884,8 +881,7 @@ class TestNameID(TestCase):
 
     def test_update(self):
         """
-        Test that the date and geometry are extracted from the data
-        and saved in DB
+        Test that the name_id is retrieved from the species facade from the species_name
         :return:
         """
         ds = self.ds_1

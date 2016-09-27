@@ -92,7 +92,7 @@ class HerbieFacade(SpeciesFacade):
     @staticmethod
     def _add_attributes_filter_to_params(properties, params=None):
         """
-        :param properties: al sequence of Property
+        :param properties: a sequence of Property
         :param params: an initial parameter dictionary
         :return:
         """
@@ -100,8 +100,8 @@ class HerbieFacade(SpeciesFacade):
             if params is None:
                 params = {}
                 # WFS spec: {'propertyName': (p1,p2,..)}
-            params['propertyName'] = "({list})".format(
-                list=','.join([a.herbie_name for a in properties])
+            params['propertyName'] = "({csv})".format(
+                csv=','.join([a.herbie_name for a in properties])
             )
         return params
 
