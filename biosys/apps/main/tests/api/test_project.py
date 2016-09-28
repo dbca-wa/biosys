@@ -370,6 +370,33 @@ class TestProjectSiteBulk(TestCase):
                     status.HTTP_201_CREATED
                 )
 
+    def test_permissions_delete(self):
+        """
+        Bulk delete is not a valid method
+        :return:
+        """
+        project = self.project_1
+        urls = [
+            reverse('api:project-sites', kwargs={'pk': project.pk})
+        ]
+        access = {
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client, self.custodian_2_client,
+                          self.admin_client],
+            "allowed": []
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertIn(
+                    client.delete(url, format='json').status_code,
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN, status.HTTP_405_METHOD_NOT_ALLOWED]
+                )
+        for client in access['allowed']:
+            for url in urls:
+                self.assertEqual(
+                    client.delete(url, format='json').status_code,
+                    status.HTTP_200_OK
+                )
+
     def test_bulk_update_forbidden(self):
         project = self.project_1
         urls = [
@@ -454,4 +481,4 @@ class TestProjectSiteBulk(TestCase):
         self.assertIsNotNone(sdb_2)
         self.assertEqual(sdb_2.name, site_2['name'])
         self.assertEqual(sdb_2.comments, site_2['comments'])
-        self.assertEqual(sdb_2.attributes, site_2['attributes'])        
+        self.assertEqual(sdb_2.attributes, site_2['attributes'])
