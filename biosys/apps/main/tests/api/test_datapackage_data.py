@@ -130,6 +130,67 @@ class TestGenericPermissions(TestCase):
                 )
                 self.assertEqual(GenericRecord.objects.count(), count + len(data))
 
+    def test_update(self):
+        """
+        Not implemented
+        """
+        ds = self.ds_1
+        urls = [
+            reverse('api:dataset-data', kwargs={'pk': ds.pk})
+        ]
+        access = {
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client, self.custodian_2_client,
+                          self.admin_client],
+            "allowed": []
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertIn(
+                    client.put(url, format='json').status_code,
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN, status.HTTP_405_METHOD_NOT_ALLOWED]
+                )
+                self.assertIn(
+                    client.patch(url, format='json').status_code,
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN, status.HTTP_405_METHOD_NOT_ALLOWED]
+                )
+        for client in access['allowed']:
+            for url in urls:
+                self.assertEqual(
+                    client.put(url, format='json').status_code,
+                    status.HTTP_200_OK
+                )
+
+    def test_delete(self):
+        """
+        Not implemented
+        """
+        ds = self.ds_1
+        urls = [
+            reverse('api:dataset-data', kwargs={'pk': ds.pk})
+        ]
+        data = [
+            {
+                "id": ds.pk
+            }
+        ]
+        access = {
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client, self.custodian_2_client,
+                          self.admin_client],
+            "allowed": []
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertIn(
+                    client.delete(url, data, format='json').status_code,
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN, status.HTTP_405_METHOD_NOT_ALLOWED]
+                )
+        for client in access['allowed']:
+            for url in urls:
+                self.assertEqual(
+                    client.delete(url, data, format='json').status_code,
+                    status.HTTP_200_OK
+                )
+
 
 class TestBulkGenericCreate(TestCase):
     fixtures = [
@@ -473,6 +534,71 @@ class TestObservationPermissions(TestCase):
                 )
                 self.assertEqual(ds.record_queryset.count(), count + len(data))
 
+    def test_update(self):
+        """
+        Not implemented
+        """
+        ds = self.ds_1
+        urls = [
+            reverse('api:dataset-data', kwargs={'pk': ds.pk})
+        ]
+        access = {
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client, self.custodian_2_client,
+                          self.admin_client],
+            "allowed": []
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertIn(
+                    client.put(url, format='json').status_code,
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN, status.HTTP_405_METHOD_NOT_ALLOWED]
+                )
+                self.assertIn(
+                    client.patch(url, format='json').status_code,
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN, status.HTTP_405_METHOD_NOT_ALLOWED]
+                )
+        for client in access['allowed']:
+            for url in urls:
+                self.assertEqual(
+                    client.put(url, format='json').status_code,
+                    status.HTTP_200_OK
+                )
+
+    def test_delete(self):
+        """
+        Not implemented
+        :return:
+        """
+        """
+        Not implemented
+        """
+        ds = self.ds_1
+        urls = [
+            reverse('api:dataset-data', kwargs={'pk': ds.pk})
+        ]
+        data = [
+            {
+                "id": ds.pk
+            }
+        ]
+        access = {
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client, self.custodian_2_client,
+                          self.admin_client],
+            "allowed": []
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertIn(
+                    client.delete(url, data, format='json').status_code,
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN, status.HTTP_405_METHOD_NOT_ALLOWED]
+                )
+        for client in access['allowed']:
+            for url in urls:
+                self.assertEqual(
+                    client.delete(url, data, format='json').status_code,
+                    status.HTTP_200_OK
+                )
+
 
 class TestBulkObservationCreate(TestCase):
     fixtures = [
@@ -791,6 +917,71 @@ class TestSpeciesObservationPermissions(TestCase):
                     status.HTTP_201_CREATED
                 )
                 self.assertEqual(ds.record_queryset.count(), count + len(data))
+
+    def test_update(self):
+        """
+        Not implemented
+        """
+        ds = self.ds_1
+        urls = [
+            reverse('api:dataset-data', kwargs={'pk': ds.pk})
+        ]
+        access = {
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client, self.custodian_2_client,
+                          self.admin_client],
+            "allowed": []
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertIn(
+                    client.put(url, format='json').status_code,
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN, status.HTTP_405_METHOD_NOT_ALLOWED]
+                )
+                self.assertIn(
+                    client.patch(url, format='json').status_code,
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN, status.HTTP_405_METHOD_NOT_ALLOWED]
+                )
+        for client in access['allowed']:
+            for url in urls:
+                self.assertEqual(
+                    client.put(url, format='json').status_code,
+                    status.HTTP_200_OK
+                )
+
+    def test_delete(self):
+        """
+        Not implemented
+        :return:
+        """
+        """
+        Not implemented
+        """
+        ds = self.ds_1
+        urls = [
+            reverse('api:dataset-data', kwargs={'pk': ds.pk})
+        ]
+        data = [
+            {
+                "id": ds.pk
+            }
+        ]
+        access = {
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client, self.custodian_2_client,
+                          self.admin_client],
+            "allowed": []
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertIn(
+                    client.delete(url, data, format='json').status_code,
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN, status.HTTP_405_METHOD_NOT_ALLOWED]
+                )
+        for client in access['allowed']:
+            for url in urls:
+                self.assertEqual(
+                    client.delete(url, data, format='json').status_code,
+                    status.HTTP_200_OK
+                )
 
 
 class TestBulkSpeciesObservationCreate(TestCase):
