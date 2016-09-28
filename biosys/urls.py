@@ -31,7 +31,7 @@ def admin_view_selection_view(request):
 urlpatterns = \
     [
         # Authentication URLs
-        url(r'^logout/$', auth_views.logout, {'next_page': '/login/'}),
+        url(r'^logout/$', auth_views.logout, {'next_page': '/login/'}, name='logout'),
         # url(r'^login/$', auth_views.login),
         url('^', include('django.contrib.auth.urls')),
         # Application URLs

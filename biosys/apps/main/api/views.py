@@ -1,28 +1,15 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, filters, mixins, generics
-from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
-from rest_framework_bulk import ListBulkCreateAPIView
 from dry_rest_permissions.generics import DRYPermissions
+from rest_framework import viewsets, filters, generics
+from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
 
 from main import models
 from main.api import serializers
+from main.models import Dataset
 from main.utils_auth import is_admin
 from main.utils_species import HerbieFacade
-from main.models import Dataset
-
-
-class BulkModelViewSet(
-    ListBulkCreateAPIView,
-    mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
-    mixins.DestroyModelMixin,
-    viewsets.GenericViewSet
-):
-    """ A model ViewSet that allows the bulk creation of object through list
-    """
-    pass
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -33,7 +20,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
     filter_fields = ('id', 'title',)
 
 
-class SiteViewSet(BulkModelViewSet):
+# TODO: implement an endpoint for bulk site upload. Something like project/{pk}/sites (see dataset/{pk}/data)
+
+class SiteViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Site.objects.all()
     serializer_class = serializers.SiteSerializer
@@ -55,7 +44,7 @@ class DatasetDataPermission(BasePermission):
         return \
             request.method in SAFE_METHODS \
             or is_admin(user) \
-            or (hasattr(view, 'dataset') and view.dataset.is_custodian(user))
+            or (hasattr(view, 'dataset') and view.dataset and view.dataset.is_custodian(user))
 
 
 class SpeciesMixin:
