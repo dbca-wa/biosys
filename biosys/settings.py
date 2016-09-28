@@ -280,13 +280,8 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 
-
 # Grappelli settings
 GRAPPELLI_ADMIN_TITLE = SITE_TITLE + ' administration'
-
-# envelop extensions
-ENVELOPE_EMAIL_RECIPIENTS = ['biosys@DPaW.wa.gov.au']
-ENVELOPE_USE_HTML_EMAIL = False
 
 # Email settings
 EMAIL_HOST = env('EMAIL_HOST', 'email.host')
