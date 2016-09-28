@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_MET
 
 from main import models
 from main.api import serializers
-from main.models import Dataset
+from main.models import Project, Site, Dataset
 from main.utils_auth import is_admin
 from main.utils_species import HerbieFacade
 
@@ -20,7 +20,43 @@ class ProjectViewSet(viewsets.ModelViewSet):
     filter_fields = ('id', 'title',)
 
 
-# TODO: implement an endpoint for bulk site upload. Something like project/{pk}/sites (see dataset/{pk}/data)
+class ProjectPermission(BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        return \
+            request.method in SAFE_METHODS \
+            or is_admin(user) \
+            or (hasattr(view, 'project') and view.project and view.project.is_custodian(user))
+
+
+class ProjectSitesView(generics.ListCreateAPIView):
+    permission_classes = (IsAuthenticated, ProjectPermission)
+    serializer_class = serializers.SiteSerializer
+
+    def __init__(self, **kwargs):
+        super(ProjectSitesView, self).__init__(**kwargs)
+        self.project = None
+
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Intercept any request to set the project from the pk
+        :param request:
+        """
+        self.project = get_object_or_404(Project, pk=self.kwargs.get('pk'))
+        return super(ProjectSitesView, self).dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        project = self.project if hasattr(self, 'project') else get_object_or_404(Project, pk=self.kwargs.get('pk'))
+        return Site.objects.filter(project=project)
+
+    def get_serializer(self, *args, **kwargs):
+        kwargs["many"] = True
+        ser = super(ProjectSitesView, self).get_serializer(*args, **kwargs)
+        if hasattr(ser, 'initial_data') and self.project:
+            for r in ser.initial_data:
+                r['project'] = self.project.pk
+        return ser
+
 
 class SiteViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)

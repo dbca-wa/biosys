@@ -76,6 +76,9 @@ class GenericDataValidator:
 
 
 class GenericRecordListSerializer(serializers.ListSerializer):
+    """
+    This serializer uses the django bulk_create instead of creating one by one.
+    """
     def create(self, validated_data):
         records = []
         model = self.child.Meta.model
