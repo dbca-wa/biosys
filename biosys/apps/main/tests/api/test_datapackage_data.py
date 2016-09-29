@@ -132,7 +132,7 @@ class TestGenericPermissions(TestCase):
 
     def test_update(self):
         """
-        Not implemented
+        The update method is not implemented
         """
         ds = self.ds_1
         urls = [
@@ -162,7 +162,7 @@ class TestGenericPermissions(TestCase):
 
     def test_delete(self):
         """
-        Not implemented
+        The delete method is not implemented
         """
         ds = self.ds_1
         urls = [
@@ -536,7 +536,7 @@ class TestObservationPermissions(TestCase):
 
     def test_update(self):
         """
-        Not implemented
+        The update method is not implemented
         """
         ds = self.ds_1
         urls = [
@@ -566,11 +566,8 @@ class TestObservationPermissions(TestCase):
 
     def test_delete(self):
         """
-        Not implemented
+        The delete method is not implemented
         :return:
-        """
-        """
-        Not implemented
         """
         ds = self.ds_1
         urls = [
@@ -920,7 +917,7 @@ class TestSpeciesObservationPermissions(TestCase):
 
     def test_update(self):
         """
-        Not implemented
+        The update method is not implemented
         """
         ds = self.ds_1
         urls = [
@@ -950,11 +947,8 @@ class TestSpeciesObservationPermissions(TestCase):
 
     def test_delete(self):
         """
-        Not implemented
+        The delete method is not implemented
         :return:
-        """
-        """
-        Not implemented
         """
         ds = self.ds_1
         urls = [
