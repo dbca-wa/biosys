@@ -1,3 +1,5 @@
+from __future__ import absolute_import, unicode_literals, print_function, division
+
 import datetime
 from django.views.generic import View
 from django.shortcuts import get_object_or_404

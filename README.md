@@ -34,13 +34,10 @@ The following environment settings should be defined in a `.env` file
 
     DJANGO_SETTINGS_MODULE="biosys.settings"
     DEBUG=True
-    DATABASE_URL="postgres://USER:PASSWORD@HOST:PORT/NAME"
+    DATABASE_URL="postgis://USER:PASSWORD@HOST:PORT/NAME"
     SECRET_KEY="ThisIsASecretKey"
     CSRF_COOKIE_SECURE=False
     SESSION_COOKIE_SECURE=False
-    KMI_USER="KMIUSER"
-    KMI_PASSWORD="PASSWORD"
-    KMI_WFS_URL="https://kmi.dpaw.wa.gov.au/geoserver/ows?service=wfs&version=1.0.0&request=GetCapabilities&typeNames={}&outputFormat=application/json"
 
 ## Running
 

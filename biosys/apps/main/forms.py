@@ -1,3 +1,5 @@
+from __future__ import absolute_import, unicode_literals, print_function, division
+
 import json
 import pytz
 import datetime
@@ -5,10 +7,9 @@ import datetime
 from django import forms
 from django.contrib.postgres.forms import JSONField
 from django.core.exceptions import ValidationError
+from django.utils import six
 
-from envelope.forms import ContactForm
-
-from .models import Project, SiteVisitDataSheetTemplate, Visit, Site, Dataset
+from .models import Project, Site, Dataset
 
 DATUM_BOUNDS = {
     4326: (-180.0, -90.0, 180.0, 90.0),
@@ -31,7 +32,7 @@ class BetterJSONField(JSONField):
     def prepare_value(self, value):
         if value is None:
             return ""
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
             # already a string
             return value
         else:
@@ -43,6 +44,7 @@ class BetterTimeZoneFormField(forms.TypedChoiceField):
     A fixed version of the TimeZoneFormField from timezone_field (but when updating a model)
     It just ensure that the coerce test if it is already a timezone.
     """
+
     def __init__(self, *args, **kwargs):
 
         def coerce_to_pytz(val):
@@ -72,8 +74,9 @@ class DataSetForm(forms.ModelForm):
 
 
 class ProjectForm(forms.ModelForm):
-    attributes_schema = BetterJSONField(required=False)
     attributes = BetterJSONField(required=False)
+    attributes_data_package = BetterJSONField(required=False)
+    site_data_package = BetterJSONField(required=False)
     timezone = BetterTimeZoneFormField(initial=Project.DEFAULT_TIMEZONE)
 
     class Meta:
@@ -133,39 +136,6 @@ class ProjectForm(forms.ModelForm):
         return self.cleaned_data
 
 
-class VisitForm(forms.ModelForm):
-    class Meta:
-        model = Visit
-        exclude = []
-
-    def __init__(self, *args, **kwargs):
-        super(VisitForm, self).__init__(*args, **kwargs)
-        if self.instance.pk and self.instance.project:
-            self.fields['sites'].queryset = Site.objects.filter(project=self.instance.project)
-        else:
-            self.fields['sites'].queryset = Site.objects.none()
-
-        # override clean method of form field for sites so that it doesn't force site to be in existing
-        # queryset - instead do this check in clean
-        def sites_clean(value):
-            if value is not None and value != '':
-                return Site.objects.filter(pk__in=value)
-            else:
-                return Site.objects.none()
-
-        self.fields['sites'].clean = sites_clean
-
-    def clean(self):
-        if 'project' in self.cleaned_data and 'sites' in self.cleaned_data:
-            project = self.cleaned_data.get('project')
-            sites = self.cleaned_data.get('sites')
-            for site in sites:
-                if site.project != project:
-                    raise forms.ValidationError('Please Choose only sites that '
-                                                'belong to project {}'.format(project))
-        return self.cleaned_data
-
-
 class SiteForm(forms.ModelForm):
     attributes_schema = BetterJSONField(required=False)
     attributes = BetterJSONField(required=False)
@@ -212,24 +182,6 @@ class SiteForm(forms.ModelForm):
 
         return longitude
 
-    def clean_bearing(self):
-        bearing = self.cleaned_data['bearing']
-
-        if bearing is not None:
-            if bearing < 0.0 or bearing > 360.0:
-                raise forms.ValidationError('Bearing must be between 0.0 and 360.0')
-
-        return bearing
-
-    def clean_slope(self):
-        slope = self.cleaned_data['slope']
-
-        if slope is not None:
-            if slope < 0.0 or slope > 90.0:
-                raise forms.ValidationError('Slope must be between 0.0 and 90.0')
-
-        return slope
-
     def clean(self):
         if 'project' in self.cleaned_data and 'parent_site' in self.cleaned_data:
             project = self.cleaned_data.get('project')
@@ -239,54 +191,7 @@ class SiteForm(forms.ModelForm):
         return self.cleaned_data
 
 
-class SiteVisitDataSheetTemplateForm(forms.ModelForm):
-    """Upload form for local property register spreadsheets.
-    """
-
-    class Meta:
-        model = SiteVisitDataSheetTemplate
-        exclude = []
-
-    def __init__(self, *args, **kwargs):
-        super(SiteVisitDataSheetTemplateForm, self).__init__(*args, **kwargs)
-        self.fields['file'].help_text = '.xlsx files only'
-
-    def clean(self):
-        # Only clean the file field if a file has been uploaded (will skip
-        # when updating an existing object that already has a file).
-        if 'file' in self.cleaned_data and hasattr(self.cleaned_data['file'], 'content_type'):
-            # Allow Excel 2007 mimetype only (possibly others in future).
-            mime = [
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
-            f = self.cleaned_data['file'].content_type
-            if f not in mime:
-                msg = '{} is not an allowed file type'.format(f)
-                self._errors['file'] = self.error_class([msg])
-            return self.cleaned_data
-
-
-class DownloadDatasheetForm(forms.Form):
-    datasheets = forms.ModelChoiceField(
-        queryset=SiteVisitDataSheetTemplate.objects.all(),
-        label='Download blank datasheet')
-
-
-class UploadDatasheetForm(forms.Form):
-    file = forms.FileField(required=True, help_text='.xlsx files only')
-
-    def clean(self):
-        if 'file' in self.cleaned_data and hasattr(self.cleaned_data['file'], 'content_type'):
-            # Allow Excel 2007 mimetype only (possibly others in future).
-            mime = [
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
-            f = self.cleaned_data['file'].content_type
-            if f not in mime:
-                msg = '{} is not an allowed file type'.format(f)
-                self._errors['file'] = self.error_class([msg])
-            return self.cleaned_data
-
-
-class UploadDataForm(forms.Form):
+class UploadDatasetForm(forms.Form):
     file = forms.FileField(required=True, help_text='CSV files only')
     append_mode = forms.BooleanField(required=False, initial=False,
                                      help_text="If checked data will be added to the current set")
@@ -308,8 +213,3 @@ class UploadDataForm(forms.Form):
                 msg = '{} is not an allowed file type'.format(f)
                 self._errors['file'] = self.error_class([msg])
             return self.cleaned_data
-
-
-class FeedbackForm(ContactForm):
-    subject_intro = '[BioSys Feedback]  '
-    template_name = 'envelope/email_body.txt'

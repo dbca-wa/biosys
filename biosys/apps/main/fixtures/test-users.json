@@ -1,73 +1,79 @@
 [
-{
+  {
+    "model": "auth.user",
+    "pk": 1,
     "fields": {
-        "username": "admin",
-        "first_name": "Admin",
-        "last_name": "User",
-        "is_active": true,
-        "is_superuser": true,
-        "is_staff": true,
-        "groups": [],
-        "user_permissions": [],
-        "password": "",
-        "email": "asi@dpaw.wa.gov.au"
-    },
-    "model": "auth.user"
-},
-{
+      "password": "pbkdf2_sha256$30000$mGDhyqioJCSI$frTTdX5H7zHN0FuAoEvjKo6CEC+y+eEwylDTLww3+rE=",
+      "last_login": "2016-09-13T03:02:10.344Z",
+      "is_superuser": true,
+      "username": "admin",
+      "first_name": "",
+      "last_name": "",
+      "email": "admin@test.com",
+      "is_staff": true,
+      "is_active": true,
+      "date_joined": "2016-09-13T02:49:42.435Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 2,
     "fields": {
-        "username": "normaluser",
-        "first_name": "Normal",
-        "last_name": "User",
-        "is_active": true,
-        "is_superuser": false,
-        "is_staff": false,
-        "groups": [],
-        "user_permissions": [],
-        "password": "",
-        "email": "normaluser@dpaw.wa.gov.au"
-    },
-    "model": "auth.user"
-},
-{
+      "password": "pbkdf2_sha256$30000$zNNEMvFT23Pv$+OWZeBok5k9P612uYDQfHTvQl86EByH/BjUGs/o1AbU=",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "readonly",
+      "first_name": "Read",
+      "last_name": "Only",
+      "email": "readonly@test.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2016-09-13T02:52:06.093Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 3,
     "fields": {
-        "username": "custodian",
-        "first_name": "Custodian",
-        "last_name": "User",
-        "is_active": true,
-        "is_superuser": false,
-        "is_staff": true,
-        "groups": [
-            [
-                "Uploaders"
-            ],
-            [
-                "Data custodians"
-            ]
-        ],
-        "user_permissions": [],
-        "password": "",
-        "email": "custodian@dpaw.wa.gov.au"
-    },
-    "model": "auth.user"
-},
-{
+      "password": "pbkdf2_sha256$30000$ve0dUMpwbwxV$gvdbZNMpGj9irq4GQcnMQZccmptSHL7nPEOPryIgULA=",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "custodian1",
+      "first_name": "Cust",
+      "last_name": "Odian",
+      "email": "custodian@test.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2016-09-13T03:02:55.906Z",
+      "groups": [
+        1
+      ],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 4,
     "fields": {
-        "username": "uploader",
-        "first_name": "Uploader",
-        "last_name": "User",
-        "is_active": true,
-        "is_superuser": false,
-        "is_staff": true,
-        "groups": [
-            [
-                "Uploaders"
-            ]
-        ],
-        "user_permissions": [],
-        "password": "",
-        "email": "uploader@dpaw.wa.gov.au"
-    },
-    "model": "auth.user"
-}
+      "password": "pbkdf2_sha256$30000$ve0dUMpwbwxV$gvdbZNMpGj9irq4GQcnMQZccmptSHL7nPEOPryIgULA=",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "custodian2",
+      "first_name": "Cust2",
+      "last_name": "Odian2",
+      "email": "custodian2@test.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2016-09-13T03:02:55.906Z",
+      "groups": [
+        2
+      ],
+      "user_permissions": []
+    }
+  }
+
 ]

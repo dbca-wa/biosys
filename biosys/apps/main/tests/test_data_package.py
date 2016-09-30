@@ -1,13 +1,14 @@
 import copy
 import datetime
 
+from django.contrib.gis.geos import GEOSGeometry
 from django.test import TestCase
-from django.contrib.gis.geos import Point, GEOSGeometry
+from django.utils import timezone
+from django.utils import six
 from jsontableschema.exceptions import *
 
-from main.utils_data_package import *
-from main.constants import MODEL_SRID, get_datum_srid
 from main.models import Dataset, Observation, Project
+from main.utils_data_package import *
 
 
 def clone(descriptor):
@@ -101,6 +102,9 @@ DATUM_FIELD = {
     }
 }
 
+LAT_LONG_OBSERVATION_DATA_PACKAGE = clone(GENERIC_DATA_PACKAGE)
+LAT_LONG_OBSERVATION_DATA_PACKAGE['resources'][0]['schema'] = clone(LAT_LONG_OBSERVATION_SCHEMA)
+
 LAT_LONG_WITH_DATUM_OBSERVATION_SCHEMA = clone(LAT_LONG_OBSERVATION_SCHEMA)
 LAT_LONG_WITH_DATUM_OBSERVATION_SCHEMA['fields'].append(clone(DATUM_FIELD))
 
@@ -164,6 +168,9 @@ SPECIES_NAME_FIELD = {
 
 SPECIES_OBSERVATION_SCHEMA = clone(LAT_LONG_OBSERVATION_SCHEMA)
 SPECIES_OBSERVATION_SCHEMA['fields'].append(clone(SPECIES_NAME_FIELD))
+
+SPECIES_OBSERVATION_DATA_PACKAGE = clone(GENERIC_DATA_PACKAGE)
+SPECIES_OBSERVATION_DATA_PACKAGE['resources'][0]['schema'] = clone(SPECIES_OBSERVATION_SCHEMA)
 
 
 class TestSchemaConstraints(TestCase):
@@ -300,7 +307,7 @@ class TestSchemaFieldCast(TestCase):
         for v in valid_values:
             date = f.cast(v)
             self.assertIsInstance(date, datetime.date)
-            self.assertEqual(datetime.date(2016, 07, 29), date)
+            self.assertEqual(datetime.date(2016, 7, 29), date)
         invalid_value = ['29/07/2016', '07/29/2016', '2016-07-29 15:28:37']
         for v in invalid_value:
             with self.assertRaises(Exception):
@@ -320,7 +327,7 @@ class TestSchemaFieldCast(TestCase):
             '29-07-2016',
             '29-07-16'
         ]
-        expected_date = datetime.date(2016, 07, 29)
+        expected_date = datetime.date(2016, 7, 29)
         for v in valid_values:
             date = f.cast(v)
             self.assertIsInstance(date, datetime.date)
@@ -358,7 +365,7 @@ class TestSchemaFieldCast(TestCase):
 
         # test non unicode (python 2)
         value = 'not unicode'
-        self.assertIsInstance(f.cast(value), unicode)  # will fail on python 3 (type = str)
+        self.assertIsInstance(f.cast(value), six.text_type)  # will fail on python 3 (type = str)
         self.assertEqual(f.cast(value), value)
 
 
@@ -1230,7 +1237,7 @@ class TestObservationSchemaCast(TestCase):
         self.assertEquals((easting, northing), point.coords)
         self.assertEquals(get_datum_srid(datum), point.get_srid())
 
-        # create a db record and check geometry conversion
+        # create a db record with geometry = east/north and check geometry conversion
         # create dataset
         project = Project.objects.create(
             title="Test"
@@ -1242,6 +1249,7 @@ class TestObservationSchemaCast(TestCase):
         )
         record = Observation.objects.create(
             dataset=ds,
+            datetime=timezone.now(),
             geometry=point,
             data=record)
         record.refresh_from_db()
@@ -1315,7 +1323,8 @@ class TestSpeciesObservationSchema(TestCase):
         descriptor['fields'].append(field_desc)
 
         try:
-            self.assertEqual(SpeciesObservationSchema.find_species_name_field_or_throws(descriptor).name, field_desc['name'])
+            self.assertEqual(SpeciesObservationSchema.find_species_name_field_or_throws(descriptor).name,
+                             field_desc['name'])
         except Exception as e:
             self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
 
@@ -1341,7 +1350,8 @@ class TestSpeciesObservationSchema(TestCase):
         descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
         descriptor['fields'].append(field_desc)
         try:
-            self.assertEqual(SpeciesObservationSchema.find_species_name_field_or_throws(descriptor).name, field_desc['name'])
+            self.assertEqual(SpeciesObservationSchema.find_species_name_field_or_throws(descriptor).name,
+                             field_desc['name'])
         except Exception as e:
             self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
 

@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import absolute_import, unicode_literals, print_function, division
 
 import io
 import json
@@ -8,6 +8,7 @@ from os.path import join
 import jsontableschema
 from dateutil.parser import parse as date_parse
 from django.utils.encoding import python_2_unicode_compatible
+from django.utils import six
 from future.utils import raise_with_traceback
 from jsontableschema.exceptions import InvalidDateType
 from jsontableschema.model import SchemaModel, types
@@ -215,10 +216,10 @@ class SchemaField:
         :param value:
         :return:
         """
-        # TODO: delete in python3
-        if isinstance(value, basestring):
+        # TODO: remove that when running in Python3
+        if isinstance(value, six.string_types) and not isinstance(value, six.text_type):
             # the StringType accepts only unicode
-            value = unicode(value)
+            value = six.u(value)
         return self.type.cast(value)
 
     def validation_error(self, value):
@@ -231,7 +232,7 @@ class SchemaField:
         try:
             self.cast(value)
         except Exception as e:
-            error = e.message
+            error = "{}".format(e)
         return error
 
     def __str__(self):
@@ -281,7 +282,7 @@ class SchemaForeignKey:
     def _as_list(value):
         if isinstance(value, list):
             return value
-        elif isinstance(value, basestring):
+        elif isinstance(value, six.string_types):
             return [value]
         else:
             return list(value)
@@ -493,7 +494,7 @@ class ObservationSchema(GenericSchema):
                       "One should be tagged as a biosys type=observationDate "
                 raise ObservationSchemaError(msg)
             msg = "The schema doesn't include a required Observation Date field. " \
-                  "It must have a field named {} or with biosys type {}". \
+                  "It must have a field named {} or tagged with biosys type {}". \
                 format(ObservationSchema.OBSERVATION_DATE_FIELD_NAME, BiosysSchema.OBSERVATION_DATE_TYPE_NAME)
             raise ObservationSchemaError(msg)
 
@@ -532,7 +533,7 @@ class ObservationSchema(GenericSchema):
             else:
                 return field
         msg = "The schema doesn't include a required latitude field. " \
-              "It must have a field named {} or with biosys type {}". \
+              "It must have a field named {} or tagged with biosys type {}". \
             format(ObservationSchema.LATITUDE_FIELD_NAME, BiosysSchema.LATITUDE_TYPE_NAME)
         raise ObservationSchemaError(msg)
 
@@ -571,7 +572,7 @@ class ObservationSchema(GenericSchema):
             else:
                 return field
         msg = "The schema doesn't include a required longitude field. " \
-              "It must have a field named {} or with biosys type {}". \
+              "It must have a field named {} or tagged with biosys type {}". \
             format(ObservationSchema.LONGITUDE_FIELD_NAME, BiosysSchema.LONGITUDE_TYPE_NAME)
         raise ObservationSchemaError(msg)
 
@@ -669,7 +670,7 @@ class SpeciesObservationSchema(ObservationSchema):
             else:
                 return field
         msg = "The schema doesn't include a required 'Species Name' field. " \
-              "It must have a field named {} or with biosys type {}". \
+              "It must have a field named {} or tagged with biosys type {}". \
             format(SpeciesObservationSchema.SPECIES_NAME_FIELD_NAME, BiosysSchema.SPECIES_NAME_TYPE_NAME)
         raise SpeciesObservationSchemaError(msg)
 
@@ -681,7 +682,7 @@ class SpeciesObservationSchema(ObservationSchema):
 class Exporter:
     def __init__(self, dataset, records=None):
         self.ds = dataset
-        self.schema = GenericSchema(dataset.schema)
+        self.schema = GenericSchema(dataset.schema_data)
         self.headers = self.schema.headers
         self.warnings = []
         self.errors = []
@@ -691,7 +692,7 @@ class Exporter:
         for record in self.records:
             row = []
             for field in self.schema.field_names:
-                row.append(unicode(record.data.get(field, '')))
+                row.append(six.u(record.data.get(field, '')))
             yield row
 
     def to_csv(self):
@@ -727,7 +728,7 @@ def infer_csv(csv_file, outfile, row_limit=0):
             headers = stream.readline().rstrip('\n').split(',')
             values = jsontableschema.compat.csv_reader(stream)
             schema = jsontableschema.infer(headers, values, row_limit=row_limit)
-            fp.write(unicode(json.dumps(schema, indent=2, ensure_ascii=False)))
+            fp.write(six.u(json.dumps(schema, indent=2, ensure_ascii=False)))
 
 
 def infer_csvs(path, row_limit=0):

@@ -1,6 +1,8 @@
 """
 Django settings for biosys project.
 """
+from __future__ import absolute_import, unicode_literals, print_function, division
+
 from confy import env, database
 import os
 import sys
@@ -33,7 +35,7 @@ if not DEBUG:
 # Application definition
 # The variables below are added to all responses in biosys/context_processors.py
 SITE_TITLE = 'BioSys - WA Biological Survey Database'
-APPLICATION_VERSION_NO = '2.0.0'
+APPLICATION_VERSION_NO = '3.0.b1'
 
 INSTALLED_APPS = (
     'grappelli',  # Must be before django.contrib.admin
@@ -45,28 +47,22 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.gis',
     'django.contrib.postgres',
-    # Third-party apps.
+
+    'rest_framework',
+    'rest_framework_swagger',
+    'rest_framework.authtoken',
+    'dry_rest_permissions',
+    'rest_framework_gis',
+
     'django_extensions',
-    'envelope',
     'reversion',
-    'tastypie',
-    'webtemplate_dpaw',
     'bootstrap3',
     'timezone_field'
 )
 
 PROJECT_APPS = (
     'main',
-    'species',
     'publish',
-
-
-    # legacy apps
-    'vegetation',
-    'animals',
-    'upload',
-    'download',
-    'old_publish',
 )
 
 INSTALLED_APPS += PROJECT_APPS
@@ -81,7 +77,6 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.gzip.GZipMiddleware',
-    'reversion.middleware.RevisionMiddleware',
     'dpaw_utils.middleware.SSOLoginMiddleware',
 )
 
@@ -97,18 +92,54 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': [
                 "django.contrib.auth.context_processors.auth",
-                "django.core.context_processors.debug",
-                "django.core.context_processors.i18n",
-                "django.core.context_processors.media",
-                "django.core.context_processors.static",
-                "django.core.context_processors.tz",
+                "django.template.context_processors.debug",
+                "django.template.context_processors.i18n",
+                "django.template.context_processors.media",
+                "django.template.context_processors.static",
+                "django.template.context_processors.request",
+                "django.template.context_processors.tz",
+                "django.template.context_processors.csrf",
                 "django.contrib.messages.context_processors.messages",
-                "django.core.context_processors.request",
                 "biosys.context_processors.standard",
             ],
         },
     },
 ]
+
+LOGIN_URL = '/login/'
+LOGOUT_URL = '/logout/'
+LOGIN_REDIRECT_URL = '/'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    # TODO: why setting the permission below breaks the swagger explorer
+    'DEFAULT_PERMISSION_CLASSES': [
+        # 'rest_framework.permissions.DjangoModelPermissions' # this permission breaks the explorer.
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        # 'rest_framework.renderers.BrowsableAPIRenderer', # commented because we use the swagger explorer
+    ),
+    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
+}
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'basic': {
+            'type': 'basic'
+        }
+    },
+    'USE_SESSION_AUTH': True,
+    'APIS_SORTER': 'alpha',
+}
+
 
 WSGI_APPLICATION = 'biosys.wsgi.application'
 
@@ -155,9 +186,6 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 )
-
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/'
 
 BOOTSTRAP3 = {
     'jquery_url': '//static.dpaw.wa.gov.au/static/libs/jquery/2.2.1/jquery.min.js',
@@ -252,19 +280,8 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 
-
-# django-tastypie settings
-TASTYPIE_ALLOW_MISSING_SLASH = True
-TASTYPIE_DATETIME_FORMATTING = 'iso-8601-strict'
-TASTYPIE_DEFAULT_FORMATS = ['json']
-API_LIMIT_PER_PAGE = 0
-
 # Grappelli settings
 GRAPPELLI_ADMIN_TITLE = SITE_TITLE + ' administration'
-
-# envelop extensions
-ENVELOPE_EMAIL_RECIPIENTS = ['biosys@DPaW.wa.gov.au']
-ENVELOPE_USE_HTML_EMAIL = False
 
 # Email settings
 EMAIL_HOST = env('EMAIL_HOST', 'email.host')
