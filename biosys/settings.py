@@ -53,6 +53,7 @@ INSTALLED_APPS = (
     'rest_framework.authtoken',
     'dry_rest_permissions',
     'rest_framework_gis',
+    'corsheaders',
 
     'django_extensions',
     'reversion',
@@ -78,6 +79,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.gzip.GZipMiddleware',
     'dpaw_utils.middleware.SSOLoginMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 )
 
 ROOT_URLCONF = 'biosys.urls'
@@ -140,6 +142,7 @@ SWAGGER_SETTINGS = {
     'APIS_SORTER': 'alpha',
 }
 
+CORS_ORIGIN_ALLOW_ALL = True
 
 WSGI_APPLICATION = 'biosys.wsgi.application'
 
