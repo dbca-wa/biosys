@@ -313,21 +313,20 @@ class TestSchemaFieldCast(TestCase):
             with self.assertRaises(Exception):
                 f.cast(v)
 
-        # format='any'. Auto-detect but will use the bloody mm/dd/yyyy american format by default
+        # The main problem is to be sure that a dd/mm/yyyy is not interpreted as mm/dd/yyyy
         descriptor['format'] = 'any'
         f = SchemaField(descriptor)
         valid_values = [
-            '2016-07-29',
-            '07/29/2016',
-            '07/29/16',
-            '2016-07-29 15:28:37',
-            '29/07/2016',
-            '29-July-2016',
-            '29-JUlY-16',
-            '29-07-2016',
-            '29-07-16'
+            '2016-07-10',
+            '10/07/2016',
+            '10/07/16',
+            '2016-07-10 15:28:37',
+            '10-July-2016',
+            '10-JUlY-16',
+            '10-07-2016',
+            '10-07-16'
         ]
-        expected_date = datetime.date(2016, 7, 29)
+        expected_date = datetime.date(2016, 7, 10)
         for v in valid_values:
             date = f.cast(v)
             self.assertIsInstance(date, datetime.date)
@@ -336,10 +335,6 @@ class TestSchemaFieldCast(TestCase):
         for v in invalid_value:
             with self.assertRaises(Exception):
                 f.cast(v)
-        # test that it works in dd/mm/yyyy not mm/dd/yyy
-        date = '01/12/2016'
-        expected = datetime.date(2016, 12, 1)
-        self.assertEqual(f.cast(date), expected)
 
     def test_date_custom_format(self):
         format_ = 'fmt:%d %b %y'  # ex 30 Nov 14
