@@ -59,7 +59,7 @@ class DayFirstDateType(types.DateType):
             # there's a 'bug' in dateutil.parser.parse (2.5.3)if you are using
             # dayfirst=True. It will parse YYYY-MM-DD as YYYY-DD-MM !!
             # https://github.com/dateutil/dateutil/issues/268
-            dayfirst = False if YYYY_MM_DD_REGEX.match(value) else True
+            dayfirst = not YYYY_MM_DD_REGEX.match(value)
             return date_parse(value, dayfirst=dayfirst).date()
         except (TypeError, ValueError) as e:
             raise_with_traceback(InvalidDateType(e))
