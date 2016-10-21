@@ -2,6 +2,7 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 
 import io
 import json
+import re
 from os import listdir
 from os.path import join
 
@@ -21,6 +22,7 @@ from django.contrib.gis.geos import Point
 from main.constants import MODEL_SRID, SUPPORTED_DATUMS, get_datum_srid, is_supported_datum
 
 COLUMN_HEADER_FONT = Font(bold=True)
+YYYY_MM_DD_REGEX = re.compile(r'^\d{4}-\d{2}-\d{2}')
 
 
 class ObservationSchemaError(Exception):
@@ -54,24 +56,20 @@ class DayFirstDateType(types.DateType):
         if isinstance(value, self.python_type):
             return value
         try:
-            return date_parse(value, dayfirst=True).date()
+            # there's a 'bug' in dateutil.parser.parse (2.5.3)if you are using
+            # dayfirst=True. It will parse 2016-12-01 as the 12/01/2016 !!
+            # https://github.com/dateutil/dateutil/issues/268
+            dayfirst = False if YYYY_MM_DD_REGEX.match(value) else True
+            return date_parse(value, dayfirst=dayfirst).date()
         except (TypeError, ValueError) as e:
             raise_with_traceback(InvalidDateType(e))
 
 
-class DayFirstDateTimeType(types.DateTimeType):
+class DayFirstDateTimeType(DayFirstDateType):
     """
     Extend the jsontableschema DateType which use the mm/dd/yyyy date model for the 'any' format
     to use dd/mm/yyyy
     """
-
-    def cast_any(self, value, fmt=None):
-        if isinstance(value, self.python_type):
-            return value
-        try:
-            return date_parse(value, dayfirst=True).date()
-        except (TypeError, ValueError) as e:
-            raise_with_traceback(InvalidDateType(e))
 
 
 class NotBlankStringType(types.StringType):
@@ -135,6 +133,7 @@ class BiosysSchema:
 
     def is_species_name(self):
         return self.type == self.SPECIES_NAME_TYPE_NAME
+
 
 @python_2_unicode_compatible
 class SchemaField:
@@ -658,7 +657,8 @@ class SpeciesObservationSchema(ObservationSchema):
             else:
                 return field
         # no Biosys species_name field found look for column name
-        fields = [f for f in schema.fields if f.name.lower() == SpeciesObservationSchema.SPECIES_NAME_FIELD_NAME.lower()]
+        fields = [f for f in schema.fields if
+                  f.name.lower() == SpeciesObservationSchema.SPECIES_NAME_FIELD_NAME.lower()]
         if len(fields) > 1:
             msg = "More than one 'Species Name' field found!. {}".format(fields)
             raise SpeciesObservationSchemaError(msg)
