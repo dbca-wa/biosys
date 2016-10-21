@@ -57,7 +57,7 @@ class DayFirstDateType(types.DateType):
             return value
         try:
             # there's a 'bug' in dateutil.parser.parse (2.5.3)if you are using
-            # dayfirst=True. It will parse 2016-12-01 as the 12/01/2016 !!
+            # dayfirst=True. It will parse YYYY-MM-DD as YYYY-DD-MM !!
             # https://github.com/dateutil/dateutil/issues/268
             dayfirst = False if YYYY_MM_DD_REGEX.match(value) else True
             return date_parse(value, dayfirst=dayfirst).date()
