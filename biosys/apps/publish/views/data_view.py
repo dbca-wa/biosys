@@ -13,7 +13,6 @@ class DataView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         if 'projects' not in kwargs:
-            # kwargs['projects'] = [ds.project for ds in DataSet.objects.all().order_by('project').distinct('project')]
             kwargs['projects'] = Project.objects.all()
         return super(DataView, self).get_context_data(**kwargs)
 
