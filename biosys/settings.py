@@ -3,9 +3,10 @@ Django settings for biosys project.
 """
 from __future__ import absolute_import, unicode_literals, print_function, division
 
-from confy import env, database
 import os
 import sys
+
+from confy import env, database
 from unipath import Path
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -129,7 +130,8 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
         # 'rest_framework.renderers.BrowsableAPIRenderer', # commented because we use the swagger explorer
     ),
-    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
+    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
 }
 
 SWAGGER_SETTINGS = {
