@@ -1,9 +1,11 @@
+from django.contrib.auth import get_user_model
+from django.shortcuts import reverse
 from django.test import TestCase
 from django_dynamic_fixture import G
-from django.shortcuts import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
-from django.contrib.auth import get_user_model
+
+from main.models import Project
 
 
 class TestWhoAmI(TestCase):
@@ -80,6 +82,34 @@ class TestStatistics(TestCase):
             resp.status_code,
             status.HTTP_200_OK
         )
+        # expected response with no data
+        expected = {
+            'projects': {'total': 0},
+            'datasets': {
+                'total': 0,
+                'generic': {'total': 0},
+                'observation': {'total': 0},
+                'speciesObservation': {'total': 0},
+            },
+            'records': {
+                'total': 0,
+                'generic': {'total': 0},
+                'observation': {'total': 0},
+                'speciesObservation': {'total': 0},
+            }
+        }
+        self.assertEquals(expected, resp.json())
+
+        # create one project
+        G(Project)
+        self.assertEquals(1, Project.objects.count())
+        expected['projects']['total'] = 1
+        resp = client.get(self.url)
+        self.assertEqual(
+            resp.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertEquals(expected, resp.json())
 
     def test_not_allowed_methods(self):
         user = G(get_user_model())
