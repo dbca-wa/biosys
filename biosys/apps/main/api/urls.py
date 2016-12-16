@@ -7,6 +7,7 @@ from main.api import views as main_views
 
 
 router = routers.DefaultRouter()
+router.register(r'users?', main_views.UserViewSet, 'user')
 router.register(r'projects?', main_views.ProjectViewSet, 'project')
 router.register(r'sites?', main_views.SiteViewSet, 'site')
 router.register(r'datasets?', main_views.DatasetViewSet, 'dataset')

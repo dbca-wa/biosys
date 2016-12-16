@@ -2,6 +2,7 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 
 from collections import OrderedDict
 
+from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from dry_rest_permissions.generics import DRYPermissions
 from rest_framework import viewsets, filters, generics
@@ -14,6 +15,24 @@ from main.api import serializers
 from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
 from main.utils_auth import is_admin
 from main.utils_species import HerbieFacade
+
+
+class UserPermission(BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        return request.method in SAFE_METHODS or (is_admin(user) and request.method != 'DELETE')
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        return request.method in SAFE_METHODS or (is_admin(user) or obj == user and request.method != 'DELETE')
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, UserPermission)
+    queryset = get_user_model().objects.all()
+    serializer_class = serializers.UserSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_fields = ('username', 'first_name', 'last_name', 'email')
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
