@@ -229,6 +229,7 @@ class ObservationSerializer(GenericRecordSerializer):
     class Meta:
         model = Observation
         list_serializer_class = ObservationListSerializer
+        fields = '__all__'
 
 
 class SpeciesObservationListSerializer(ObservationListSerializer):
@@ -290,3 +291,4 @@ class SpeciesObservationSerializer(ObservationSerializer):
     class Meta:
         model = SpeciesObservation
         list_serializer_class = SpeciesObservationListSerializer
+        fields = '__all__'
