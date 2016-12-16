@@ -1,19 +1,18 @@
 import datetime
 
 from django.contrib.auth.models import User
+from django.contrib.gis.geos import Point
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
 from django.utils import timezone
-from django.contrib.gis.geos import Point
-
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from main.models import Project, Site, Dataset
+from main.tests.api import helpers
 from main.tests.test_data_package import clone
 from main.utils_auth import is_admin
-from main.utils_species import HerbieFacade, NoSpeciesFacade
-from main.tests.api import helpers
+from main.utils_species import NoSpeciesFacade
 
 
 class TestPermissions(TestCase):
@@ -245,6 +244,29 @@ class TestPermissions(TestCase):
                     status.HTTP_204_NO_CONTENT
                 )
                 self.assertTrue(Dataset.objects.count(), count - 1)
+
+    def test_options(self):
+        urls = [
+            reverse('api:speciesObservation-list'),
+            reverse('api:speciesObservation-detail', kwargs={'pk': 1})
+        ]
+        access = {
+            "forbidden": [self.anonymous_client],
+            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertEqual(
+                    client.options(url).status_code,
+                    status.HTTP_401_UNAUTHORIZED
+                )
+        # authenticated
+        for client in access['allowed']:
+            for url in urls:
+                self.assertEqual(
+                    client.options(url).status_code,
+                    status.HTTP_200_OK
+                )
 
 
 class TestDataValidation(TestCase):

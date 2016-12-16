@@ -171,6 +171,9 @@ class Dataset(models.Model):
     def has_metadata_permission(request):
         return True
 
+    def has_object_metadata_permission(self, request):
+        return True
+
     @staticmethod
     def has_create_permission(request):
         """
@@ -254,6 +257,9 @@ class AbstractRecord(models.Model):
 
     @staticmethod
     def has_metadata_permission(request):
+        return True
+
+    def has_object_metadata_permission(self, request):
         return True
 
     @staticmethod
@@ -389,6 +395,9 @@ class Project(models.Model):
     def has_metadata_permission(request):
         return True
 
+    def has_object_metadata_permission(self, request):
+        return True
+
     @staticmethod
     def has_create_permission(request):
         return is_admin(request.user)
@@ -454,6 +463,9 @@ class Site(models.Model):
 
     @staticmethod
     def has_metadata_permission(request):
+        return True
+
+    def has_object_metadata_permission(self, request):
         return True
 
     @staticmethod
