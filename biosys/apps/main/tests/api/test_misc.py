@@ -5,7 +5,7 @@ from django_dynamic_fixture import G
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from main.models import Project
+from main.models import Project, Site
 
 
 class TestWhoAmI(TestCase):
@@ -96,14 +96,27 @@ class TestStatistics(TestCase):
                 'generic': {'total': 0},
                 'observation': {'total': 0},
                 'speciesObservation': {'total': 0},
-            }
+            },
+            'sites': {'total': 0},
         }
         self.assertEquals(expected, resp.json())
 
         # create one project
-        G(Project)
+        project = G(Project)
         self.assertEquals(1, Project.objects.count())
         expected['projects']['total'] = 1
+        resp = client.get(self.url)
+        self.assertEqual(
+            resp.status_code,
+            status.HTTP_200_OK
+        )
+        self.assertEquals(expected, resp.json())
+
+        # create some sites
+        count = 3
+        for i in range(0, count):
+            G(Site, project=project, parent_site=None)  # if parent_site None to avoid other sites/projects creation
+        expected['sites']['total'] = count
         resp = client.get(self.url)
         self.assertEqual(
             resp.status_code,

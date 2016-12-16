@@ -224,6 +224,10 @@ class StatisticsView(APIView):
                 'total': species_observation_count
             }),
         ])
+        qs = Site.objects.all()
+        data['sites'] = {
+            'total': qs.count()
+        }
         return Response(data)
 
 
