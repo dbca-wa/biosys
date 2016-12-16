@@ -1,9 +1,10 @@
-from django.test import TestCase, override_settings
-from django.core.urlresolvers import reverse
-from rest_framework.test import APIClient
-from rest_framework import status
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
+from django.test import TestCase, override_settings
+from rest_framework import status
+from rest_framework.test import APIClient
 
+from main.constants import DATUM_CHOICES
 from main.models import Project, Site
 from main.utils_auth import is_admin
 
@@ -250,6 +251,44 @@ class TestPermissions(TestCase):
                     client.delete(url, data, format='json').status_code,
                     status.HTTP_200_OK
                 )
+
+    def test_options(self):
+        urls = [
+            reverse('api:project-list'),
+            reverse('api:project-detail', kwargs={'pk': 1})
+        ]
+        access = {
+            "forbidden": [self.anonymous_client],
+            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertEqual(
+                    client.options(url).status_code,
+                    status.HTTP_401_UNAUTHORIZED
+                )
+        # authenticated
+        for client in access['allowed']:
+            for url in urls:
+                self.assertEqual(
+                    client.options(url).status_code,
+                    status.HTTP_200_OK
+                )
+
+    def test_options_model_choices(self):
+        """
+        Test that the options request return model choices
+        :return:
+        """
+        url = reverse('api:project-list')
+        client = self.admin_client
+        resp = client.options(url)
+        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        data = resp.json()
+        datum_choices = data.get('actions', {}).get('POST', {}).get('datum', {}).get('choices', None)
+        self.assertTrue(datum_choices)
+        expected = [{'value': d[0], 'display_name': d[1]} for d in DATUM_CHOICES]
+        self.assertEquals(expected, datum_choices)
 
 
 class TestProjectSiteBulk(TestCase):

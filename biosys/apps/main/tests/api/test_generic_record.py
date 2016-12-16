@@ -235,6 +235,29 @@ class TestPermissions(TestCase):
                 )
                 self.assertTrue(Dataset.objects.count(), count - 1)
 
+    def test_options(self):
+        urls = [
+            reverse('api:genericRecord-list'),
+            reverse('api:genericRecord-detail', kwargs={'pk': 1})
+        ]
+        access = {
+            "forbidden": [self.anonymous_client],
+            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertEqual(
+                    client.options(url).status_code,
+                    status.HTTP_401_UNAUTHORIZED
+                )
+        # authenticated
+        for client in access['allowed']:
+            for url in urls:
+                self.assertEqual(
+                    client.options(url).status_code,
+                    status.HTTP_200_OK
+                )
+
 
 class TestDataValidation(TestCase):
     fixtures = [
