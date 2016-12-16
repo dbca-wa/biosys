@@ -136,7 +136,7 @@ class DatasetDataView(generics.ListCreateAPIView, SpeciesMixin):
         return ctx
 
     def get_queryset(self):
-        return self.dataset.record_queryset
+        return self.dataset.record_queryset if self.dataset else Dataset.objects.none()
 
     def get(self, request, *args, **kwargs):
         """
