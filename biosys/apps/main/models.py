@@ -15,8 +15,8 @@ from django.utils.text import Truncator
 from timezone_field import TimeZoneField
 
 from main.constants import DATUM_CHOICES, MODEL_SRID
-from main.utils_data_package import GenericSchema, ObservationSchema, SpeciesObservationSchema
 from main.utils_auth import is_admin, belongs_to
+from main.utils_data_package import GenericSchema, ObservationSchema, SpeciesObservationSchema
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +168,10 @@ class Dataset(models.Model):
         return True
 
     @staticmethod
+    def has_metadata_permission(request):
+        return True
+
+    @staticmethod
     def has_create_permission(request):
         """
         Custodian and admin only
@@ -246,6 +250,10 @@ class AbstractRecord(models.Model):
         return True
 
     def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_metadata_permission(request):
         return True
 
     @staticmethod
@@ -378,6 +386,10 @@ class Project(models.Model):
         return True
 
     @staticmethod
+    def has_metadata_permission(request):
+        return True
+
+    @staticmethod
     def has_create_permission(request):
         return is_admin(request.user)
 
@@ -438,6 +450,10 @@ class Site(models.Model):
         return True
 
     def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_metadata_permission(request):
         return True
 
     @staticmethod
