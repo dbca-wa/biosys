@@ -18,7 +18,6 @@ class TestPermissions(TestCase):
     Delete: admin, custodians
     """
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -261,7 +260,6 @@ class TestPermissions(TestCase):
 
 class TestDataValidation(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -382,7 +380,6 @@ class TestDataValidation(TestCase):
 
 class TestSiteExtraction(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',

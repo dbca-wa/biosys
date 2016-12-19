@@ -18,7 +18,6 @@ class TestPermissions(TestCase):
     Delete: forbidden through API
     """
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects'
     ]
@@ -296,7 +295,6 @@ class TestProjectSiteBulk(TestCase):
     Test the bulk upload/get end-point project/{pk}/sites
     """
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites'

@@ -24,7 +24,6 @@ class TestPermissions(TestCase):
     Delete: admin, custodians
     """
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -271,7 +270,6 @@ class TestPermissions(TestCase):
 
 class TestDataValidation(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -567,7 +565,6 @@ class TestDataValidation(TestCase):
 
 class TestDateTimeAndGeometryExtraction(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -696,7 +693,6 @@ class TestDateTimeAndGeometryExtraction(TestCase):
 
 class TestSpeciesNameExtraction(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -814,7 +810,6 @@ class TestNameID(TestCase):
     Test that we retrieve the name id from the species facade
     """
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',

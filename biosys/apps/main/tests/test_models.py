@@ -7,7 +7,6 @@ from main.models import *
 
 class TestProject(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
     ]
 

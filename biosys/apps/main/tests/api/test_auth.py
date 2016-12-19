@@ -1,11 +1,11 @@
 import base64
-import six
 
-from django.core.urlresolvers import reverse
+import six
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
 from django.test import TestCase
-from rest_framework.test import APIClient
 from rest_framework import status
+from rest_framework.test import APIClient
 
 
 class TestBasicAuth(TestCase):
@@ -13,7 +13,6 @@ class TestBasicAuth(TestCase):
     Basic Auth is currently turned on.
     """
     fixtures = [
-        'test-groups',
         'test-users'
     ]
 

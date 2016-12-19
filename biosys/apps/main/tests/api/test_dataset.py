@@ -23,7 +23,6 @@ class TestPermissions(TestCase):
     Delete: admin, custodians
     """
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -291,7 +290,6 @@ class TestDataPackageValidation(TestCase):
     Test that when create/update the datapackage validation is called
     """
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
