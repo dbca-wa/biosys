@@ -2,6 +2,7 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 
 from collections import OrderedDict
 
+from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from dry_rest_permissions.generics import DRYPermissions
 from rest_framework import viewsets, filters, generics
@@ -14,6 +15,45 @@ from main.api import serializers
 from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
 from main.utils_auth import is_admin
 from main.utils_species import HerbieFacade
+
+
+class UserPermission(BasePermission):
+    """
+    Rules:
+    Get: authenticated
+    Update: admin or user itself
+    Create: admin
+    Delete: forbidden through API
+    """
+
+    def has_permission(self, request, view):
+        """
+        Global level.
+        Reject Delete and Create for non admin.
+        The rest will be checked at object level (below)
+        """
+        method = request.method
+        if method == 'DELETE':
+            return False
+        if method == 'POST':
+            return is_admin(request.user)
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        """
+        Object level. Will be called only if the global level passed (see above).
+        Note: it won't be called for a Create (POST) method
+        """
+        is_owner = (request.user == obj)
+        return request.method in SAFE_METHODS or is_admin(request.user) or is_owner
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, UserPermission,)
+    queryset = get_user_model().objects.all()
+    serializer_class = serializers.UserSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_fields = ('username', 'first_name', 'last_name', 'email')
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -224,6 +264,10 @@ class StatisticsView(APIView):
                 'total': species_observation_count
             }),
         ])
+        qs = Site.objects.all()
+        data['sites'] = {
+            'total': qs.count()
+        }
         return Response(data)
 
 
