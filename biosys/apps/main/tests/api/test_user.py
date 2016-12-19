@@ -17,7 +17,6 @@ class TestPermissions(TestCase):
     Delete: forbidden through API
     """
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects'
     ]

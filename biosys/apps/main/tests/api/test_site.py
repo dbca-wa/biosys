@@ -17,7 +17,6 @@ class TestPermissions(TestCase):
     Delete: admin, custodians
     """
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites'

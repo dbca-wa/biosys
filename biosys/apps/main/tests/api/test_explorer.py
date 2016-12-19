@@ -1,19 +1,14 @@
+from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
-from django.contrib.auth.models import User
-
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from main.models import Project, Site, Dataset
 from main.utils_auth import is_admin
-from main.utils_species import HerbieFacade, NoSpeciesFacade
-from main.tests.api import helpers
 
 
 class TestView(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',

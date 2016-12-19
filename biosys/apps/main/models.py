@@ -6,7 +6,6 @@ from os import path
 import datapackage
 import jsontableschema
 from django.conf import settings
-from django.contrib.auth.models import User, Group
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ValidationError
@@ -15,7 +14,7 @@ from django.utils.text import Truncator
 from timezone_field import TimeZoneField
 
 from main.constants import DATUM_CHOICES, MODEL_SRID
-from main.utils_auth import is_admin, belongs_to
+from main.utils_auth import is_admin
 from main.utils_data_package import GenericSchema, ObservationSchema, SpeciesObservationSchema
 
 logger = logging.getLogger(__name__)
@@ -217,7 +216,7 @@ class Dataset(models.Model):
 class DatasetFile(models.Model):
     file = models.FileField(upload_to='%Y/%m/%d')
     uploaded_date = models.DateTimeField(auto_now_add=True)
-    uploaded_by = models.ForeignKey(User, null=True, blank=True)
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
     dataset = models.ForeignKey(Dataset, blank=False, null=True)
 
     def __str__(self):
@@ -373,15 +372,11 @@ class Project(models.Model):
                                   help_text='Define here the attributes that all your sites will share. '
                                             'This allows validation when importing sites.')
 
-    custodians = models.ManyToManyField(Group, blank=True, help_text="Add group of users that have write access"
-                                                                     " to the data of this project.")
+    custodians = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True,
+                                        help_text="Users that have write/upload access to the data of this project.")
 
     def is_custodian(self, user):
-        # TODO: should be done in one query
-        for group in self.custodians.all():
-            if belongs_to(user, group.name):
-                return True
-        return False
+        return user in self.custodians.all()
 
     # API permissions
     @staticmethod

@@ -13,7 +13,6 @@ from main.utils_species import NoSpeciesFacade, HerbieFacade
 
 class TestGenericPermissions(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -194,7 +193,6 @@ class TestGenericPermissions(TestCase):
 
 class TestBulkGenericCreate(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -320,7 +318,6 @@ class TestBulkGenericCreate(TestCase):
 
 class TestBulkGenericUpdate(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -412,7 +409,6 @@ class TestBulkGenericUpdate(TestCase):
 
 class TestObservationPermissions(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -601,7 +597,6 @@ class TestObservationPermissions(TestCase):
 
 class TestBulkObservationCreate(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -714,7 +709,6 @@ class TestBulkObservationCreate(TestCase):
 
 class TestBulkObservationUpdate(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -797,7 +791,6 @@ class TestBulkObservationUpdate(TestCase):
 
 class TestSpeciesObservationPermissions(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -982,7 +975,6 @@ class TestSpeciesObservationPermissions(TestCase):
 
 class TestBulkSpeciesObservationCreate(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -1089,7 +1081,6 @@ class TestBulkSpeciesObservationCreate(TestCase):
 
 class TestBulkSpeciesObservationUpdate(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',

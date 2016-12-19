@@ -2,12 +2,14 @@ from django.core.urlresolvers import reverse
 from django.test import TestCase
 from django.test.client import Client
 from mixer.backend.django import mixer
-from django.contrib.auth.models import User
+
 from main.models import Project, Site
 
 
 class BaseTestCase(TestCase):
-    fixtures = ['test-groups', 'test-users.json']
+    fixtures = [
+        'test-users.json'
+    ]
     client = Client()
 
     def setUp(self):
