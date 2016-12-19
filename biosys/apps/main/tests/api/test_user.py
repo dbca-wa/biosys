@@ -157,6 +157,7 @@ class TestPermissions(TestCase):
         :return:
         """
         user = self.custodian_1_user
+        user_client = self.custodian_1_client
         urls = [reverse('api:user-detail', kwargs={'pk': user.pk})]
         new_first_name = "New First Name"
         data = {
@@ -164,7 +165,7 @@ class TestPermissions(TestCase):
         }
         access = {
             "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
-            "allowed": [self.admin_client, self.custodian_1_client]
+            "allowed": [self.admin_client, user_client]
         }
 
         for client in access['forbidden']:

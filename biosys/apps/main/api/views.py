@@ -18,17 +18,38 @@ from main.utils_species import HerbieFacade
 
 
 class UserPermission(BasePermission):
+    """
+    Rules:
+    Get: authenticated
+    Update: admin or user itself
+    Create: admin
+    Delete: forbidden through API
+    """
+
     def has_permission(self, request, view):
-        user = request.user
-        return request.method in SAFE_METHODS or (is_admin(user) and request.method != 'DELETE')
+        """
+        Global level.
+        Reject Delete and Create for non admin.
+        The rest will be checked at object level (below)
+        """
+        method = request.method
+        if method == 'DELETE':
+            return False
+        if method == 'POST':
+            return is_admin(request.user)
+        return True
 
     def has_object_permission(self, request, view, obj):
-        user = request.user
-        return request.method in SAFE_METHODS or (is_admin(user) or obj == user and request.method != 'DELETE')
+        """
+        Object level. Will be called only if the global level passed (see above).
+        Note: it won't be called for a Create (POST) method
+        """
+        is_owner = (request.user == obj)
+        return request.method in SAFE_METHODS or is_admin(request.user) or is_owner
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    permission_classes = (IsAuthenticated, UserPermission)
+    permission_classes = (IsAuthenticated, UserPermission,)
     queryset = get_user_model().objects.all()
     serializer_class = serializers.UserSerializer
     filter_backends = (filters.DjangoFilterBackend,)
