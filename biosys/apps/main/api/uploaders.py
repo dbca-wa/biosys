@@ -47,7 +47,7 @@ class SiteUploader:
             if parent_site_code:
                 kwargs['parent_site'] = self._get_or_create_parent_site(parent_site_code)
             try:
-                site, created = Site.objects.update_or_create(code=code, project=self.project, defaults=kwargs)
+                site, _ = Site.objects.update_or_create(code=code, project=self.project, defaults=kwargs)
             except Exception as e:
                 error = str(e)
         return site, error
@@ -66,5 +66,5 @@ class SiteUploader:
 
     @staticmethod
     def _get_or_create_parent_site(parent_code):
-        site, created = Site.objects.get_or_create(code=parent_code)
+        site, _ = Site.objects.get_or_create(code=parent_code)
         return site
