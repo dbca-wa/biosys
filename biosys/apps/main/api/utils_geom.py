@@ -9,7 +9,8 @@ class PointParser:
     Given a dictionary this class try to create a point
     Accept latitude/longitude, easting/northing and a datum and return a Point
     If no x or y is found it returns None else returns a Point
-    Will raise error if something wrong
+    Will raise error if something is wrong.
+    TODO: lat/long value validation.
     """
 
     def __init__(self, data, default_srid=MODEL_SRID):
