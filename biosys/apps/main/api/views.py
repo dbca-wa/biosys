@@ -5,7 +5,7 @@ from collections import OrderedDict
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from dry_rest_permissions.generics import DRYPermissions
-from rest_framework import viewsets, filters, generics
+from rest_framework import viewsets, filters, generics, status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
 from rest_framework.views import APIView, Response
@@ -104,12 +104,24 @@ class ProjectSitesView(generics.ListCreateAPIView):
 
 
 class ProjectSitesUploadView(APIView):
+    # TODO: unit test for this view + Implement xlsx version.
     permission_classes = (IsAuthenticated, ProjectPermission)
     parser_classes = (FormParser, MultiPartParser)
 
     def post(self, request, *args, **kwargs):
         project = get_object_or_404(Project, pk=self.kwargs.get('pk'))
         file_obj = request.data['file']
+        accepted_mime = [
+            'text/csv',
+            # 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            # 'application/vnd.ms-excel',
+            # 'application/vnd.msexcel'
+            'text/comma-separated-values',
+            'application/csv'
+        ]
+        if file_obj.content_type not in accepted_mime:
+            msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type, accepted_mime)
+            return Response(msg, status=status.HTTP_501_NOT_IMPLEMENTED)
         uploader = SiteUploader(file_obj, project)
         data = {}
         # return an items by row
@@ -130,7 +142,7 @@ class ProjectSitesUploadView(APIView):
                 has_error = True
                 result['error'] = str(error)
             data[row] = result
-        status_code = 200 if not has_error else 400
+        status_code = status.HTTP_200_OK if not has_error else status.HTTP_400_BAD_REQUEST
         return Response(data, status=status_code)
 
 
