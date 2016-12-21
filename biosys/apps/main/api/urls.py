@@ -17,6 +17,8 @@ router.register(r'species_observations?', main_views.SpeciesObservationViewSet, 
 
 url_patterns = [
     url(r'projects?/(?P<pk>\d+)/sites/?', main_views.ProjectSitesView.as_view(), name='project-sites'),  # bulk sites
+    url(r'projects?/(?P<pk>\d+)/upload-sites/?', main_views.ProjectSitesUploadView.as_view(), name='project-sites'),
+    # bulk sites
     url(r'datasets?/(?P<pk>\d+)/data/?', main_views.DatasetDataView.as_view(), name='dataset-data'),  # bulk data upload
     url(r'statistics/?', main_views.StatisticsView.as_view(), name="statistics"),
     url(r'whoami/?', main_views.WhoamiView.as_view(), name="whoami")

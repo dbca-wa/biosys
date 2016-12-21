@@ -6,12 +6,13 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from dry_rest_permissions.generics import DRYPermissions
 from rest_framework import viewsets, filters, generics
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
-from rest_framework.views import APIView
-from rest_framework.views import Response
+from rest_framework.views import APIView, Response
 
 from main import models
 from main.api import serializers
+from main.api.uploaders import SiteUploader
 from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
 from main.utils_auth import is_admin
 from main.utils_species import HerbieFacade
@@ -100,6 +101,37 @@ class ProjectSitesView(generics.ListCreateAPIView):
             for r in ser.initial_data:
                 r['project'] = self.project.pk
         return ser
+
+
+class ProjectSitesUploadView(APIView):
+    permission_classes = (IsAuthenticated, ProjectPermission)
+    parser_classes = (FormParser, MultiPartParser)
+
+    def post(self, request, *args, **kwargs):
+        project = get_object_or_404(Project, pk=self.kwargs.get('pk'))
+        file_obj = request.data['file']
+        uploader = SiteUploader(file_obj, project)
+        data = {}
+        # return an items by row
+        # {1: { site: pk|None, error: msg|None}, 2:...., 3:... }
+
+        has_error = False
+        row = 0
+        for site, error in uploader:
+            row += 1
+            result = {
+                'site': None,
+                'error': None
+            }
+            if site:
+                result['site'] = site.pk
+            if error:
+                print('error at row #{}: {}'.format(row, error))
+                has_error = True
+                result['error'] = str(error)
+            data[row] = result
+        status_code = 200 if not has_error else 400
+        return Response(data, status=status_code)
 
 
 class SiteViewSet(viewsets.ModelViewSet):
