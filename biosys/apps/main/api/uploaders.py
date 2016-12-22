@@ -10,6 +10,7 @@ from main.utils_misc import get_value
 
 
 class SiteUploader:
+    # TODO: python2 not compatible!
     CSV_TYPES = [
         'text/csv',
         'text/comma-separated-values',
