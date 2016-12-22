@@ -104,7 +104,7 @@ class ProjectSitesView(generics.ListCreateAPIView):
 
 
 class ProjectSitesUploadView(APIView):
-    # TODO: unit test for this view + Implement xlsx version.
+    # TODO: unit test for this view
     permission_classes = (IsAuthenticated, ProjectPermission)
     parser_classes = (FormParser, MultiPartParser)
 
