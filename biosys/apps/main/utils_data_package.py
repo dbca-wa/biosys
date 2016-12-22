@@ -8,16 +8,15 @@ from os.path import join
 
 import jsontableschema
 from dateutil.parser import parse as date_parse
-from django.utils.encoding import python_2_unicode_compatible
+from django.contrib.gis.geos import Point
 from django.utils import six
+from django.utils.encoding import python_2_unicode_compatible
 from future.utils import raise_with_traceback
 from jsontableschema.exceptions import InvalidDateType
 from jsontableschema.model import SchemaModel, types
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.writer.write_only import WriteOnlyCell
-
-from django.contrib.gis.geos import Point
 
 from main.constants import MODEL_SRID, SUPPORTED_DATUMS, get_datum_srid, is_supported_datum
 
@@ -733,7 +732,6 @@ class Exporter:
         return ws
 
     def to_workbook(self):
-        # TODO: implement version in write_only mode.
         wb = Workbook(write_only=True)
         ws = wb.create_sheet()
         self._to_worksheet(ws)
