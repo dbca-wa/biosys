@@ -1,7 +1,7 @@
 import codecs
 import csv
-import io
 
+from django.utils import six
 from openpyxl import load_workbook
 
 from main.api.utils_geom import PointParser
@@ -96,7 +96,7 @@ class SiteUploader:
         return site
 
     def _to_csv(self, file):
-        output = io.StringIO()
+        output = six.StringIO()
         writer = csv.writer(output)
         wb = load_workbook(filename=file, read_only=True)
         ws = wb.active
