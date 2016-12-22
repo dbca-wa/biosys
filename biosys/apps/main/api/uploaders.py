@@ -1,5 +1,8 @@
 import codecs
 import csv
+import io
+
+from openpyxl import load_workbook
 
 from main.api.utils_geom import PointParser
 from main.models import Site
@@ -7,6 +10,17 @@ from main.utils_misc import get_value
 
 
 class SiteUploader:
+    CSV_TYPES = [
+        'text/csv',
+        'text/comma-separated-values',
+        'application/csv'
+    ]
+    XLSX_TYPES = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel',
+        'application/vnd.msexcel',
+    ]
+    SUPPORTED_TYPES = CSV_TYPES + XLSX_TYPES
     COLUMN_MAP = {
         'code': ['code', 'site code'],
         'name': ['name', 'site name'],
@@ -15,13 +29,24 @@ class SiteUploader:
     }
 
     def __init__(self, file, project):
+        if file.content_type not in self.SUPPORTED_TYPES:
+            msg = "Wrong file type {}. Should be one of: {}".format(file.content_type, self.SUPPORTED_TYPES)
+            raise Exception(msg)
+
         self.file = file
+        if file.content_type in self.XLSX_TYPES:
+            self.file = self._to_csv(file)
+            self.reader = csv.DictReader(self.file)
+        else:
+            self.reader = csv.DictReader(codecs.iterdecode(self.file, 'utf-8'))
         self.project = project
 
     def __iter__(self):
-        reader = csv.DictReader(codecs.iterdecode(self.file, 'utf-8'))
-        for row in reader:
+        for row in self.reader:
             yield self._create_or_update_site(row)
+
+    def close(self):
+        self.file.close()
 
     def _create_or_update_site(self, row):
         # we need the code at minimum
@@ -68,3 +93,15 @@ class SiteUploader:
     def _get_or_create_parent_site(parent_code):
         site, _ = Site.objects.get_or_create(code=parent_code)
         return site
+
+    def _to_csv(self, file):
+        output = io.StringIO()
+        writer = csv.writer(output)
+        wb = load_workbook(filename=file, read_only=True)
+        ws = wb.active
+        for row in ws.rows:
+            r = [cell.value for cell in row]
+            writer.writerow(r)
+        # rewind
+        output.seek(0)
+        return output

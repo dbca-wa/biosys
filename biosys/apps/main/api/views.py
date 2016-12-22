@@ -104,24 +104,17 @@ class ProjectSitesView(generics.ListCreateAPIView):
 
 
 class ProjectSitesUploadView(APIView):
-    # TODO: unit test for this view + Implement xlsx version.
+    # TODO: unit test for this view
     permission_classes = (IsAuthenticated, ProjectPermission)
     parser_classes = (FormParser, MultiPartParser)
 
     def post(self, request, *args, **kwargs):
         project = get_object_or_404(Project, pk=self.kwargs.get('pk'))
         file_obj = request.data['file']
-        accepted_mime = [
-            'text/csv',
-            # 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            # 'application/vnd.ms-excel',
-            # 'application/vnd.msexcel'
-            'text/comma-separated-values',
-            'application/csv'
-        ]
-        if file_obj.content_type not in accepted_mime:
-            msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type, accepted_mime)
+        if file_obj.content_type not in SiteUploader.SUPPORTED_TYPES:
+            msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type, SiteUploader.SUPPORTED_TYPES)
             return Response(msg, status=status.HTTP_501_NOT_IMPLEMENTED)
+
         uploader = SiteUploader(file_obj, project)
         data = {}
         # return an items by row
@@ -142,6 +135,7 @@ class ProjectSitesUploadView(APIView):
                 has_error = True
                 result['error'] = str(error)
             data[row] = result
+        uploader.close()
         status_code = status.HTTP_200_OK if not has_error else status.HTTP_400_BAD_REQUEST
         return Response(data, status=status_code)
 
