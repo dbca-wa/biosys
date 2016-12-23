@@ -85,6 +85,7 @@ class ProjectSitesView(generics.ListCreateAPIView):
     def dispatch(self, request, *args, **kwargs):
         """
         Intercept any request to set the project from the pk
+        This is necessary for the ProjectPermission.
         :param request:
         """
         self.project = get_object_or_404(Project, pk=self.kwargs.get('pk'))
@@ -104,20 +105,27 @@ class ProjectSitesView(generics.ListCreateAPIView):
 
 
 class ProjectSitesUploadView(APIView):
-    # TODO: unit test for this view
     permission_classes = (IsAuthenticated, ProjectPermission)
     parser_classes = (FormParser, MultiPartParser)
 
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Intercept any request to set the project from the pk.
+        This is necessary for the ProjectPermission.
+        :param request:
+        """
+        self.project = get_object_or_404(Project, pk=self.kwargs.get('pk'))
+        return super(ProjectSitesUploadView, self).dispatch(request, *args, **kwargs)
+
     def post(self, request, *args, **kwargs):
-        project = get_object_or_404(Project, pk=self.kwargs.get('pk'))
         file_obj = request.data['file']
         if file_obj.content_type not in SiteUploader.SUPPORTED_TYPES:
             msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type, SiteUploader.SUPPORTED_TYPES)
             return Response(msg, status=status.HTTP_501_NOT_IMPLEMENTED)
 
-        uploader = SiteUploader(file_obj, project)
+        uploader = SiteUploader(file_obj, self.project)
         data = {}
-        # return an items by row
+        # return an item by parsed row
         # {1: { site: pk|None, error: msg|None}, 2:...., 3:... }
 
         has_error = False
