@@ -139,7 +139,6 @@ class ProjectSitesUploadView(APIView):
             if site:
                 result['site'] = site.pk
             if error:
-                print('error at row #{}: {}'.format(row, error))
                 has_error = True
                 result['error'] = str(error)
             data[row] = result
