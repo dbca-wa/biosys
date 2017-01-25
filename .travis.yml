@@ -16,11 +16,11 @@ env:
         - DATABASE_URL="postgis://postgres@localhost:5432/travis_ci_test"
 install:
     - psql -U postgres -c "create extension postgis"
+    - pip install pip --upgrade
     - pip install -r requirements.txt
 before_script:
     - psql -c 'create database travis_ci_test;' -U postgres
     - python manage.py migrate --noinput
-    - pip install pip --upgrade
 script:
     - python manage.py test
 
