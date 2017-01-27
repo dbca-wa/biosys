@@ -5,14 +5,13 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from main.models import Project, Site, Dataset
-from main.utils_auth import is_admin
-
 from main.tests.test_data_package import (
     clone,
     GENERIC_DATA_PACKAGE,
     LAT_LONG_OBSERVATION_DATA_PACKAGE,
     SPECIES_OBSERVATION_DATA_PACKAGE,
 )
+from main.utils_auth import is_admin
 
 
 class TestPermissions(TestCase):
@@ -24,7 +23,6 @@ class TestPermissions(TestCase):
     Delete: admin, custodians
     """
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -248,13 +246,50 @@ class TestPermissions(TestCase):
                 )
                 self.assertTrue(Dataset.objects.count(), count - 1)
 
+    def test_options(self):
+        urls = [
+            reverse('api:dataset-list'),
+            reverse('api:dataset-detail', kwargs={'pk': 1})
+        ]
+        access = {
+            "forbidden": [self.anonymous_client],
+            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertEqual(
+                    client.options(url).status_code,
+                    status.HTTP_401_UNAUTHORIZED
+                )
+        # authenticated
+        for client in access['allowed']:
+            for url in urls:
+                self.assertEqual(
+                    client.options(url).status_code,
+                    status.HTTP_200_OK
+                )
+
+    def test_options_model_choices(self):
+        """
+        Test that the options request return model choices for dataset type
+        :return:
+        """
+        url = reverse('api:dataset-list')
+        client = self.admin_client
+        resp = client.options(url)
+        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        data = resp.json()
+        choices = data.get('actions', {}).get('POST', {}).get('type', {}).get('choices', None)
+        self.assertTrue(choices)
+        expected = [{'value': d[0], 'display_name': d[1]} for d in Dataset.TYPE_CHOICES]
+        self.assertEquals(expected, choices)
+
 
 class TestDataPackageValidation(TestCase):
     """
     Test that when create/update the datapackage validation is called
     """
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -430,5 +465,3 @@ class TestDataPackageValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-
-

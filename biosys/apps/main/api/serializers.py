@@ -2,12 +2,25 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 
 import datetime
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
 
 from main.constants import MODEL_SRID
 from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
+
+
+class SimpleUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = ('username', 'first_name', 'last_name', 'email')
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        exclude = ('password',)
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -79,6 +92,7 @@ class GenericRecordListSerializer(serializers.ListSerializer):
     """
     This serializer uses the django bulk_create instead of creating one by one.
     """
+
     def create(self, validated_data):
         records = []
         model = self.child.Meta.model
@@ -215,6 +229,7 @@ class ObservationSerializer(GenericRecordSerializer):
     class Meta:
         model = Observation
         list_serializer_class = ObservationListSerializer
+        fields = '__all__'
 
 
 class SpeciesObservationListSerializer(ObservationListSerializer):
@@ -276,3 +291,4 @@ class SpeciesObservationSerializer(ObservationSerializer):
     class Meta:
         model = SpeciesObservation
         list_serializer_class = SpeciesObservationListSerializer
+        fields = '__all__'

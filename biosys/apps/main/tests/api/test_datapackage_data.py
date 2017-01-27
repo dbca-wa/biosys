@@ -5,15 +5,14 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from main.models import Project, Site, Dataset, GenericRecord
+from main.tests.api import helpers
 from main.tests.test_data_package import clone
 from main.utils_auth import is_admin
-from main.tests.api import helpers
 from main.utils_species import NoSpeciesFacade, HerbieFacade
 
 
 class TestGenericPermissions(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -194,7 +193,6 @@ class TestGenericPermissions(TestCase):
 
 class TestBulkGenericCreate(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -258,6 +256,7 @@ class TestBulkGenericCreate(TestCase):
         """
         ds = self.ds_1
         url = reverse('api:dataset-data', kwargs={'pk': ds.pk})
+        # empty list is ok
         data = []
         client = self.custodian_1_client
         count = self.ds_1.record_queryset.count()
@@ -267,10 +266,11 @@ class TestBulkGenericCreate(TestCase):
         )
         self.assertEqual(self.ds_1.record_queryset.count(), count)
 
+        # but None is not
         data = None
         self.assertEqual(
             client.post(url, data, format='json').status_code,
-            status.HTTP_201_CREATED
+            status.HTTP_400_BAD_REQUEST
         )
         self.assertEqual(self.ds_1.record_queryset.count(), count)
 
@@ -318,7 +318,6 @@ class TestBulkGenericCreate(TestCase):
 
 class TestBulkGenericUpdate(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -410,7 +409,6 @@ class TestBulkGenericUpdate(TestCase):
 
 class TestObservationPermissions(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -599,7 +597,6 @@ class TestObservationPermissions(TestCase):
 
 class TestBulkObservationCreate(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -712,7 +709,6 @@ class TestBulkObservationCreate(TestCase):
 
 class TestBulkObservationUpdate(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -795,7 +791,6 @@ class TestBulkObservationUpdate(TestCase):
 
 class TestSpeciesObservationPermissions(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -980,7 +975,6 @@ class TestSpeciesObservationPermissions(TestCase):
 
 class TestBulkSpeciesObservationCreate(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',
@@ -1087,7 +1081,6 @@ class TestBulkSpeciesObservationCreate(TestCase):
 
 class TestBulkSpeciesObservationUpdate(TestCase):
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites',

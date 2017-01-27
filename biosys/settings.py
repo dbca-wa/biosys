@@ -3,9 +3,10 @@ Django settings for biosys project.
 """
 from __future__ import absolute_import, unicode_literals, print_function, division
 
-from confy import env, database
 import os
 import sys
+
+from confy import env, database
 from unipath import Path
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -129,7 +130,9 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
         # 'rest_framework.renderers.BrowsableAPIRenderer', # commented because we use the swagger explorer
     ),
-    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
+    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'DEFAULT_METADATA_CLASS': 'rest_framework.metadata.SimpleMetadata',
 }
 
 SWAGGER_SETTINGS = {
@@ -142,7 +145,14 @@ SWAGGER_SETTINGS = {
     'APIS_SORTER': 'alpha',
 }
 
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ORIGIN_ALLOW_ALL = env('CORS_ORIGIN_ALLOW_ALL', False)
+CORS_ALLOW_CREDENTIALS = env('CORS_ALLOW_CREDENTIALS', True)
+CORS_ORIGIN_WHITELIST = env('CORS_ORIGIN_WHITELIST', [
+
+])
+CORS_ORIGIN_REGEX_WHITELIST = env('CORS_ORIGIN_WHITELIST', [
+    r'^.*$',
+])
 
 WSGI_APPLICATION = 'biosys.wsgi.application'
 

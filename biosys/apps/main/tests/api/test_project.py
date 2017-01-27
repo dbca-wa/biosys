@@ -1,9 +1,12 @@
-from django.test import TestCase, override_settings
-from django.core.urlresolvers import reverse
-from rest_framework.test import APIClient
-from rest_framework import status
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
+from django.test import TestCase, override_settings
+from django_dynamic_fixture import G
+from rest_framework import status
+from rest_framework.test import APIClient
 
+from main.constants import DATUM_CHOICES
 from main.models import Project, Site
 from main.utils_auth import is_admin
 
@@ -17,7 +20,6 @@ class TestPermissions(TestCase):
     Delete: forbidden through API
     """
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects'
     ]
@@ -251,13 +253,50 @@ class TestPermissions(TestCase):
                     status.HTTP_200_OK
                 )
 
+    def test_options(self):
+        urls = [
+            reverse('api:project-list'),
+            reverse('api:project-detail', kwargs={'pk': 1})
+        ]
+        access = {
+            "forbidden": [self.anonymous_client],
+            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertEqual(
+                    client.options(url).status_code,
+                    status.HTTP_401_UNAUTHORIZED
+                )
+        # authenticated
+        for client in access['allowed']:
+            for url in urls:
+                self.assertEqual(
+                    client.options(url).status_code,
+                    status.HTTP_200_OK
+                )
+
+    def test_options_model_choices(self):
+        """
+        Test that the options request return model choices
+        :return:
+        """
+        url = reverse('api:project-list')
+        client = self.admin_client
+        resp = client.options(url)
+        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        data = resp.json()
+        datum_choices = data.get('actions', {}).get('POST', {}).get('datum', {}).get('choices', None)
+        self.assertTrue(datum_choices)
+        expected = [{'value': d[0], 'display_name': d[1]} for d in DATUM_CHOICES]
+        self.assertEquals(expected, datum_choices)
+
 
 class TestProjectSiteBulk(TestCase):
     """
     Test the bulk upload/get end-point project/{pk}/sites
     """
     fixtures = [
-        'test-groups',
         'test-users',
         'test-projects',
         'test-sites'
@@ -482,3 +521,119 @@ class TestProjectSiteBulk(TestCase):
         self.assertEqual(sdb_2.name, site_2['name'])
         self.assertEqual(sdb_2.comments, site_2['comments'])
         self.assertEqual(sdb_2.attributes, site_2['attributes'])
+
+
+class TestProjectCustodians(TestCase):
+    fixtures = [
+        'test-users',
+        'test-projects'
+    ]
+
+    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
+    def setUp(self):
+        password = 'password'
+        self.admin_user = User.objects.filter(username="admin").first()
+        self.assertIsNotNone(self.admin_user)
+        self.assertTrue(is_admin(self.admin_user))
+        self.admin_user.set_password(password)
+        self.admin_user.save()
+        self.admin_client = APIClient()
+        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
+
+        self.custodian_1_user = User.objects.filter(username="custodian1").first()
+        self.assertIsNotNone(self.custodian_1_user)
+        self.custodian_1_user.set_password(password)
+        self.custodian_1_user.save()
+        self.custodian_1_client = APIClient()
+        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
+        self.project_1 = Project.objects.filter(title="Project1").first()
+        self.assertTrue(self.project_1.is_custodian(self.custodian_1_user))
+
+        self.custodian_2_user = User.objects.filter(username="custodian2").first()
+        self.assertIsNotNone(self.custodian_2_user)
+        self.custodian_2_user.set_password(password)
+        self.custodian_2_user.save()
+        self.custodian_2_client = APIClient()
+        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
+        self.project_2 = Project.objects.filter(title="Project2").first()
+        self.assertTrue(self.project_2.is_custodian(self.custodian_2_user))
+        self.assertFalse(self.project_1.is_custodian(self.custodian_2_user))
+
+        self.readonly_user = User.objects.filter(username="readonly").first()
+        self.assertIsNotNone(self.custodian_2_user)
+        self.assertFalse(self.project_2.is_custodian(self.readonly_user))
+        self.assertFalse(self.project_1.is_custodian(self.readonly_user))
+        self.readonly_user.set_password(password)
+        self.readonly_user.save()
+        self.readonly_client = APIClient()
+        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
+
+        self.anonymous_client = APIClient()
+
+    def test_add_custodian(self):
+        project = self.project_1
+        custodian = self.custodian_1_user
+        client = self.custodian_1_client
+        self.assertTrue(project.is_custodian(custodian))
+
+        new_user = G(get_user_model())
+        self.assertFalse(project.is_custodian(new_user))
+        # add this user
+        url = reverse('api:project-detail', kwargs={'pk': project.pk})
+        data = {
+            'custodians': [custodian.pk, new_user.pk]
+        }
+        resp = client.patch(url, data, format='json')
+        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        self.assertTrue(project.is_custodian(custodian))
+        # new user is a custodian of the project
+        self.assertTrue(project.is_custodian(new_user))
+
+    def test_remove_custodian(self):
+        """
+        A custodian removes itself from the list of custodian.
+        It cannot add itself back! Only an admin can do that.
+        :return:
+        """
+        project = self.project_1
+        custodian = self.custodian_1_user
+        client = self.custodian_1_client
+        self.assertTrue(project.is_custodian(custodian))
+        url = reverse('api:project-detail', kwargs={'pk': project.pk})
+        expected_custodians = [custodian.pk]
+        resp = client.get(url)
+        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        self.assertEquals(expected_custodians, resp.json()['custodians'])
+        # clear custodians list
+
+        data = {
+            'custodians': []
+        }
+        resp = client.patch(url, data, format='json')
+        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        resp = client.get(url)
+        expected_custodians = []
+        self.assertEquals(expected_custodians, resp.json()['custodians'])
+        # still a custodian
+        self.assertFalse(project.is_custodian(custodian))
+
+        # oops! try to get back on board
+        data = {
+            'custodians': [custodian.pk]
+        }
+        resp = client.patch(url, data, format='json')
+        # can't
+        self.assertIn(
+            resp.status_code,
+            [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+        )
+        self.assertFalse(project.is_custodian(custodian))
+
+        # only admin can do it now
+        client = self.admin_client
+        data = {
+            'custodians': [custodian.pk]
+        }
+        resp = client.patch(url, data, format='json')
+        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        self.assertTrue(project.is_custodian(custodian))

@@ -1,15 +1,60 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
+from collections import OrderedDict
+
+from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from dry_rest_permissions.generics import DRYPermissions
-from rest_framework import viewsets, filters, generics
+from rest_framework import viewsets, filters, generics, status
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
+from rest_framework.views import APIView, Response
 
 from main import models
 from main.api import serializers
-from main.models import Project, Site, Dataset
+from main.api.uploaders import SiteUploader
+from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
 from main.utils_auth import is_admin
 from main.utils_species import HerbieFacade
+
+
+class UserPermission(BasePermission):
+    """
+    Rules:
+    Get: authenticated
+    Update: admin or user itself
+    Create: admin
+    Delete: forbidden through API
+    """
+
+    def has_permission(self, request, view):
+        """
+        Global level.
+        Reject Delete and Create for non admin.
+        The rest will be checked at object level (below)
+        """
+        method = request.method
+        if method == 'DELETE':
+            return False
+        if method == 'POST':
+            return is_admin(request.user)
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        """
+        Object level. Will be called only if the global level passed (see above).
+        Note: it won't be called for a Create (POST) method
+        """
+        is_owner = (request.user == obj)
+        return request.method in SAFE_METHODS or is_admin(request.user) or is_owner
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, UserPermission,)
+    queryset = get_user_model().objects.all()
+    serializer_class = serializers.UserSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_fields = ('username', 'first_name', 'last_name', 'email')
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -40,6 +85,7 @@ class ProjectSitesView(generics.ListCreateAPIView):
     def dispatch(self, request, *args, **kwargs):
         """
         Intercept any request to set the project from the pk
+        This is necessary for the ProjectPermission.
         :param request:
         """
         self.project = get_object_or_404(Project, pk=self.kwargs.get('pk'))
@@ -56,6 +102,50 @@ class ProjectSitesView(generics.ListCreateAPIView):
             for r in ser.initial_data:
                 r['project'] = self.project.pk
         return ser
+
+
+class ProjectSitesUploadView(APIView):
+    permission_classes = (IsAuthenticated, ProjectPermission)
+    parser_classes = (FormParser, MultiPartParser)
+
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Intercept any request to set the project from the pk.
+        This is necessary for the ProjectPermission.
+        :param request:
+        """
+        self.project = get_object_or_404(Project, pk=self.kwargs.get('pk'))
+        return super(ProjectSitesUploadView, self).dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        file_obj = request.data['file']
+        if file_obj.content_type not in SiteUploader.SUPPORTED_TYPES:
+            msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type, SiteUploader.SUPPORTED_TYPES)
+            return Response(msg, status=status.HTTP_501_NOT_IMPLEMENTED)
+
+        uploader = SiteUploader(file_obj, self.project)
+        data = {}
+        # return an item by parsed row
+        # {1: { site: pk|None, error: msg|None}, 2:...., 3:... }
+
+        has_error = False
+        row = 0
+        for site, error in uploader:
+            row += 1
+            result = {
+                'site': None,
+                'error': None
+            }
+            if site:
+                result['site'] = site.pk
+            if error:
+                print('error at row #{}: {}'.format(row, error))
+                has_error = True
+                result['error'] = str(error)
+            data[row] = result
+        uploader.close()
+        status_code = status.HTTP_200_OK if not has_error else status.HTTP_400_BAD_REQUEST
+        return Response(data, status=status_code)
 
 
 class SiteViewSet(viewsets.ModelViewSet):
@@ -132,7 +222,7 @@ class DatasetDataView(generics.ListCreateAPIView, SpeciesMixin):
         return ctx
 
     def get_queryset(self):
-        return self.dataset.record_queryset
+        return self.dataset.record_queryset if self.dataset else Dataset.objects.none()
 
     def get(self, request, *args, **kwargs):
         """
@@ -180,3 +270,58 @@ class SpeciesObservationViewSet(ObservationViewSet, SpeciesMixin):
         if 'species_mapping' not in ctx:
             ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
         return ctx
+
+
+class StatisticsView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, **kwargs):
+        data = OrderedDict()
+        qs = Project.objects.all()
+        data['projects'] = {
+            'total': qs.count()
+        }
+        qs = Dataset.objects.all()
+        data['datasets'] = OrderedDict([
+            ('total', qs.count()),
+            ('generic', {
+                'total': qs.filter(type=Dataset.TYPE_GENERIC).count()
+            }),
+            ('observation', {
+                'total': qs.filter(type=Dataset.TYPE_OBSERVATION).count()
+            }),
+            ('speciesObservation', {
+                'total': qs.filter(type=Dataset.TYPE_SPECIES_OBSERVATION).count()
+            }),
+        ])
+        # records
+        generic_records_count = GenericRecord.objects.count()
+        observation_record_count = Observation.objects.count()
+        species_observation_count = SpeciesObservation.objects.count()
+        data['records'] = OrderedDict([
+            ('total', generic_records_count + observation_record_count + species_observation_count),
+            ('generic', {
+                'total': generic_records_count
+            }),
+            ('observation', {
+                'total': observation_record_count
+            }),
+            ('speciesObservation', {
+                'total': species_observation_count
+            }),
+        ])
+        qs = Site.objects.all()
+        data['sites'] = {
+            'total': qs.count()
+        }
+        return Response(data)
+
+
+class WhoamiView(APIView):
+    serializers = serializers.SimpleUserSerializer
+
+    def get(self, request, **kwargs):
+        data = {}
+        if request.user.is_authenticated():
+            data = self.serializers(request.user).data
+        return Response(data)

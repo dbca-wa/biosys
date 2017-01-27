@@ -1,9 +1,9 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
-import json
-import pytz
 import datetime
+import json
 
+import pytz
 from django import forms
 from django.contrib.postgres.forms import JSONField
 from django.core.exceptions import ValidationError
@@ -75,65 +75,12 @@ class DataSetForm(forms.ModelForm):
 
 class ProjectForm(forms.ModelForm):
     attributes = BetterJSONField(required=False)
-    attributes_data_package = BetterJSONField(required=False)
     site_data_package = BetterJSONField(required=False)
     timezone = BetterTimeZoneFormField(initial=Project.DEFAULT_TIMEZONE)
 
     class Meta:
         model = Project
         exclude = []
-
-    def clean_extent_long_min(self):
-        extent_long_min = self.cleaned_data['extent_long_min']
-        bounds = DATUM_BOUNDS[self.cleaned_data['datum']]
-
-        if extent_long_min is not None and extent_long_min < bounds[0]:
-            raise forms.ValidationError('Must be greater than or equal to %.1f' % bounds[0])
-
-        return extent_long_min
-
-    def clean_extent_lat_min(self):
-        extent_lat_min = self.cleaned_data['extent_lat_min']
-        bounds = DATUM_BOUNDS[self.cleaned_data['datum']]
-
-        if extent_lat_min is not None and extent_lat_min < bounds[1]:
-            raise forms.ValidationError('Must be greater than or equal to  %.1f' % bounds[1])
-
-        return extent_lat_min
-
-    def clean_extent_long_max(self):
-        extent_long_max = self.cleaned_data['extent_long_max']
-        bounds = DATUM_BOUNDS[self.cleaned_data['datum']]
-
-        if extent_long_max is not None and extent_long_max > bounds[2]:
-            raise forms.ValidationError('Must be less than or equal to  %.1f' % bounds[2])
-
-        return extent_long_max
-
-    def clean_extent_lat_max(self):
-        extent_lat_max = self.cleaned_data['extent_lat_max']
-        bounds = DATUM_BOUNDS[self.cleaned_data['datum']]
-
-        if extent_lat_max is not None and extent_lat_max > bounds[3]:
-            raise forms.ValidationError('Must be less than or equal to  %.1f' % bounds[3])
-
-        return extent_lat_max
-
-    def clean(self):
-        extent_long_min = self.cleaned_data.get('extent_long_min')
-        extent_lat_min = self.cleaned_data.get('extent_lat_min')
-        extent_long_max = self.cleaned_data.get('extent_long_max')
-        extent_lat_max = self.cleaned_data.get('extent_lat_max')
-
-        if extent_long_min is not None and extent_lat_min is not None and extent_long_max is not None and \
-                        extent_lat_max is not None:
-            if extent_lat_min >= extent_lat_max:
-                raise forms.ValidationError('Extent latitude min must be less than Extent latitude max')
-
-            if extent_long_min >= extent_long_max:
-                raise forms.ValidationError('Extent longitude min must be less than Extent longitude max')
-
-        return self.cleaned_data
 
 
 class SiteForm(forms.ModelForm):

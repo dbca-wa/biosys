@@ -2,13 +2,15 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 
 import io
 import json
+import re
 from os import listdir
 from os.path import join
 
 import jsontableschema
 from dateutil.parser import parse as date_parse
-from django.utils.encoding import python_2_unicode_compatible
+from django.contrib.gis.geos import Point
 from django.utils import six
+from django.utils.encoding import python_2_unicode_compatible
 from future.utils import raise_with_traceback
 from jsontableschema.exceptions import InvalidDateType
 from jsontableschema.model import SchemaModel, types
@@ -16,11 +18,10 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.writer.write_only import WriteOnlyCell
 
-from django.contrib.gis.geos import Point
-
 from main.constants import MODEL_SRID, SUPPORTED_DATUMS, get_datum_srid, is_supported_datum
 
 COLUMN_HEADER_FONT = Font(bold=True)
+YYYY_MM_DD_REGEX = re.compile(r'^\d{4}-\d{2}-\d{2}')
 
 
 class ObservationSchemaError(Exception):
@@ -44,6 +45,20 @@ class FieldSchemaError(Exception):
     pass
 
 
+def parse_datetime_day_first(value):
+    """
+    use the dateutil.parse() to parse a date/datetime with the date first (dd/mm/yyyy) (not month first mm/dd/yyyy)
+    in case of ambiguity
+    :param value:
+    :return:
+    """
+    # there's a 'bug' in dateutil.parser.parse (2.5.3). If you are using
+    # dayfirst=True. It will parse YYYY-MM-DD as YYYY-DD-MM !!
+    # https://github.com/dateutil/dateutil/issues/268
+    dayfirst = not YYYY_MM_DD_REGEX.match(value)
+    return date_parse(value, dayfirst=dayfirst)
+
+
 class DayFirstDateType(types.DateType):
     """
     Extend the jsontableschema DateType which use the mm/dd/yyyy date model for the 'any' format
@@ -54,7 +69,7 @@ class DayFirstDateType(types.DateType):
         if isinstance(value, self.python_type):
             return value
         try:
-            return date_parse(value, dayfirst=True).date()
+            return parse_datetime_day_first(value).date()
         except (TypeError, ValueError) as e:
             raise_with_traceback(InvalidDateType(e))
 
@@ -69,7 +84,7 @@ class DayFirstDateTimeType(types.DateTimeType):
         if isinstance(value, self.python_type):
             return value
         try:
-            return date_parse(value, dayfirst=True).date()
+            return parse_datetime_day_first(value)
         except (TypeError, ValueError) as e:
             raise_with_traceback(InvalidDateType(e))
 
@@ -135,6 +150,7 @@ class BiosysSchema:
 
     def is_species_name(self):
         return self.type == self.SPECIES_NAME_TYPE_NAME
+
 
 @python_2_unicode_compatible
 class SchemaField:
@@ -658,7 +674,8 @@ class SpeciesObservationSchema(ObservationSchema):
             else:
                 return field
         # no Biosys species_name field found look for column name
-        fields = [f for f in schema.fields if f.name.lower() == SpeciesObservationSchema.SPECIES_NAME_FIELD_NAME.lower()]
+        fields = [f for f in schema.fields if
+                  f.name.lower() == SpeciesObservationSchema.SPECIES_NAME_FIELD_NAME.lower()]
         if len(fields) > 1:
             msg = "More than one 'Species Name' field found!. {}".format(fields)
             raise SpeciesObservationSchemaError(msg)
@@ -715,7 +732,6 @@ class Exporter:
         return ws
 
     def to_workbook(self):
-        # TODO: implement version in write_only mode.
         wb = Workbook(write_only=True)
         ws = wb.create_sheet()
         self._to_worksheet(ws)
