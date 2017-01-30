@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from main.models import Project, Site, Dataset, GenericRecord
+from main.tests.api import helpers
 from main.tests.test_data_package import clone
 from main.utils_auth import is_admin
 
@@ -25,7 +26,8 @@ class TestPermissions(TestCase):
         'test-generic-records'
     ]
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
+    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
+                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
         password = 'password'
         self.admin_user = User.objects.filter(username="admin").first()
@@ -267,7 +269,8 @@ class TestDataValidation(TestCase):
         'test-generic-records'
     ]
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
+    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
+                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
         password = 'password'
         self.admin_user = User.objects.filter(username="admin").first()
@@ -387,7 +390,8 @@ class TestSiteExtraction(TestCase):
         'test-generic-records'
     ]
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
+    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
+                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
         password = 'password'
         self.admin_user = User.objects.filter(username="admin").first()

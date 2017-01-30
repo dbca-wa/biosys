@@ -78,15 +78,3 @@ class TestBasicAuth(TestCase):
         client.credentials(HTTP_AUTHORIZATION='Token ' + token)
         resp = client.get(url)
         self.assertEquals(resp.status_code, status.HTTP_200_OK)
-
-    def test_session_auth(self):
-        client = APIClient()
-        # can't get dataset list without login
-        url = reverse('api:dataset-list')
-        resp = client.get(url)
-        self.assertEquals(resp.status_code, status.HTTP_401_UNAUTHORIZED)
-
-        # The login of the client uses the session mechanism
-        client.login(username="readonly", password="password")
-        resp = client.get(url)
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)

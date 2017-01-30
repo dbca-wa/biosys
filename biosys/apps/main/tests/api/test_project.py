@@ -8,6 +8,7 @@ from rest_framework.test import APIClient
 
 from main.constants import DATUM_CHOICES
 from main.models import Project, Site
+from main.tests.api import helpers
 from main.utils_auth import is_admin
 
 
@@ -24,7 +25,8 @@ class TestPermissions(TestCase):
         'test-projects'
     ]
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
+    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
+                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
         password = 'password'
         self.admin_user = User.objects.filter(username="admin").first()
