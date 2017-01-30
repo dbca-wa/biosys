@@ -1,3 +1,15 @@
+from main.models import Dataset
+
+
+def get_record_validator_for_dataset(dataset):
+    if dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
+        return SpeciesObservationValidator(dataset)
+    elif dataset.type == Dataset.TYPE_OBSERVATION:
+        return ObservationValidator(dataset)
+    else:
+        return GenericRecordValidator(dataset)
+
+
 class RecordValidatorResult:
     def __init__(self):
         self.warnings = []
@@ -9,6 +21,10 @@ class RecordValidatorResult:
             'column': column_id,
             'message': str(message) if message else ''
         }
+
+    @property
+    def has_errors(self):
+        return bool(self.errors)
 
     def add_column_warning(self, column_id, message):
         self.warnings.append(self._column_result(column_id, message))
@@ -46,19 +62,23 @@ class GenericRecordValidator:
         :param data: must be a dictionary or a list of key => value
         :return: a RecordValidatorResult. To obtain the result as dict call the to_dict method of the result.
         """
-        # TODO: add constraint required validation
+        # TODO: add constraint required validation if the field is not provided
         data = dict(data)
         result = RecordValidatorResult()
         for field_name, value in data.items():
+            print('validate', (field_name, value))
             try:
                 schema_error_msg = self.schema.field_validation_error(field_name, value)
+                print('error:', schema_error_msg)
             except Exception as e:
                 schema_error_msg = str(e)
+                print('exception:', schema_error_msg)
             if schema_error_msg:
                 if schema_error_as_warning:
                     result.add_column_warning(field_name, schema_error_msg)
                 else:
                     result.add_column_error(field_name, schema_error_msg)
+        print('result w', result.warnings, 'result.e', result.errors)
         return result
 
 

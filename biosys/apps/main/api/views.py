@@ -324,3 +324,49 @@ class WhoamiView(APIView):
         if request.user.is_authenticated():
             data = self.serializers(request.user).data
         return Response(data)
+
+
+class DatasetUploadRecordsView(APIView):
+    """
+    Manage data file upload
+    """
+    permission_classes = (IsAuthenticated, ProjectPermission)
+    parser_classes = (FormParser, MultiPartParser)
+
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Intercept any request to set the project from the pk.
+        This is necessary for the ProjectPermission.
+        :param request:
+        """
+        self.project = get_object_or_404(Project, pk=self.kwargs.get('pk'))
+        return super(DatasetUploadRecordsView, self).dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        file_obj = request.data['file']
+        if file_obj.content_type not in SiteUploader.SUPPORTED_TYPES:
+            msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type, SiteUploader.SUPPORTED_TYPES)
+            return Response(msg, status=status.HTTP_501_NOT_IMPLEMENTED)
+
+        uploader = SiteUploader(file_obj, self.project)
+        data = {}
+        # return an item by parsed row
+        # {1: { site: pk|None, error: msg|None}, 2:...., 3:... }
+
+        has_error = False
+        row = 0
+        for site, error in uploader:
+            row += 1
+            result = {
+                'site': None,
+                'error': None
+            }
+            if site:
+                result['site'] = site.pk
+            if error:
+                has_error = True
+                result['error'] = str(error)
+            data[row] = result
+        uploader.close()
+        status_code = status.HTTP_200_OK if not has_error else status.HTTP_400_BAD_REQUEST
+        return Response(data, status=status_code)
