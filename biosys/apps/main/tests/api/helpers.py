@@ -1,3 +1,5 @@
+from django.conf import settings
+
 from main.utils_species import SpeciesFacade
 
 SOME_SPECIES_NAME_NAME_ID_MAP = {
@@ -5,6 +7,11 @@ SOME_SPECIES_NAME_NAME_ID_MAP = {
     "Canis lupus": 25454,
     "Vespadelus douglasorum": 24204
 }
+
+REST_FRAMEWORK_TEST_SETTINGS = settings.REST_FRAMEWORK
+REST_FRAMEWORK_TEST_SETTINGS['DEFAULT_AUTHENTICATION_CLASSES'] += [
+    'rest_framework.authentication.SessionAuthentication',
+]
 
 
 class LightSpeciesFacade(SpeciesFacade):
