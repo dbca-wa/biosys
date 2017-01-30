@@ -180,6 +180,7 @@ class RecordsUploader:
                     name_id = int(self.species_id_by_name.get(species_name, -1))
                     record.species_name = species_name
                     record.name_id = name_id
+            record.save()
         return record, validator_result
 
     def close(self):

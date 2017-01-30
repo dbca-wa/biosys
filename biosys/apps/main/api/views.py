@@ -12,7 +12,7 @@ from rest_framework.views import APIView, Response
 
 from main import models
 from main.api import serializers
-from main.api.uploaders import SiteUploader
+from main.api.uploaders import SiteUploader, RecordsUploader
 from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
 from main.utils_auth import is_admin
 from main.utils_species import HerbieFacade
@@ -185,7 +185,8 @@ class DatasetDataView(generics.ListCreateAPIView, SpeciesMixin):
 
     def dispatch(self, request, *args, **kwargs):
         """
-        Intercept any request to set the dataset
+        Intercept any request to set the dataset.
+        This is necessary for the DatasetDataPermission
         :param request:
         """
         self.dataset = get_object_or_404(models.Dataset, pk=kwargs.get('pk'))
@@ -328,18 +329,18 @@ class WhoamiView(APIView):
 
 class DatasetUploadRecordsView(APIView):
     """
-    Manage data file upload
+    Upload file for records (Xlsx, csv)
     """
-    permission_classes = (IsAuthenticated, ProjectPermission)
+    permission_classes = (IsAuthenticated, DatasetDataPermission)
     parser_classes = (FormParser, MultiPartParser)
 
     def dispatch(self, request, *args, **kwargs):
         """
-        Intercept any request to set the project from the pk.
-        This is necessary for the ProjectPermission.
+        Intercept any request to set the dataset from the pk.
+        This is necessary for the DatasetDataPermission.
         :param request:
         """
-        self.project = get_object_or_404(Project, pk=self.kwargs.get('pk'))
+        self.dataset = get_object_or_404(models.Dataset, pk=kwargs.get('pk'))
         return super(DatasetUploadRecordsView, self).dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
@@ -348,25 +349,21 @@ class DatasetUploadRecordsView(APIView):
             msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type, SiteUploader.SUPPORTED_TYPES)
             return Response(msg, status=status.HTTP_501_NOT_IMPLEMENTED)
 
-        uploader = SiteUploader(file_obj, self.project)
-        data = {}
-        # return an item by parsed row
-        # {1: { site: pk|None, error: msg|None}, 2:...., 3:... }
-
+        uploader = RecordsUploader(file_obj, self.dataset)
+        data = []
         has_error = False
         row = 0
-        for site, error in uploader:
+        for record, details in uploader:
             row += 1
             result = {
-                'site': None,
-                'error': None
+                'row': row
             }
-            if site:
-                result['site'] = site.pk
-            if error:
+            if record is None:
                 has_error = True
-                result['error'] = str(error)
-            data[row] = result
+            else:
+                result['recordId'] = record.id
+            result['details'] = details.to_dict()
+            data.append(result)
         uploader.close()
         status_code = status.HTTP_200_OK if not has_error else status.HTTP_400_BAD_REQUEST
         return Response(data, status=status_code)
