@@ -78,7 +78,7 @@ class GenericRecordValidator:
                     result.add_column_warning(field_name, schema_error_msg)
                 else:
                     result.add_column_error(field_name, schema_error_msg)
-        # check for missing required field
+        # check for missing required fields
         for field in self.schema.required_fields:
             if field.name not in data:
                 msg = "The field '{}' is missing".format(field.name)
