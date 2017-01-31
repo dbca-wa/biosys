@@ -135,19 +135,6 @@ class Dataset(models.Model):
                         resource.get('name'),
                         e))
 
-    def validate_data(self, data):
-        if not data:
-            msg = "field 'data' cannot be null or empty"
-            raise ValidationError(msg)
-        try:
-            field_errors = self.schema.get_error_fields(data)
-            if len(field_errors) > 0:
-                for field_name, data in field_errors:
-                    msg = "'{}': {}".format(field_name, data.get('error'))
-                    raise ValidationError(msg)
-        except Exception as e:
-            raise ValidationError(e)
-
     def clean(self):
         """
         Validate the data descriptor
@@ -295,9 +282,6 @@ class AbstractRecord(models.Model):
 
     def has_object_destroy_permission(self, request):
         return is_admin(request.user) or self.is_custodian(request.user)
-
-    def clean(self):
-        self.dataset.validate_data(self.data)
 
     class Meta:
         abstract = True

@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
 
+from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
 from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
 
@@ -63,20 +64,11 @@ class DatasetSerializer(serializers.ModelSerializer):
 class GenericDataValidator:
     def __call__(self, data):
         if self.dataset is not None:
-            self.dataset.validate_data(data)
-            # validate site
-            schema = self.dataset.schema
-            site_fk = schema.get_fk_for_model('Site')
-            if site_fk:
-                model_field = site_fk.model_field
-                site_value = data.get(site_fk.data_field)
-                kwargs = {
-                    "project": self.dataset.project,
-                    model_field: site_value
-                }
-                if not Site.objects.filter(**kwargs).exists():
-                    msg = "Could not find the site '{} in: {}':".format(site_value, data)
-                    raise ValidationError(msg)
+            validator = get_record_validator_for_dataset(self.dataset)
+            validator.schema_error_as_warning = False
+            result = validator.validate(data)
+            if result.has_errors:
+                raise ValidationError(result.errors)
 
     def set_context(self, serializer_field):
         ctx = serializer_field.parent.context
