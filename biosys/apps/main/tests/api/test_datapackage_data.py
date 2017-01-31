@@ -984,7 +984,8 @@ class TestBulkSpeciesObservationCreate(TestCase):
 
     species_facade_class = HerbieFacade
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
+    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
+                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
         from main.api.views import SpeciesMixin
         SpeciesMixin.species_facade_class = self.species_facade_class
@@ -1089,7 +1090,8 @@ class TestBulkSpeciesObservationUpdate(TestCase):
     ]
     species_facade_class = NoSpeciesFacade
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
+    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
+                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
         from main.api.views import SpeciesMixin
         SpeciesMixin.species_facade_class = self.species_facade_class

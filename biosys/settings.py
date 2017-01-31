@@ -114,14 +114,12 @@ LOGOUT_URL = '/logout/'
 LOGIN_REDIRECT_URL = '/'
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
+    'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.BasicAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.TokenAuthentication',
-    ),
+    ],
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
-    # TODO: why setting the permission below breaks the swagger explorer
     'DEFAULT_PERMISSION_CLASSES': [
         # 'rest_framework.permissions.DjangoModelPermissions' # this permission breaks the explorer.
         'rest_framework.permissions.IsAuthenticated',
@@ -139,6 +137,11 @@ SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
         'basic': {
             'type': 'basic'
+        },
+        'api_key': {
+            'type': 'apiKey',
+            'in': 'header',
+            'name': 'Authorization'
         }
     },
     'USE_SESSION_AUTH': True,
