@@ -19,9 +19,10 @@ SOME_SPECIES_NAME_NAME_ID_MAP = {
 }
 
 REST_FRAMEWORK_TEST_SETTINGS = settings.REST_FRAMEWORK
-REST_FRAMEWORK_TEST_SETTINGS['DEFAULT_AUTHENTICATION_CLASSES'] += [
-    'rest_framework.authentication.SessionAuthentication',
-]
+if 'rest_framework.authentication.SessionAuthentication' \
+        not in REST_FRAMEWORK_TEST_SETTINGS['DEFAULT_AUTHENTICATION_CLASSES']:
+    REST_FRAMEWORK_TEST_SETTINGS['DEFAULT_AUTHENTICATION_CLASSES'] \
+        .append('rest_framework.authentication.SessionAuthentication')
 
 
 def to_xlsx_file(rows):
