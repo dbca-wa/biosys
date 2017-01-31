@@ -346,8 +346,9 @@ class DatasetUploadRecordsView(APIView):
 
     def post(self, request, *args, **kwargs):
         file_obj = request.data['file']
-        create_site = 'create_site' in request.data
-        delete_previous = 'delete_previous' in request.data
+        create_site = 'create_site' in request.data and bool(request.data['create_site'])
+        delete_previous = 'delete_previous' in request.data and bool(request.data['delete_previous'])
+        strict = 'strict' in request.data and bool(request.data['strict'])
 
         if file_obj.content_type not in FileReader.SUPPORTED_TYPES:
             msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type, SiteUploader.SUPPORTED_TYPES)
@@ -357,7 +358,7 @@ class DatasetUploadRecordsView(APIView):
             self.dataset.record_queryset.delete()
         generator = FileReader(file_obj)
         validator = get_record_validator_for_dataset(self.dataset)
-        validator.schema_error_as_warning = True
+        validator.schema_error_as_warning = not strict
         creator = RecordCreator(self.dataset, generator, validator=validator, create_site=create_site, commit=True)
         data = []
         has_error = False
