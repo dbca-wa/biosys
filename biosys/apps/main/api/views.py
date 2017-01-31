@@ -63,7 +63,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
     filter_backends = (filters.DjangoFilterBackend,)
-    filter_fields = ('id', 'title',)
+    filter_fields = ('id', 'title', 'custodians')
 
 
 class ProjectPermission(BasePermission):
