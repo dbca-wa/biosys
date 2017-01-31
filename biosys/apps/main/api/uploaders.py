@@ -26,7 +26,7 @@ def xlsx_to_csv(file):
     return output
 
 
-class FileReader:
+class FileReader(object):
     """
     Accept a csv or a xlsx as file and provide a row generator.
     Each row is a dictionary of (column_name, value)
