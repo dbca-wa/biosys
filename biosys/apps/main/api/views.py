@@ -12,7 +12,8 @@ from rest_framework.views import APIView, Response
 
 from main import models
 from main.api import serializers
-from main.api.uploaders import SiteUploader, RecordsUploader
+from main.api.uploaders import SiteUploader, FileReader, RecordCreator
+from main.api.validators import get_record_validator_for_dataset
 from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
 from main.utils_auth import is_admin
 from main.utils_species import HerbieFacade
@@ -345,25 +346,32 @@ class DatasetUploadRecordsView(APIView):
 
     def post(self, request, *args, **kwargs):
         file_obj = request.data['file']
-        if file_obj.content_type not in SiteUploader.SUPPORTED_TYPES:
+        create_site = 'create_site' in request.data
+        delete_previous = 'delete_previous' in request.data
+
+        if file_obj.content_type not in FileReader.SUPPORTED_TYPES:
             msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type, SiteUploader.SUPPORTED_TYPES)
             return Response(msg, status=status.HTTP_501_NOT_IMPLEMENTED)
 
-        uploader = RecordsUploader(file_obj, self.dataset)
+        if delete_previous:
+            self.dataset.record_queryset.delete()
+        generator = FileReader(file_obj)
+        validator = get_record_validator_for_dataset(self.dataset)
+        validator.schema_error_as_warning = True
+        creator = RecordCreator(self.dataset, generator, validator=validator, create_site=create_site, commit=True)
         data = []
         has_error = False
         row = 0
-        for record, details in uploader:
+        for record, validator_result in creator:
             row += 1
             result = {
                 'row': row
             }
-            if record is None:
+            if validator_result.has_errors:
                 has_error = True
             else:
                 result['recordId'] = record.id
-            result['details'] = details.to_dict()
+            result.update(validator_result.to_dict())
             data.append(result)
-        uploader.close()
         status_code = status.HTTP_200_OK if not has_error else status.HTTP_400_BAD_REQUEST
         return Response(data, status=status_code)

@@ -30,6 +30,10 @@ class RecordValidatorResult:
     def has_errors(self):
         return bool(self.errors)
 
+    @property
+    def is_valid(self):
+        return not self.has_errors
+
     def add_column_warning(self, column_id, message):
         self.warnings.update([(column_id, message)])
 
@@ -54,13 +58,14 @@ class RecordValidatorResult:
 
 
 class GenericRecordValidator:
-    def __init__(self, dataset):
+    def __init__(self, dataset, schema_error_as_warning=True):
         self.schema = dataset.schema
+        self.schema_error_as_warning = schema_error_as_warning
 
-    def validate(self, data, schema_error_as_warning=True):
-        return self.validate_schema(data, schema_error_as_warning=schema_error_as_warning)
+    def validate(self, data):
+        return self.validate_schema(data)
 
-    def validate_schema(self, data, schema_error_as_warning=True):
+    def validate_schema(self, data):
         """
         :param schema_error_as_warning: if True the schema error are reported as warnings not errors
         :param data: must be a dictionary or a list of key => value
@@ -74,7 +79,7 @@ class GenericRecordValidator:
             except Exception as e:
                 schema_error_msg = str(e)
             if schema_error_msg:
-                if schema_error_as_warning:
+                if self.schema_error_as_warning:
                     result.add_column_warning(field_name, schema_error_msg)
                 else:
                     result.add_column_error(field_name, schema_error_msg)
@@ -82,7 +87,7 @@ class GenericRecordValidator:
         for field in self.schema.required_fields:
             if field.name not in data:
                 msg = "The field '{}' is missing".format(field.name)
-                if schema_error_as_warning:
+                if self.schema_error_as_warning:
                     result.add_column_warning(field.name, msg)
                 else:
                     result.add_column_error(field.name, msg)
@@ -90,14 +95,14 @@ class GenericRecordValidator:
 
 
 class ObservationValidator(GenericRecordValidator):
-    def __init__(self, dataset):
-        super(ObservationValidator, self).__init__(dataset)
+    def __init__(self, dataset, schema_error_as_warning=True):
+        super(ObservationValidator, self).__init__(dataset, schema_error_as_warning)
         self.date_col = self.schema.observation_date_field.name
         self.lat_col = self.schema.latitude_field.name
         self.lon_col = self.schema.longitude_field.name
 
-    def validate(self, data, schema_error_as_warning=True):
-        result = super(ObservationValidator, self).validate(data, schema_error_as_warning=schema_error_as_warning)
+    def validate(self, data):
+        result = super(ObservationValidator, self).validate(data)
         # Every warnings on date or lat/long becomes error
         if self.date_col in result.warnings:
             result.add_column_error(self.date_col, result.warnings[self.date_col])
@@ -113,18 +118,17 @@ class ObservationValidator(GenericRecordValidator):
             result = result.merge(self.validate_geometry(data))
         return result
 
-    def validate_date(self, data, as_warning=False):
+    def validate_date(self, data):
         result = RecordValidatorResult()
         date_field = self.schema.observation_date_field
         try:
             self.schema.cast_record_observation_date(data)
         except Exception as e:
             msg = str(e)
-            result.add_column_warning(date_field.name, msg) if as_warning else result.add_column_error(date_field.name,
-                                                                                                       msg)
+            result.add_column_error(date_field.name, msg)
         return result
 
-    def validate_geometry(self, data, as_warning=False):
+    def validate_geometry(self, data):
         result = RecordValidatorResult()
         lat_field = self.schema.latitude_field
         long_field = self.schema.longitude_field
@@ -132,23 +136,18 @@ class ObservationValidator(GenericRecordValidator):
             self.schema.cast_geometry(data)
         except Exception as e:
             msg = str(e)
-            if as_warning:
-                result.add_column_warning(lat_field.name, msg)
-                result.add_column_warning(long_field.name, msg)
-            else:
-                result.add_column_error(lat_field.name, msg)
-                result.add_column_error(long_field.name, msg)
+            result.add_column_error(lat_field.name, msg)
+            result.add_column_error(long_field.name, msg)
         return result
 
 
 class SpeciesObservationValidator(ObservationValidator):
-    def __init__(self, dataset):
-        super(SpeciesObservationValidator, self).__init__(dataset)
+    def __init__(self, dataset, schema_error_as_warning=True):
+        super(SpeciesObservationValidator, self).__init__(dataset, schema_error_as_warning)
         self.species_name_col = self.schema.species_name_field.name
 
     def validate(self, data, schema_error_as_warning=True):
-        result = super(SpeciesObservationValidator, self).validate(data,
-                                                                   schema_error_as_warning=schema_error_as_warning)
+        result = super(SpeciesObservationValidator, self).validate(data)
         if self.species_name_col in result.warnings:
             result.add_column_error(self.species_name_col, result.warnings[self.species_name_col])
             del result.warnings[self.species_name_col]
@@ -157,6 +156,6 @@ class SpeciesObservationValidator(ObservationValidator):
         return result
 
     def validate_species(self, data):
-        # TODO: Species validation!!
+        # TODO: Species validation!! ??
         result = RecordValidatorResult()
         return result

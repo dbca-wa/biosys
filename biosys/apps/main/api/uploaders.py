@@ -26,7 +26,11 @@ def xlsx_to_csv(file):
     return output
 
 
-class SiteUploader:
+class FileReader:
+    """
+    Accept a csv or a xlsx as file and provide a row generator.
+    Each row is a dictionary of (column_name, value)
+    """
     CSV_TYPES = [
         'text/csv',
         'text/comma-separated-values',
@@ -38,14 +42,8 @@ class SiteUploader:
         'application/vnd.msexcel',
     ]
     SUPPORTED_TYPES = CSV_TYPES + XLSX_TYPES
-    COLUMN_MAP = {
-        'code': ['code', 'site code'],
-        'name': ['name', 'site name'],
-        'comments': ['comments'],
-        'parent_site': ['parent site', 'parent']
-    }
 
-    def __init__(self, file, project):
+    def __init__(self, file):
         if file.content_type not in self.SUPPORTED_TYPES:
             msg = "Wrong file type {}. Should be one of: {}".format(file.content_type, self.SUPPORTED_TYPES)
             raise Exception(msg)
@@ -56,14 +54,31 @@ class SiteUploader:
             self.reader = csv.DictReader(self.file)
         else:
             self.reader = csv.DictReader(codecs.iterdecode(self.file, 'utf-8'))
+
+    def __iter__(self):
+        for row in self.reader:
+            yield row
+        self.close()
+
+    def close(self):
+        self.file.close()
+
+
+class SiteUploader(FileReader):
+    COLUMN_MAP = {
+        'code': ['code', 'site code'],
+        'name': ['name', 'site name'],
+        'comments': ['comments'],
+        'parent_site': ['parent site', 'parent']
+    }
+
+    def __init__(self, file, project):
+        super(SiteUploader, self).__init__(file)
         self.project = project
 
     def __iter__(self):
         for row in self.reader:
             yield self._create_or_update_site(row)
-
-    def close(self):
-        self.file.close()
 
     def _create_or_update_site(self, row):
         # we need the code at minimum
@@ -112,51 +127,35 @@ class SiteUploader:
         return site
 
 
-class RecordsUploader:
-    CSV_TYPES = [
-        'text/csv',
-        'text/comma-separated-values',
-        'application/csv'
-    ]
-    XLSX_TYPES = [
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-excel',
-        'application/vnd.msexcel',
-    ]
-    SUPPORTED_TYPES = CSV_TYPES + XLSX_TYPES
-
-    def __init__(self, file, dataset):
-        if file.content_type not in self.SUPPORTED_TYPES:
-            msg = "Wrong file type {}. Should be one of: {}".format(file.content_type, self.SUPPORTED_TYPES)
-            raise Exception(msg)
-
-        self.file = file
-        if file.content_type in self.XLSX_TYPES:
-            self.file = xlsx_to_csv(file)
-            self.reader = csv.DictReader(self.file)
-        else:
-            self.reader = csv.DictReader(codecs.iterdecode(self.file, 'utf-8'))
+class RecordCreator:
+    def __init__(self, dataset, data_generator, commit=True, create_site=False, validator=None):
+        self.dataset = dataset
+        self.generator = data_generator
+        self.create_site = create_site
         self.dataset = dataset
         self.schema = dataset.schema
         self.record_model = dataset.record_model
-        self.validator = get_record_validator_for_dataset(dataset)
+        self.validator = validator if validator else get_record_validator_for_dataset(dataset)
         # if species. First load species list from herbie. Should raise an exception if problem.
         self.species_id_by_name = {}
         if dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
             self.species_id_by_name = HerbieFacade().name_id_by_species_name()
+        # Schema foreign key for site.
+        self.site_fk = self.schema.get_fk_for_model('Site')
+        self.commit = commit
 
     def __iter__(self):
-        for row in self.reader:
-            yield self._add_record(row)
+        for data in self.generator:
+            yield self._create_record(data)
 
-    def _add_record(self, row):
+    def _create_record(self, row):
         """
         :param row:
         :return: record, RecordValidatorResult
         """
-        validator_result = self.validator.validate(row, schema_error_as_warning=True)
+        validator_result = self.validator.validate(row)
         record = None
-        if not validator_result.has_errors:
+        if validator_result.is_valid:
             site = self._get_or_create_site(row)
             record = self.record_model(
                 site=site,
@@ -180,11 +179,21 @@ class RecordsUploader:
                     name_id = int(self.species_id_by_name.get(species_name, -1))
                     record.species_name = species_name
                     record.name_id = name_id
-            record.save()
+            if self.commit:
+                record.save()
         return record, validator_result
 
-    def close(self):
-        self.file.close()
-
     def _get_or_create_site(self, row):
-        return None
+        site = None
+        # Only if the schema has a foreign key for site
+        if self.site_fk:
+            model_field = self.site_fk.model_field
+            data = row.get(self.site_fk.data_field)
+            kwargs = {
+                "project": self.dataset.project,
+                model_field: data
+            }
+            site = Site.objects.filter(**kwargs).first()
+            if site is None and self.create_site:
+                site = Site.objects.create(**kwargs)
+        return site
