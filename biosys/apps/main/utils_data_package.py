@@ -363,6 +363,10 @@ class GenericSchema:
     def field_names(self):
         return [f.name for f in self.fields]
 
+    @property
+    def required_fields(self):
+        return [f for f in self.fields if f.required]
+
     def get_field_by_mame(self, name):
         for f in self.fields:
             if f.name == name:

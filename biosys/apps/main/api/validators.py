@@ -10,40 +10,44 @@ def get_record_validator_for_dataset(dataset):
         return GenericRecordValidator(dataset)
 
 
+def merge_dicts(*dict_args):
+    """
+    Given any number of dicts, shallow copy and merge into a new dict,
+    precedence goes to key value pairs in latter dicts.
+    """
+    result = {}
+    for dictionary in dict_args:
+        result.update(dictionary)
+    return result
+
+
 class RecordValidatorResult:
     def __init__(self):
-        self.warnings = []
-        self.errors = []
-
-    @staticmethod
-    def _column_result(column_id, message):
-        return {
-            'column': column_id,
-            'message': str(message) if message else ''
-        }
+        self.warnings = {}
+        self.errors = {}
 
     @property
     def has_errors(self):
         return bool(self.errors)
 
     def add_column_warning(self, column_id, message):
-        self.warnings.append(self._column_result(column_id, message))
+        self.warnings.update([(column_id, message)])
 
     def add_column_error(self, column_id, message):
-        self.errors.append(self._column_result(column_id, message))
+        self.errors.update([(column_id, message)])
 
     def merge(self, other):
         if isinstance(other, RecordValidatorResult):
             result = RecordValidatorResult()
-            result.warnings = self.warnings + other.warnings
-            result.errors = self.errors + other.errors
+            result.warnings = merge_dicts(self.warnings, other.warnings)
+            result.errors = merge_dicts(self.errors, other.errors)
             return result
         else:
             raise Exception("Can merge only a RecordValidatorResult")
 
     def to_dict(self):
         result = {
-            'warning': self.warnings,
+            'warnings': self.warnings,
             'errors': self.errors
         }
         return result
@@ -62,52 +66,97 @@ class GenericRecordValidator:
         :param data: must be a dictionary or a list of key => value
         :return: a RecordValidatorResult. To obtain the result as dict call the to_dict method of the result.
         """
-        # TODO: add constraint required validation if the field is not provided
         data = dict(data)
         result = RecordValidatorResult()
         for field_name, value in data.items():
-            print('validate', (field_name, value))
             try:
                 schema_error_msg = self.schema.field_validation_error(field_name, value)
-                print('error:', schema_error_msg)
             except Exception as e:
                 schema_error_msg = str(e)
-                print('exception:', schema_error_msg)
             if schema_error_msg:
                 if schema_error_as_warning:
                     result.add_column_warning(field_name, schema_error_msg)
                 else:
                     result.add_column_error(field_name, schema_error_msg)
-        print('result w', result.warnings, 'result.e', result.errors)
+        # check for missing required field
+        for field in self.schema.required_fields:
+            if field.name not in data:
+                msg = "The field '{}' is missing".format(field.name)
+                if schema_error_as_warning:
+                    result.add_column_warning(field.name, msg)
+                else:
+                    result.add_column_error(field.name, msg)
         return result
 
 
 class ObservationValidator(GenericRecordValidator):
+    def __init__(self, dataset):
+        super(ObservationValidator, self).__init__(dataset)
+        self.date_col = self.schema.observation_date_field.name
+        self.lat_col = self.schema.latitude_field.name
+        self.lon_col = self.schema.longitude_field.name
+
     def validate(self, data, schema_error_as_warning=True):
         result = super(ObservationValidator, self).validate(data, schema_error_as_warning=schema_error_as_warning)
-        result = result.merge(self.validate_date(data))
-        result = result.merge(self.validate_geometry(data))
+        # Every warnings on date or lat/long becomes error
+        if self.date_col in result.warnings:
+            result.add_column_error(self.date_col, result.warnings[self.date_col])
+            del result.warnings[self.date_col]
+        if self.lat_col in result.warnings:
+            result.add_column_error(self.lat_col, result.warnings[self.lat_col])
+            del result.warnings[self.lat_col]
+        if self.lon_col in result.warnings:
+            result.add_column_error(self.lon_col, result.warnings[self.lon_col])
+            del result.warnings[self.lon_col]
+        if not result.has_errors:
+            result = result.merge(self.validate_date(data))
+            result = result.merge(self.validate_geometry(data))
         return result
 
     def validate_date(self, data, as_warning=False):
-        # TODO: implement
         result = RecordValidatorResult()
+        date_field = self.schema.observation_date_field
+        try:
+            self.schema.cast_record_observation_date(data)
+        except Exception as e:
+            msg = str(e)
+            result.add_column_warning(date_field.name, msg) if as_warning else result.add_column_error(date_field.name,
+                                                                                                       msg)
         return result
 
-    def validate_geometry(self, data):
-        # TODO: implement
+    def validate_geometry(self, data, as_warning=False):
         result = RecordValidatorResult()
+        lat_field = self.schema.latitude_field
+        long_field = self.schema.longitude_field
+        try:
+            self.schema.cast_geometry(data)
+        except Exception as e:
+            msg = str(e)
+            if as_warning:
+                result.add_column_warning(lat_field.name, msg)
+                result.add_column_warning(long_field.name, msg)
+            else:
+                result.add_column_error(lat_field.name, msg)
+                result.add_column_error(long_field.name, msg)
         return result
 
 
 class SpeciesObservationValidator(ObservationValidator):
+    def __init__(self, dataset):
+        super(SpeciesObservationValidator, self).__init__(dataset)
+        self.species_name_col = self.schema.species_name_field.name
+
     def validate(self, data, schema_error_as_warning=True):
         result = super(SpeciesObservationValidator, self).validate(data,
                                                                    schema_error_as_warning=schema_error_as_warning)
-        result = result.merge(self.validate_species(data))
+        if self.species_name_col in result.warnings:
+            result.add_column_error(self.species_name_col, result.warnings[self.species_name_col])
+            del result.warnings[self.species_name_col]
+        if not result.has_errors:
+            result = result.merge(self.validate_species(data))
         return result
 
     def validate_species(self, data):
-        # TODO: implement
+        # TODO: Species validation!!
         result = RecordValidatorResult()
         return result
