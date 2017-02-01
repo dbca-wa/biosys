@@ -229,16 +229,15 @@ class TestPermissions(TestCase):
 
     def test_delete(self):
         """
-        Currently forbidden through API
+        Allowed for admin and custodian
         :return:
         """
         project = self.project_1
         urls = [reverse('api:project-detail', kwargs={'pk': project.pk})]
         data = None
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client, self.admin_client,
-                          self.custodian_2_client],
-            "allowed": []
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
+            "allowed": [self.custodian_1_client, self.admin_client]
         }
 
         for client in access['forbidden']:
@@ -249,11 +248,14 @@ class TestPermissions(TestCase):
                 )
 
         for client in access['allowed']:
+            project.save()
+            count = Project.objects.count()
             for url in urls:
                 self.assertEqual(
                     client.delete(url, data, format='json').status_code,
-                    status.HTTP_200_OK
+                    status.HTTP_204_NO_CONTENT
                 )
+                self.assertTrue(Project.objects.count(), count - 1)
 
     def test_options(self):
         urls = [
