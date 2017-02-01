@@ -12,7 +12,8 @@ from rest_framework.views import APIView, Response
 
 from main import models
 from main.api import serializers
-from main.api.uploaders import SiteUploader
+from main.api.uploaders import SiteUploader, FileReader, RecordCreator
+from main.api.validators import get_record_validator_for_dataset
 from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
 from main.utils_auth import is_admin
 from main.utils_species import HerbieFacade
@@ -62,7 +63,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
     filter_backends = (filters.DjangoFilterBackend,)
-    filter_fields = ('id', 'title',)
+    filter_fields = ('id', 'title', 'custodians')
 
 
 class ProjectPermission(BasePermission):
@@ -139,7 +140,6 @@ class ProjectSitesUploadView(APIView):
             if site:
                 result['site'] = site.pk
             if error:
-                print('error at row #{}: {}'.format(row, error))
                 has_error = True
                 result['error'] = str(error)
             data[row] = result
@@ -186,7 +186,8 @@ class DatasetDataView(generics.ListCreateAPIView, SpeciesMixin):
 
     def dispatch(self, request, *args, **kwargs):
         """
-        Intercept any request to set the dataset
+        Intercept any request to set the dataset.
+        This is necessary for the DatasetDataPermission
         :param request:
         """
         self.dataset = get_object_or_404(models.Dataset, pk=kwargs.get('pk'))
@@ -325,3 +326,53 @@ class WhoamiView(APIView):
         if request.user.is_authenticated():
             data = self.serializers(request.user).data
         return Response(data)
+
+
+class DatasetUploadRecordsView(APIView):
+    """
+    Upload file for records (xlsx, csv)
+    """
+    permission_classes = (IsAuthenticated, DatasetDataPermission)
+    parser_classes = (FormParser, MultiPartParser)
+
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Intercept any request to set the dataset from the pk.
+        This is necessary for the DatasetDataPermission.
+        :param request:
+        """
+        self.dataset = get_object_or_404(models.Dataset, pk=kwargs.get('pk'))
+        return super(DatasetUploadRecordsView, self).dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        file_obj = request.data['file']
+        create_site = 'create_site' in request.data and bool(request.data['create_site'])
+        delete_previous = 'delete_previous' in request.data and bool(request.data['delete_previous'])
+        strict = 'strict' in request.data and bool(request.data['strict'])
+
+        if file_obj.content_type not in FileReader.SUPPORTED_TYPES:
+            msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type, SiteUploader.SUPPORTED_TYPES)
+            return Response(msg, status=status.HTTP_501_NOT_IMPLEMENTED)
+
+        if delete_previous:
+            self.dataset.record_queryset.delete()
+        generator = FileReader(file_obj)
+        validator = get_record_validator_for_dataset(self.dataset)
+        validator.schema_error_as_warning = not strict
+        creator = RecordCreator(self.dataset, generator, validator=validator, create_site=create_site, commit=True)
+        data = []
+        has_error = False
+        row = 0
+        for record, validator_result in creator:
+            row += 1
+            result = {
+                'row': row
+            }
+            if validator_result.has_errors:
+                has_error = True
+            else:
+                result['recordId'] = record.id
+            result.update(validator_result.to_dict())
+            data.append(result)
+        status_code = status.HTTP_200_OK if not has_error else status.HTTP_400_BAD_REQUEST
+        return Response(data, status=status_code)

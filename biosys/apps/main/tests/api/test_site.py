@@ -1,14 +1,11 @@
-import csv
-import tempfile
-
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
-from openpyxl import Workbook
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from main.models import Project, Site
+from main.tests.api import helpers
 from main.utils_auth import is_admin
 
 
@@ -26,7 +23,8 @@ class TestPermissions(TestCase):
         'test-sites'
     ]
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
+    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
+                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
         password = 'password'
         self.admin_user = User.objects.filter(username="admin").first()
@@ -289,32 +287,14 @@ class TestPermissions(TestCase):
                 )
 
 
-def to_xlsx_file(rows):
-    h, f = tempfile.mkstemp(suffix='.xlsx')
-    wb = Workbook(write_only=True)
-    ws = wb.create_sheet()
-    for row in rows:
-        ws.append(row)
-    wb.save(f)
-    return f
-
-
-def to_csv_file(rows):
-    h, f = tempfile.mkstemp(text=True, suffix='.csv')
-    with open(f, 'wt') as csvfile:
-        writer = csv.writer(csvfile)
-        for row in rows:
-            writer.writerow(row)
-    return f
-
-
 class TestSiteUpload(TestCase):
     fixtures = [
         'test-users',
         'test-projects'
     ]
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',))  # faster password hasher
+    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
+                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
         password = 'password'
         self.admin_user = User.objects.filter(username="admin").first()
@@ -373,7 +353,7 @@ class TestSiteUpload(TestCase):
                     [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
                 )
 
-        csv_file = to_csv_file([
+        csv_file = helpers.to_csv_file([
             ['Site Code'],
             ['C1']
         ])
@@ -391,7 +371,7 @@ class TestSiteUpload(TestCase):
             ['C1', 'Site 1', 'Comments1', -32, 116, '', 'attr11', 'attr12'],
             ['C2', 'Site 2', 'Comments2', -31, 117, '', 'attr21', 'attr22']
         ]
-        csv_file = to_csv_file(csv_data)
+        csv_file = helpers.to_csv_file(csv_data)
         project = self.project_1
         client = self.custodian_1_client
         url = reverse('api:upload-sites', kwargs={'pk': project.pk})
@@ -426,7 +406,7 @@ class TestSiteUpload(TestCase):
             ['C1', 'Site 1', 'Comments1', -32, 116, '', 'attr11', 'attr12'],
             ['C2', 'Site 2', 'Comments2', -31, 117, '', 'attr21', 'attr22']
         ]
-        xlsx_file = to_xlsx_file(csv_data)
+        xlsx_file = helpers.to_xlsx_file(csv_data)
         project = self.project_1
         client = self.custodian_1_client
         url = reverse('api:upload-sites', kwargs={'pk': project.pk})
