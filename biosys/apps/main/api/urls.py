@@ -13,6 +13,7 @@ router.register(r'datasets?', main_views.DatasetViewSet, 'dataset')
 router.register(r'generic_records?', main_views.GenericRecordViewSet, 'genericRecord')
 router.register(r'observations?', main_views.ObservationViewSet, 'observation')
 router.register(r'species_observations?', main_views.SpeciesObservationViewSet, 'speciesObservation')
+router.register(r'records?', main_views.RecordViewSet, 'records')
 
 url_patterns = [
     url(r'projects?/(?P<pk>\d+)/sites/?', main_views.ProjectSitesView.as_view(), name='project-sites'),  # bulk sites
@@ -24,7 +25,7 @@ url_patterns = [
     url(r'datasets?/(?P<pk>\d+)/upload-records/?', main_views.DatasetUploadRecordsView.as_view(),
         name='dataset-upload'),
     url(r'statistics/?', main_views.StatisticsView.as_view(), name="statistics"),
-    url(r'whoami/?', main_views.WhoamiView.as_view(), name="whoami")
+    url(r'whoami/?', main_views.WhoamiView.as_view(), name="whoami"),
 ]
 
 urls = router.urls + url_patterns

@@ -68,7 +68,7 @@ class GenericDataValidator:
             validator.schema_error_as_warning = False
             result = validator.validate(data)
             if result.has_errors:
-                raise ValidationError(result.errors)
+                raise ValidationError(list(result.errors.items()))
 
     def set_context(self, serializer_field):
         ctx = serializer_field.parent.context
