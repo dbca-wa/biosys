@@ -330,7 +330,7 @@ class WhoamiView(APIView):
 
 class DatasetUploadRecordsView(APIView):
     """
-    Upload file for records (Xlsx, csv)
+    Upload file for records (xlsx, csv)
     """
     permission_classes = (IsAuthenticated, DatasetDataPermission)
     parser_classes = (FormParser, MultiPartParser)

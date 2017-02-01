@@ -30,12 +30,13 @@ class TestWhoAmI(TestCase):
             resp.status_code,
             status.HTTP_200_OK
         )
-        # test that the response contains username, first and last name and email at least
+        # test that the response contains username, first and last name and email at least and the id
         data = resp.json()
         self.assertEqual(user.username, data['username'])
         self.assertEqual(user.first_name, data['first_name'])
         self.assertEqual(user.last_name, data['last_name'])
         self.assertEqual(user.email, data['email'])
+        self.assertEqual(user.id, data['id'])
 
         # test that the password is not in the returned fields
         self.assertFalse('password' in data)

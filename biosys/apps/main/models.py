@@ -395,10 +395,10 @@ class Project(models.Model):
 
     @staticmethod
     def has_destroy_permission(request):
-        return False
+        return True
 
     def has_object_destroy_permission(self, request):
-        return False
+        return is_admin(request.user) or self.is_custodian(request.user)
 
     class Meta:
         pass
