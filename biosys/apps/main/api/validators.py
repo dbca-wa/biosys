@@ -57,7 +57,7 @@ class RecordValidatorResult:
         return result
 
 
-class GenericRecordValidator:
+class GenericRecordValidator(object):
     def __init__(self, dataset, schema_error_as_warning=True):
         self.schema = dataset.schema
         self.schema_error_as_warning = schema_error_as_warning
