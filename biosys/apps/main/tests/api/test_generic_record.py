@@ -87,9 +87,9 @@ class TestPermissions(TestCase):
         }
         for client in access['forbidden']:
             for url in urls:
-                self.assertEqual(
+                self.assertIn(
                     client.get(url).status_code,
-                    status.HTTP_401_UNAUTHORIZED
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
                 )
         for client in access['allowed']:
             for url in urls:
@@ -247,9 +247,9 @@ class TestPermissions(TestCase):
         }
         for client in access['forbidden']:
             for url in urls:
-                self.assertEqual(
+                self.assertIn(
                     client.options(url).status_code,
-                    status.HTTP_401_UNAUTHORIZED
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
                 )
         # authenticated
         for client in access['allowed']:
@@ -325,6 +325,8 @@ class TestDataValidation(TestCase):
             "data": {}
         }
         url = reverse('api:genericRecord-list')
+        # set strict mode
+        url = helpers.set_strict_mode(url)
         client = self.custodian_1_client
         count = GenericRecord.objects.count()
         self.assertEqual(
@@ -346,6 +348,8 @@ class TestDataValidation(TestCase):
             "data": incorrect_data
         }
         url = reverse('api:genericRecord-list')
+        # set strict mode
+        url = helpers.set_strict_mode(url)
         client = self.custodian_1_client
         count = GenericRecord.objects.count()
         self.assertEqual(
@@ -367,6 +371,8 @@ class TestDataValidation(TestCase):
             "data": incorrect_data
         }
         url = reverse('api:genericRecord-detail', kwargs={"pk": record.pk})
+        # set strict mode
+        url = helpers.set_strict_mode(url)
         client = self.custodian_1_client
         count = GenericRecord.objects.count()
         self.assertEqual(

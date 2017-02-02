@@ -12,6 +12,7 @@ from rest_framework.views import APIView, Response
 
 from main import models
 from main.api import serializers
+from main.api.helpers import to_bool
 from main.api.uploaders import SiteUploader, FileReader, RecordCreator
 from main.api.validators import get_record_validator_for_dataset
 from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
@@ -254,6 +255,11 @@ class GenericRecordViewSet(viewsets.ModelViewSet):
     filter_backends = (filters.DjangoFilterBackend,)
     filter_fields = ('id', 'site', 'dataset__id', 'dataset__name')
 
+    def get_serializer_context(self):
+        ctx = super(GenericRecordViewSet, self).get_serializer_context()
+        ctx['strict'] = 'strict' in self.request.query_params
+        return ctx
+
 
 class ObservationViewSet(GenericRecordViewSet):
     queryset = models.Observation.objects.all()
@@ -346,9 +352,9 @@ class DatasetUploadRecordsView(APIView):
 
     def post(self, request, *args, **kwargs):
         file_obj = request.data['file']
-        create_site = 'create_site' in request.data and bool(request.data['create_site'])
-        delete_previous = 'delete_previous' in request.data and bool(request.data['delete_previous'])
-        strict = 'strict' in request.data and bool(request.data['strict'])
+        create_site = 'create_site' in request.data and to_bool(request.data['create_site'])
+        delete_previous = 'delete_previous' in request.data and to_bool(request.data['delete_previous'])
+        strict = 'strict' in request.data and to_bool(request.data['strict'])
 
         if file_obj.content_type not in FileReader.SUPPORTED_TYPES:
             msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type, SiteUploader.SUPPORTED_TYPES)
