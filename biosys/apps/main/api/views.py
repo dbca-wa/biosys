@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
+from django.utils import six
 from dry_rest_permissions.generics import DRYPermissions
 from rest_framework import viewsets, filters, generics, status
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -333,6 +334,13 @@ class WhoamiView(APIView):
         return Response(data)
 
 
+def to_bool(s):
+    if isinstance(s, six.string_types):
+        return s.lower() in ('y', 'yes', 'true', 'on', '1')
+    else:
+        return bool(s)
+
+
 class DatasetUploadRecordsView(APIView):
     """
     Upload file for records (xlsx, csv)
@@ -351,9 +359,9 @@ class DatasetUploadRecordsView(APIView):
 
     def post(self, request, *args, **kwargs):
         file_obj = request.data['file']
-        create_site = 'create_site' in request.data and bool(request.data['create_site'])
-        delete_previous = 'delete_previous' in request.data and bool(request.data['delete_previous'])
-        strict = 'strict' in request.data and bool(request.data['strict'])
+        create_site = 'create_site' in request.data and to_bool(request.data['create_site'])
+        delete_previous = 'delete_previous' in request.data and to_bool(request.data['delete_previous'])
+        strict = 'strict' in request.data and to_bool(request.data['strict'])
 
         if file_obj.content_type not in FileReader.SUPPORTED_TYPES:
             msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type, SiteUploader.SUPPORTED_TYPES)
