@@ -61,11 +61,14 @@ class DatasetSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class GenericDataValidator:
+class SchemaValidator:
+    def __init__(self, strict=True):
+        self.strict = strict
+
     def __call__(self, data):
         if self.dataset is not None:
             validator = get_record_validator_for_dataset(self.dataset)
-            validator.schema_error_as_warning = False
+            validator.schema_error_as_warning = not self.strict
             result = validator.validate(data)
             if result.has_errors:
                 raise ValidationError(list(result.errors.items()))
@@ -107,9 +110,15 @@ class GenericRecordListSerializer(serializers.ListSerializer):
 class GenericRecordSerializer(serializers.ModelSerializer):
     data = serializers.JSONField(
         validators=[
-            GenericDataValidator()
+            SchemaValidator(strict=False)
         ]
     )
+
+    def __init__(self, **kwargs):
+        super(GenericRecordSerializer, self).__init__(**kwargs)
+        strict = kwargs.get('context', {}).get('strict', False)
+        schema_validator = SchemaValidator(strict=strict)
+        self.fields['data'].validators = [schema_validator]
 
     @staticmethod
     def get_site(dataset, data, force_create=False):

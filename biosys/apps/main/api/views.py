@@ -254,6 +254,14 @@ class GenericRecordViewSet(viewsets.ModelViewSet):
     filter_backends = (filters.DjangoFilterBackend,)
     filter_fields = ('id', 'site', 'dataset__id', 'dataset__name')
 
+    def __init__(self, **kwargs):
+        super(GenericRecordViewSet, self).__init__(**kwargs)
+
+    def get_serializer_context(self):
+        ctx = super(GenericRecordViewSet, self).get_serializer_context()
+        ctx['strict'] = 'strict' in self.request.query_params
+        return ctx
+
 
 class ObservationViewSet(GenericRecordViewSet):
     queryset = models.Observation.objects.all()
@@ -376,46 +384,3 @@ class DatasetUploadRecordsView(APIView):
             data.append(result)
         status_code = status.HTTP_200_OK if not has_error else status.HTTP_400_BAD_REQUEST
         return Response(data, status=status_code)
-
-
-class RecordViewSet(viewsets.GenericViewSet):
-    def __init__(self, **kwargs):
-        super(RecordViewSet, self).__init__(**kwargs)
-        print('__init__', kwargs)
-        self.dataset = None
-
-    def list(self, request):
-        return Response(data="Not implemented")
-
-    def create(self, request):
-        return Response(data="Not implemented")
-
-    def retrieve(self, request, pk=None):
-        return Response(data="Not implemented")
-
-    def update(self, request, pk=None):
-        return Response(data="Not implemented")
-
-    def partial_update(self, request, pk=None):
-        return Response(data="Not implemented")
-
-    def destroy(self, request, pk=None):
-        return Response(data="Not implemented")
-
-    def dispatch(self, request, *args, **kwargs):
-        print('dispatch', self, request, *args, **kwargs)
-        return super(RecordViewSet, self).dispatch(request, *args, **kwargs)
-
-    def get_serializer_context(self):
-        print('get_serializer')
-        result = super(RecordViewSet, self).get_serializer_context()
-        print('get_serializer', result)
-        return result
-
-    def get_queryset(self):
-        print('get_queryset')
-        return GenericRecord.objects.all()
-
-    def get_serializer(self):
-        print('get_serializer')
-        return serializers.GenericRecordSerializer()
