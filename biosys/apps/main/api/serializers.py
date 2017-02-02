@@ -66,6 +66,9 @@ class SchemaValidator:
         self.strict = strict
 
     def __call__(self, data):
+        if not data:
+            msg = "cannot be null or empty"
+            raise ValidationError(('data', msg))
         if self.dataset is not None:
             validator = get_record_validator_for_dataset(self.dataset)
             validator.schema_error_as_warning = not self.strict
@@ -114,8 +117,8 @@ class GenericRecordSerializer(serializers.ModelSerializer):
         ]
     )
 
-    def __init__(self, **kwargs):
-        super(GenericRecordSerializer, self).__init__(**kwargs)
+    def __init__(self, instance=None, **kwargs):
+        super(GenericRecordSerializer, self).__init__(instance, **kwargs)
         strict = kwargs.get('context', {}).get('strict', False)
         schema_validator = SchemaValidator(strict=strict)
         self.fields['data'].validators = [schema_validator]

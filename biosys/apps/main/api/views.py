@@ -254,9 +254,6 @@ class GenericRecordViewSet(viewsets.ModelViewSet):
     filter_backends = (filters.DjangoFilterBackend,)
     filter_fields = ('id', 'site', 'dataset__id', 'dataset__name')
 
-    def __init__(self, **kwargs):
-        super(GenericRecordViewSet, self).__init__(**kwargs)
-
     def get_serializer_context(self):
         ctx = super(GenericRecordViewSet, self).get_serializer_context()
         ctx['strict'] = 'strict' in self.request.query_params
