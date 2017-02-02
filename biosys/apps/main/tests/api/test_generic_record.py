@@ -88,7 +88,7 @@ class TestPermissions(TestCase):
         for client in access['forbidden']:
             for url in urls:
                 self.assertIn(
-                    client.options(url).status_code,
+                    client.get(url).status_code,
                     [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
                 )
         for client in access['allowed']:

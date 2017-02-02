@@ -20,7 +20,7 @@ class TestBasicAuth(TestCase):
         client = APIClient()
         url = reverse('api:dataset-list')
         resp = client.get(url)
-        self.assertEquals(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn(resp.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
 
         user = User.objects.filter(username="readonly").first()
         self.assertIsNotNone(user)
@@ -72,7 +72,7 @@ class TestBasicAuth(TestCase):
         # can't get dataset list without token
         url = reverse('api:dataset-list')
         resp = client.get(url)
-        self.assertEquals(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn(resp.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
 
         # set credential token
         client.credentials(HTTP_AUTHORIZATION='Token ' + token)

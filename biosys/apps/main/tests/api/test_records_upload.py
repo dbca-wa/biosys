@@ -78,9 +78,9 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             }
             resp = client.post(self.url, data=data, format='multipart')
             self.assertEquals(status.HTTP_200_OK, resp.status_code)
-            qs = self.ds.record_queryset
+            # The records should be saved in order of the row
+            qs = self.ds.record_queryset.order_by('id')
             self.assertEquals(len(csv_data) - 1, qs.count())
-
             expected_data = {
                 'Column A': 'A1',
                 'Column B': 'B1',
