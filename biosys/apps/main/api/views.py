@@ -4,7 +4,6 @@ from collections import OrderedDict
 
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
-from django.utils import six
 from dry_rest_permissions.generics import DRYPermissions
 from rest_framework import viewsets, filters, generics, status
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -13,6 +12,7 @@ from rest_framework.views import APIView, Response
 
 from main import models
 from main.api import serializers
+from main.api.helpers import to_bool
 from main.api.uploaders import SiteUploader, FileReader, RecordCreator
 from main.api.validators import get_record_validator_for_dataset
 from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
@@ -332,13 +332,6 @@ class WhoamiView(APIView):
         if request.user.is_authenticated():
             data = self.serializers(request.user).data
         return Response(data)
-
-
-def to_bool(s):
-    if isinstance(s, six.string_types):
-        return s.lower() in ('y', 'yes', 'true', 'on', '1')
-    else:
-        return bool(s)
 
 
 class DatasetUploadRecordsView(APIView):
