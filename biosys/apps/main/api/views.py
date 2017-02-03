@@ -372,3 +372,15 @@ class DatasetUploadRecordsView(APIView):
             data.append(result)
         status_code = status.HTTP_200_OK if not has_error else status.HTTP_400_BAD_REQUEST
         return Response(data, status=status_code)
+
+
+class SpeciesView(APIView, SpeciesMixin):
+    def get(self, request, *args, **kwargs):
+        """
+        :param request:
+        :param args:
+        :param kwargs:
+        :return: a dict { 'species name': name_id }
+        """
+        data = self.species_facade_class().name_id_by_species_name()
+        return Response(data=data)
