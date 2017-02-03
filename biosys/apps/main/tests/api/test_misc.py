@@ -147,10 +147,10 @@ class TestStatistics(TestCase):
 
 
 class TestSpecies(TestCase):
+    # set the species list to be the testing one
     species_facade_class = helpers.LightSpeciesFacade
 
     def setUp(self):
-        # set the species list to be the testing one
         from main.api.views import SpeciesMixin
         SpeciesMixin.species_facade_class = self.species_facade_class
 
