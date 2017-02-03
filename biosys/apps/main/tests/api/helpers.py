@@ -228,3 +228,7 @@ def create_data_package_from_fields(fields):
     result = clone(GENERIC_DATA_PACKAGE)
     result['resources'][0]['schema']['fields'] = fields
     return result
+
+
+def set_strict_mode(url):
+    return url + '?strict'

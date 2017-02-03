@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
 
+from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
 from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
 
@@ -60,23 +61,20 @@ class DatasetSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class GenericDataValidator:
+class SchemaValidator:
+    def __init__(self, strict=True):
+        self.strict = strict
+
     def __call__(self, data):
+        if not data:
+            msg = "cannot be null or empty"
+            raise ValidationError(('data', msg))
         if self.dataset is not None:
-            self.dataset.validate_data(data)
-            # validate site
-            schema = self.dataset.schema
-            site_fk = schema.get_fk_for_model('Site')
-            if site_fk:
-                model_field = site_fk.model_field
-                site_value = data.get(site_fk.data_field)
-                kwargs = {
-                    "project": self.dataset.project,
-                    model_field: site_value
-                }
-                if not Site.objects.filter(**kwargs).exists():
-                    msg = "Could not find the site '{} in: {}':".format(site_value, data)
-                    raise ValidationError(msg)
+            validator = get_record_validator_for_dataset(self.dataset)
+            validator.schema_error_as_warning = not self.strict
+            result = validator.validate(data)
+            if result.has_errors:
+                raise ValidationError(list(result.errors.items()))
 
     def set_context(self, serializer_field):
         ctx = serializer_field.parent.context
@@ -115,9 +113,15 @@ class GenericRecordListSerializer(serializers.ListSerializer):
 class GenericRecordSerializer(serializers.ModelSerializer):
     data = serializers.JSONField(
         validators=[
-            GenericDataValidator()
+            SchemaValidator(strict=False)
         ]
     )
+
+    def __init__(self, instance=None, **kwargs):
+        super(GenericRecordSerializer, self).__init__(instance, **kwargs)
+        strict = kwargs.get('context', {}).get('strict', False)
+        schema_validator = SchemaValidator(strict=strict)
+        self.fields['data'].validators = [schema_validator]
 
     @staticmethod
     def get_site(dataset, data, force_create=False):
