@@ -249,7 +249,7 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
 
     def get_dataset(self, request, *args, **kwargs):
         ds = None
-        pk = request.data.get('dataset') or request.query_params.get('dataset__id')
+        pk = request.data['dataset'] if 'dataset' in request.data else request.query_params.get('dataset__id')
         if pk:
             ds = get_object_or_404(Dataset, pk=pk)
         else:
