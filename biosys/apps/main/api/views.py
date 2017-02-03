@@ -1,5 +1,6 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
+import datetime
 from collections import OrderedDict
 
 from django.contrib.auth import get_user_model
@@ -17,6 +18,8 @@ from main.api.uploaders import SiteUploader, FileReader, RecordCreator
 from main.api.validators import get_record_validator_for_dataset
 from main.models import Project, Site, Dataset, Record
 from main.utils_auth import is_admin
+from main.utils_data_package import Exporter
+from main.utils_http import WorkbookResponse
 from main.utils_species import HerbieFacade
 
 
@@ -276,10 +279,13 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
 
     def get_dataset(self, request, *args, **kwargs):
         ds = None
-        if 'dataset' in self.request.query_params:
-            ds = get_object_or_404(Dataset, pk=request.query_params['dataset'])
-        elif 'dataset' in request.data:
-            ds = get_object_or_404(Dataset, pk=request.data['dataset'])
+        pk = request.data['dataset'] if 'dataset' in request.data else request.query_params.get('dataset__id')
+        if pk:
+            ds = get_object_or_404(Dataset, pk=pk)
+        else:
+            name = request.query_params.get('dataset__name')
+            if name:
+                ds = get_object_or_404(Dataset, name=name)
         return ds
 
     def initial(self, request, *args, **kwargs):
@@ -297,6 +303,21 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
             if 'species_mapping' not in ctx:
                 ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
         return ctx
+
+    def list(self, request, *args, **kwargs):
+        # don't use 'format' param as it's kind of reserved by DRF
+        if self.request.query_params.get('output') == 'xlsx':
+            if not self.dataset:
+                return Response(status=status.HTTP_400_BAD_REQUEST, data="No dataset specified")
+            qs = self.filter_queryset(self.get_queryset())
+            exporter = Exporter(self.dataset, qs)
+            wb = exporter.to_workbook()
+            now = datetime.datetime.now()
+            file_name = self.dataset.name + '_' + now.strftime('%Y-%m-%d-%H%M%S') + '.xlsx'
+            response = WorkbookResponse(wb, file_name)
+            return response
+        else:
+            return super(RecordViewSet, self).list(request, *args, **kwargs)
 
 
 class StatisticsView(APIView):
@@ -407,9 +428,7 @@ class DatasetUploadRecordsView(APIView):
 class SpeciesView(APIView, SpeciesMixin):
     def get(self, request, *args, **kwargs):
         """
-        :param request:
-        :param args:
-        :param kwargs:
+        Get the map 'species name' => name_id from Herbie
         :return: a dict { 'species name': name_id }
         """
         data = self.species_facade_class().name_id_by_species_name()
