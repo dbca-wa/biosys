@@ -82,8 +82,8 @@ class TestPermissions(TestCase):
 
     def test_get(self):
         urls = [
-            reverse('api:observation-list'),
-            reverse('api:observation-detail', kwargs={'pk': 1})
+            reverse('api:record-list'),
+            reverse('api:record-detail', kwargs={'pk': 1})
         ]
         access = {
             "forbidden": [self.anonymous_client],
@@ -107,7 +107,7 @@ class TestPermissions(TestCase):
         Admin and custodians
         :return:
         """
-        urls = [reverse('api:observation-list')]
+        urls = [reverse('api:record-list')]
         ds = self.ds_1
         rec = self.record_1
         data = {
@@ -142,7 +142,7 @@ class TestPermissions(TestCase):
         Cannot create bulk with this end point
         :return:
         """
-        urls = [reverse('api:observation-list')]
+        urls = [reverse('api:record-list')]
         rec = self.record_1
         ds = self.ds_1
         data = [
@@ -187,7 +187,7 @@ class TestPermissions(TestCase):
         previous_data = clone(rec.data)
         updated_data = clone(previous_data)
         updated_data['Longitude'] = '118.78'
-        urls = [reverse('api:observation-detail', kwargs={'pk': rec.pk})]
+        urls = [reverse('api:record-detail', kwargs={'pk': rec.pk})]
         data = {
             "data": updated_data,
         }
@@ -220,7 +220,7 @@ class TestPermissions(TestCase):
         :return:
         """
         rec = self.record_1
-        urls = [reverse('api:observation-detail', kwargs={'pk': rec.pk})]
+        urls = [reverse('api:record-detail', kwargs={'pk': rec.pk})]
         data = None
         access = {
             "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
@@ -246,8 +246,8 @@ class TestPermissions(TestCase):
 
     def test_options(self):
         urls = [
-            reverse('api:observation-list'),
-            reverse('api:observation-detail', kwargs={'pk': 1})
+            reverse('api:record-list'),
+            reverse('api:record-detail', kwargs={'pk': 1})
         ]
         access = {
             "forbidden": [self.anonymous_client],
@@ -339,7 +339,7 @@ class TestDataValidation(TestCase):
             "dataset": record.dataset.pk,
             "data": record.data
         }
-        url = reverse('api:observation-list')
+        url = reverse('api:record-list')
         client = self.custodian_1_client
         count = ds.record_queryset.count()
         self.assertEqual(
@@ -355,7 +355,7 @@ class TestDataValidation(TestCase):
             "dataset": record.dataset.pk,
             "data": {}
         }
-        url = reverse('api:observation-list')
+        url = reverse('api:record-list')
         client = self.custodian_1_client
         count = ds.record_queryset.count()
         self.assertEqual(
@@ -377,7 +377,7 @@ class TestDataValidation(TestCase):
             "dataset": record.dataset.pk,
             "data": incorrect_data
         }
-        url = reverse('api:observation-list')
+        url = reverse('api:record-list')
         # set strict mode
         url = helpers.set_strict_mode(url)
         client = self.custodian_1_client
@@ -401,7 +401,7 @@ class TestDataValidation(TestCase):
             "dataset": record.dataset.pk,
             "data": incorrect_data
         }
-        url = reverse('api:observation-detail', kwargs={"pk": record.pk})
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
         client = self.custodian_1_client
         count = ds.record_queryset.count()
         # set strict mode
@@ -426,8 +426,8 @@ class TestDataValidation(TestCase):
         record = self.record_1
         date_column = ds.schema.observation_date_field.name
         new_data = clone(record.data)
-        url_post = reverse('api:observation-list')
-        url_update = reverse('api:observation-detail', kwargs={'pk': record.pk})
+        url_post = reverse('api:record-list')
+        url_update = reverse('api:record-detail', kwargs={'pk': record.pk})
         valid_values = ['15/08/2008']
         for value in valid_values:
             new_data[date_column] = value
@@ -476,8 +476,8 @@ class TestDataValidation(TestCase):
         record = self.record_1
         lat_column = ds.schema.latitude_field.name
         new_data = clone(record.data)
-        url_post = reverse('api:observation-list')
-        url_update = reverse('api:observation-detail', kwargs={'pk': record.pk})
+        url_post = reverse('api:record-list')
+        url_update = reverse('api:record-detail', kwargs={'pk': record.pk})
         valid_values = [-34.125]
         for value in valid_values:
             new_data[lat_column] = value
@@ -596,7 +596,7 @@ class TestSiteExtraction(TestCase):
         schema = ds.schema
         self.assertTrue(schema.has_fk_for_model('Site'))
         expected_site = record.site
-        url = reverse('api:observation-list')
+        url = reverse('api:record-list')
         client = self.custodian_1_client
         self.assertEqual(
             client.post(url, data, format='json').status_code,
@@ -622,7 +622,7 @@ class TestSiteExtraction(TestCase):
         data = {
             "data": r_data
         }
-        url = reverse('api:observation-detail', kwargs={"pk": record.pk})
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
         client = self.custodian_1_client
         self.assertEqual(
             client.patch(url, data, format='json').status_code,
@@ -711,7 +711,7 @@ class TestDateTimeAndGeometryExtraction(TestCase):
         }
         expected_datetime = record.datetime
         expected_geojson = record.geometry.geojson
-        url = reverse('api:observation-list')
+        url = reverse('api:record-list')
         client = self.custodian_1_client
         self.assertEqual(
             client.post(url, data, format='json').status_code,
@@ -747,7 +747,7 @@ class TestDateTimeAndGeometryExtraction(TestCase):
             "dataset": record.dataset.pk,
             "data": new_data
         }
-        url = reverse('api:observation-detail', kwargs={"pk": record.pk})
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
         client = self.custodian_1_client
         count = ds.record_queryset.count()
         self.assertEqual(

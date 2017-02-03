@@ -1,10 +1,7 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
-import logging
-
 from django.contrib import admin
 from django.contrib.gis.admin import OSMGeoAdmin, GeoModelAdmin
-from reversion.admin import VersionAdmin
 
 from main import forms
 from main.models import *
@@ -54,18 +51,8 @@ class DatasetAdmin(MainAppAdmin):
     form = forms.DataSetForm
 
 
-@admin.register(GenericRecord)
-class GenericRecordAdmin(MainAppAdmin):
+@admin.register(Record)
+class RecordAdmin(MainAppAdmin):
     list_display = ['dataset', 'data']
     list_filter = ['dataset']
     readonly_fields = ['data']
-
-
-@admin.register(Observation)
-class ObservationAdmin(GenericRecordAdmin):
-    pass
-
-
-@admin.register(SpeciesObservation)
-class SpeciesObservationAdmin(GenericRecordAdmin):
-    pass

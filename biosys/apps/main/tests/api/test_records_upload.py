@@ -47,7 +47,8 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             }
             resp = client.post(self.url, data=data, format='multipart')
             self.assertEquals(status.HTTP_200_OK, resp.status_code)
-            qs = self.ds.record_queryset
+            # The records should be saved in order of the row
+            qs = self.ds.record_queryset.order_by('pk')
             self.assertEquals(len(csv_data) - 1, qs.count())
 
             expected_data = {
@@ -63,7 +64,6 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             self.assertEquals(expected_data, qs[1].data)
 
     def test_upload_xlsx_happy_path(self):
-        pass
         csv_data = [
             ['Column A', 'Column B'],
             ['A1', 'B1'],
@@ -79,7 +79,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             resp = client.post(self.url, data=data, format='multipart')
             self.assertEquals(status.HTTP_200_OK, resp.status_code)
             # The records should be saved in order of the row
-            qs = self.ds.record_queryset.order_by('id')
+            qs = self.ds.record_queryset.order_by('pk')
             self.assertEquals(len(csv_data) - 1, qs.count())
             expected_data = {
                 'Column A': 'A1',
