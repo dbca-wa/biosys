@@ -15,7 +15,7 @@ from main.api import serializers
 from main.api.helpers import to_bool
 from main.api.uploaders import SiteUploader, FileReader, RecordCreator
 from main.api.validators import get_record_validator_for_dataset
-from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
+from main.models import Project, Site, Dataset, Record
 from main.utils_auth import is_admin
 from main.utils_species import HerbieFacade
 
@@ -195,16 +195,7 @@ class DatasetDataView(generics.ListCreateAPIView, SpeciesMixin):
         return super(DatasetDataView, self).dispatch(request, *args, **kwargs)
 
     def get_serializer_class(self):
-        if self.dataset:  # test needed for the swagger
-            if self.dataset.type == models.Dataset.TYPE_SPECIES_OBSERVATION:
-                return serializers.SpeciesObservationSerializer
-            elif self.dataset.type == models.Dataset.TYPE_OBSERVATION:
-                return serializers.ObservationSerializer
-            else:
-                return serializers.GenericRecordSerializer
-        else:
-            # for the swagger
-            return serializers.GenericRecordSerializer
+        return serializers.RecordSerializer
 
     def get_serializer(self, *args, **kwargs):
         kwargs["many"] = True
@@ -238,44 +229,43 @@ class DatasetDataView(generics.ListCreateAPIView, SpeciesMixin):
             self.dataset = get_object_or_404(models.Dataset, pk=kwargs.get('pk'))
         return super(DatasetDataView, self).list(request, *args, **kwargs)
 
-    def create(self, request, *args, **kwargs):
-        result = super(DatasetDataView, self).create(request, *args, **kwargs)
+
+class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
+    permission_classes = (IsAuthenticated, DRYPermissions)
+    queryset = models.Record.objects.all()
+    serializer_class = serializers.RecordSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_fields = ('id', 'site', 'dataset__id', 'dataset__name', 'dataset__project__id', 'dataset__project__title',
+                     'datetime', 'species_name', 'name_id')
+
+    def __init__(self, **kwargs):
+        super(RecordViewSet, self).__init__(**kwargs)
+        self.dataset = None
+        # validation mode
+        self.strict = False
+
+    def get_dataset(self, request, *args, **kwargs):
+        ds = None
+        if 'dataset' in self.request.query_params:
+            ds = get_object_or_404(Dataset, pk=request.query_params['dataset'])
+        elif 'dataset' in request.data:
+            ds = get_object_or_404(Dataset, pk=request.data['dataset'])
+        return ds
+
+    def initial(self, request, *args, **kwargs):
+        result = super(RecordViewSet, self).initial(request, *args, **kwargs)
+        self.dataset = self.get_dataset(request, *args, **kwargs)
+        self.strict = 'strict' in request.query_params
         return result
 
-    def post(self, request, *args, **kwargs):
-        if not self.dataset:
-            self.dataset = get_object_or_404(models.Dataset, pk=kwargs.get('pk'))
-        return super(DatasetDataView, self).post(request, *args, **kwargs)
-
-
-class GenericRecordViewSet(viewsets.ModelViewSet):
-    permission_classes = (IsAuthenticated, DRYPermissions)
-    queryset = models.GenericRecord.objects.all()
-    serializer_class = serializers.GenericRecordSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
-    filter_fields = ('id', 'site', 'dataset__id', 'dataset__name')
-
     def get_serializer_context(self):
-        ctx = super(GenericRecordViewSet, self).get_serializer_context()
-        ctx['strict'] = 'strict' in self.request.query_params
-        return ctx
-
-
-class ObservationViewSet(GenericRecordViewSet):
-    queryset = models.Observation.objects.all()
-    serializer_class = serializers.ObservationSerializer
-    filter_fields = GenericRecordViewSet.filter_fields + ('datetime',)
-
-
-class SpeciesObservationViewSet(ObservationViewSet, SpeciesMixin):
-    queryset = models.SpeciesObservation.objects.all()
-    serializer_class = serializers.SpeciesObservationSerializer
-    filter_fields = ObservationViewSet.filter_fields + ('species_name', 'name_id',)
-
-    def get_serializer_context(self):
-        ctx = super(SpeciesObservationViewSet, self).get_serializer_context()
-        if 'species_mapping' not in ctx:
-            ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
+        ctx = super(RecordViewSet, self).get_serializer_context()
+        ctx['dataset'] = self.dataset
+        ctx['strict'] = self.strict
+        if self.dataset and self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
+            # set the species map for name id lookup
+            if 'species_mapping' not in ctx:
+                ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
         return ctx
 
 
@@ -302,13 +292,13 @@ class StatisticsView(APIView):
             }),
         ])
         # records
-        generic_records_count = GenericRecord.objects.count()
-        observation_record_count = Observation.objects.count()
-        species_observation_count = SpeciesObservation.objects.count()
+        total_records_count = Record.objects.count()
+        observation_record_count = Record.objects.filter(geometry__isnull=False).count()
+        species_observation_count = Record.objects.filter(species_name__isnull=False).exclude(species_name='').count()
         data['records'] = OrderedDict([
-            ('total', generic_records_count + observation_record_count + species_observation_count),
+            ('total', total_records_count),
             ('generic', {
-                'total': generic_records_count
+                'total': total_records_count - observation_record_count - species_observation_count
             }),
             ('observation', {
                 'total': observation_record_count

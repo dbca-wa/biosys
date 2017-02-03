@@ -1,10 +1,11 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
 import datetime
-from django.views.generic import View
-from django.shortcuts import get_object_or_404
 
-from main.models import Dataset, GenericRecord, Observation, SpeciesObservation
+from django.shortcuts import get_object_or_404
+from django.views.generic import View
+
+from main.models import Dataset, Record
 from main.utils_data_package import Exporter
 from main.utils_http import WorkbookResponse
 
@@ -12,13 +13,7 @@ from main.utils_http import WorkbookResponse
 class ExportDataSetView(View):
     def get(self, request, *args, **kwargs):
         ds = get_object_or_404(Dataset, pk=kwargs.get('pk'))
-        qs = []
-        if ds.type == Dataset.TYPE_GENERIC:
-            qs = GenericRecord.objects.filter(dataset=ds).order_by('id')
-        elif ds.type == Dataset.TYPE_OBSERVATION:
-            qs = Observation.objects.filter(dataset=ds).order_by('id')
-        elif ds.type == Dataset.TYPE_SPECIES_OBSERVATION:
-            qs = SpeciesObservation.objects.filter(dataset=ds).order_by('id')
+        qs = Record.objects.filter(dataset=ds).order_by('id')
         exporter = Exporter(ds, qs)
         wb = exporter.to_workbook()
         now = datetime.datetime.now()

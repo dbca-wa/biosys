@@ -9,7 +9,7 @@ from rest_framework import serializers
 
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
-from main.models import Project, Site, Dataset, GenericRecord, Observation, SpeciesObservation
+from main.models import Project, Site, Dataset, Record
 
 
 class SimpleUserSerializer(serializers.ModelSerializer):
@@ -64,6 +64,7 @@ class DatasetSerializer(serializers.ModelSerializer):
 class SchemaValidator:
     def __init__(self, strict=True):
         self.strict = strict
+        self.dataset = None
 
     def __call__(self, data):
         if not data:
@@ -80,48 +81,15 @@ class SchemaValidator:
         ctx = serializer_field.parent.context
         if 'dataset' in ctx:
             self.dataset = ctx['dataset']
-        elif 'dataset' in ctx['request'].data:
-            self.dataset = Dataset.objects.get(pk=ctx['request'].data['dataset'])
-        else:
-            self.dataset = None
 
 
-class GenericRecordListSerializer(serializers.ListSerializer):
-    """
-    This serializer uses the django bulk_create instead of creating one by one.
-    """
-
-    def create(self, validated_data):
-        records = []
-        model = self.child.Meta.model
-        for data in validated_data:
-            record = model(**data)
-            self.child.set_site(record, data, force_create=False, commit=False)
-            records.append(record)
-        return model.objects.bulk_create(records)
-
-    def update(self, instance, validated_data):
-        raise NotImplementedError(
-            "Serializers with many=True do not support multiple update by "
-            "default, only multiple create. For updates it is unclear how to "
-            "deal with insertions and deletions. If you need to support "
-            "multiple update, use a `ListSerializer` class and override "
-            "`.update()` so you can specify the behavior exactly."
-        )
-
-
-class GenericRecordSerializer(serializers.ModelSerializer):
-    data = serializers.JSONField(
-        validators=[
-            SchemaValidator(strict=False)
-        ]
-    )
-
+class RecordSerializer(serializers.ModelSerializer):
     def __init__(self, instance=None, **kwargs):
-        super(GenericRecordSerializer, self).__init__(instance, **kwargs)
+        super(RecordSerializer, self).__init__(instance, **kwargs)
         strict = kwargs.get('context', {}).get('strict', False)
         schema_validator = SchemaValidator(strict=strict)
         self.fields['data'].validators = [schema_validator]
+        self.dataset = kwargs.get('context', {}).get('dataset', None)
 
     @staticmethod
     def get_site(dataset, data, force_create=False):
@@ -142,49 +110,13 @@ class GenericRecordSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def set_site(instance, validated_data, force_create=False, commit=True):
-        site = GenericRecordSerializer.get_site(instance.dataset, validated_data['data'], force_create=force_create)
+        site = RecordSerializer.get_site(instance.dataset, validated_data['data'], force_create=force_create)
         if site is not None and instance.site != site:
             instance.site = site
             if commit:
                 instance.save()
         return instance
 
-    def create(self, validated_data):
-        """
-        Extract the Site from data if not specified
-        :param validated_data:
-        :return:
-        """
-        instance = super(GenericRecordSerializer, self).create(validated_data)
-        return self.set_site(instance, validated_data, force_create=False)
-
-    def update(self, instance, validated_data):
-        instance = super(GenericRecordSerializer, self).update(instance, validated_data)
-        result = self.set_site(instance, validated_data)
-        return result
-
-    class Meta:
-        model = GenericRecord
-        list_serializer_class = GenericRecordListSerializer
-        fields = '__all__'
-
-
-class ObservationListSerializer(GenericRecordListSerializer):
-    def create(self, validated_data):
-        records = []
-        model = self.child.Meta.model
-        for data in validated_data:
-            record = model(**data)
-            self.child.set_site(record, data, commit=False, force_create=False)
-            self.child.set_date_and_geometry(record, data, commit=False)
-            records.append(record)
-        return model.objects.bulk_create(records)
-
-    def update(self, instance, validated_data):
-        return super(ObservationListSerializer, self).update(instance, validated_data)
-
-
-class ObservationSerializer(GenericRecordSerializer):
     @staticmethod
     def get_datetime(dataset, data):
         return dataset.schema.cast_record_observation_date(data)
@@ -196,7 +128,7 @@ class ObservationSerializer(GenericRecordSerializer):
     @staticmethod
     def set_date(instance, validated_data, commit=True):
         dataset = instance.dataset
-        observation_date = ObservationSerializer.get_datetime(dataset, validated_data['data'])
+        observation_date = RecordSerializer.get_datetime(dataset, validated_data['data'])
         if observation_date:
             # convert to datetime with timezone awareness
             if isinstance(observation_date, datetime.date):
@@ -210,7 +142,7 @@ class ObservationSerializer(GenericRecordSerializer):
 
     @staticmethod
     def set_geometry(instance, validated_data, commit=True):
-        geom = ObservationSerializer.get_geometry(instance.dataset, validated_data['data'])
+        geom = RecordSerializer.get_geometry(instance.dataset, validated_data['data'])
         if geom:
             instance.geometry = geom
             if commit:
@@ -222,37 +154,6 @@ class ObservationSerializer(GenericRecordSerializer):
         self.set_geometry(instance, validated_data, commit=commit)
         return instance
 
-    def create(self, validated_data):
-        instance = super(ObservationSerializer, self).create(validated_data)
-        return self.set_date_and_geometry(instance, validated_data)
-
-    def update(self, instance, validated_data):
-        instance = super(ObservationSerializer, self).update(instance, validated_data)
-        return self.set_date_and_geometry(instance, validated_data)
-
-    class Meta:
-        model = Observation
-        list_serializer_class = ObservationListSerializer
-        fields = '__all__'
-
-
-class SpeciesObservationListSerializer(ObservationListSerializer):
-    def create(self, validated_data):
-        records = []
-        model = self.child.Meta.model
-        for data in validated_data:
-            record = model(**data)
-            self.child.set_site(record, data, commit=False, force_create=False)
-            self.child.set_date_and_geometry(record, data, commit=False)
-            self.child.set_species_name_and_id(record, data, commit=False)
-            records.append(record)
-        return model.objects.bulk_create(records)
-
-    def update(self, instance, validated_data):
-        return super(ObservationListSerializer, self).update(instance, validated_data)
-
-
-class SpeciesObservationSerializer(ObservationSerializer):
     @staticmethod
     def get_species_name(dataset, data):
         return dataset.schema.cast_species_name(data)
@@ -284,15 +185,27 @@ class SpeciesObservationSerializer(ObservationSerializer):
         self.set_name_id(instance, commit=commit)
         return instance
 
+    def set_fields_from_data(self, instance, validated_data):
+        instance = self.set_site(instance, validated_data)
+        if self.dataset and self.dataset.type in [Dataset.TYPE_OBSERVATION, Dataset.TYPE_SPECIES_OBSERVATION]:
+            instance = self.set_date_and_geometry(instance, validated_data)
+            if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
+                instance = self.set_species_name_and_id(instance, validated_data)
+        return instance
+
     def create(self, validated_data):
-        instance = super(SpeciesObservationSerializer, self).create(validated_data)
-        return self.set_species_name_and_id(instance, validated_data)
+        """
+        Extract the Site from data if not specified
+        :param validated_data:
+        :return:
+        """
+        instance = super(RecordSerializer, self).create(validated_data)
+        return self.set_fields_from_data(instance, validated_data)
 
     def update(self, instance, validated_data):
-        instance = super(SpeciesObservationSerializer, self).update(instance, validated_data)
-        return self.set_species_name_and_id(instance, validated_data)
+        instance = super(RecordSerializer, self).update(instance, validated_data)
+        return self.set_fields_from_data(instance, validated_data)
 
     class Meta:
-        model = SpeciesObservation
-        list_serializer_class = SpeciesObservationListSerializer
+        model = Record
         fields = '__all__'
