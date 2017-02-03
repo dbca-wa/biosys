@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from main.models import Project, Site
+from main.tests.api import helpers
 
 
 class TestWhoAmI(TestCase):
@@ -123,6 +124,58 @@ class TestStatistics(TestCase):
             resp.status_code,
             status.HTTP_200_OK
         )
+        self.assertEquals(expected, resp.json())
+
+    def test_not_allowed_methods(self):
+        user = G(get_user_model())
+        user.set_password('password')
+        user.save()
+        client = APIClient()
+        self.assertTrue(client.login(username=user.username, password='password'))
+        self.assertEqual(
+            client.post(self.url, {}).status_code,
+            status.HTTP_405_METHOD_NOT_ALLOWED
+        )
+        self.assertEqual(
+            client.put(self.url, {}).status_code,
+            status.HTTP_405_METHOD_NOT_ALLOWED
+        )
+        self.assertEqual(
+            client.patch(self.url, {}).status_code,
+            status.HTTP_405_METHOD_NOT_ALLOWED
+        )
+
+
+class TestSpecies(TestCase):
+    species_facade_class = helpers.LightSpeciesFacade
+
+    def setUp(self):
+        # set the species list to be the testing one
+        from main.api.views import SpeciesMixin
+        SpeciesMixin.species_facade_class = self.species_facade_class
+
+        self.url = reverse('api:species')
+
+    def test_get(self):
+        anonymous = APIClient()
+        client = anonymous
+        self.assertIn(
+            client.get(self.url).status_code,
+            [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+        )
+
+        user = G(get_user_model())
+        user.set_password('password')
+        user.save()
+        client = APIClient()
+        self.assertTrue(client.login(username=user.username, password='password'))
+        resp = client.get(self.url)
+        self.assertEqual(
+            resp.status_code,
+            status.HTTP_200_OK
+        )
+        expected = self.species_facade_class().name_id_by_species_name()
+        # expected response with no data
         self.assertEquals(expected, resp.json())
 
     def test_not_allowed_methods(self):
