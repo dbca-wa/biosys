@@ -430,7 +430,7 @@ class SpeciesView(APIView, SpeciesMixin):
     def get(self, request, *args, **kwargs):
         """
         Get a list of all species name present in the system
-        :return: a list
+        :return: a list of species name.
         """
         qs = Record.objects.exclude(species_name__isnull=True)
         query = Q()
