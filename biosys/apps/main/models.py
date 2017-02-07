@@ -102,7 +102,7 @@ class Project(models.Model):
         return self.geometry.centroid if self.geometry else None
 
     class Meta:
-        pass
+        ordering = ['title']
 
     def __str__(self):
         return self.title
@@ -185,6 +185,7 @@ class Site(models.Model):
 
     class Meta:
         unique_together = ('project', 'code')
+        ordering = ['code']
 
     def __str__(self):
         return self.code
@@ -362,6 +363,7 @@ class Dataset(models.Model):
 
     class Meta:
         unique_together = ('project', 'name')
+        ordering = ['name']
 
 
 @python_2_unicode_compatible
@@ -437,6 +439,9 @@ class Record(models.Model):
 
     def has_object_destroy_permission(self, request):
         return is_admin(request.user) or self.is_custodian(request.user)
+
+    class Meta:
+        ordering = ['id']
 
 
 @python_2_unicode_compatible

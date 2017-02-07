@@ -1,7 +1,9 @@
 import codecs
 import csv
 import datetime
+from os import path
 
+from django.conf import settings
 from django.utils import six, timezone
 from openpyxl import load_workbook
 
@@ -14,12 +16,18 @@ from main.utils_species import HerbieFacade
 
 
 def xlsx_to_csv(file):
+    def _format(cell):
+        result = cell.value
+        if isinstance(result, datetime.datetime):
+            result = result.strftime(settings.DATE_FORMAT)
+        return result
+
     output = six.StringIO()
     writer = csv.writer(output)
     wb = load_workbook(filename=file, read_only=True)
     ws = wb.active
     for row in ws.rows:
-        r = [cell.value for cell in row]
+        r = [_format(cell) for cell in row]
         writer.writerow(r)
     # rewind
     output.seek(0)
@@ -49,7 +57,9 @@ class FileReader(object):
             raise Exception(msg)
 
         self.file = file
-        if file.content_type in self.XLSX_TYPES:
+        extension = path.splitext(file.name)[1].lower() if file.name else ''
+        # On windows a .csv file can be send with an excel mime type.
+        if file.content_type in self.XLSX_TYPES and extension != '.csv':
             self.file = xlsx_to_csv(file)
             self.reader = csv.DictReader(self.file)
         else:

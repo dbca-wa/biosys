@@ -67,7 +67,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_fields = ('id', 'title', 'custodians')
 
 
@@ -157,7 +157,7 @@ class SiteViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Site.objects.all()
     serializer_class = serializers.SiteSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_fields = ('id', 'name', 'code')
 
 
@@ -268,7 +268,7 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Record.objects.all()
     serializer_class = serializers.RecordSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_fields = ('id', 'site', 'dataset__id', 'dataset__name', 'dataset__project__id', 'dataset__project__title',
                      'datetime', 'species_name', 'name_id')
 

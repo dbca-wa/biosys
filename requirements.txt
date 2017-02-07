@@ -3,7 +3,7 @@ psycopg2>=2.6.2,<2.7
 django-confy==1.0.4
 django-bootstrap3==6.2.2
 django-auth-ldap==1.2.8
-openpyxl==2.3.5
+openpyxl==2.4.2
 django-reversion==1.10
 jsontableschema==0.6.5
 # force a version of dependency of jsontableschema to avoid warning
