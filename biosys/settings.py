@@ -129,7 +129,10 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
         # 'rest_framework.renderers.BrowsableAPIRenderer', # commented because we use the swagger explorer
     ),
-    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
+    'DEFAULT_FILTER_BACKENDS': [
+        'rest_framework.filters.DjangoFilterBackend',
+        'rest_framework.filters.OrderingFilter'
+    ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'DEFAULT_METADATA_CLASS': 'rest_framework.metadata.SimpleMetadata',
 }
