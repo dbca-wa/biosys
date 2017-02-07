@@ -174,9 +174,6 @@ class TestSpecies(TestCase):
             resp.status_code,
             status.HTTP_200_OK
         )
-        expected = self.species_facade_class().name_id_by_species_name()
-        # expected response with no data
-        self.assertEquals(expected, resp.json())
 
     def test_not_allowed_methods(self):
         user = G(get_user_model())

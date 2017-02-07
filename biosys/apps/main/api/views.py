@@ -4,6 +4,7 @@ import datetime
 from collections import OrderedDict
 
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from dry_rest_permissions.generics import DRYPermissions
 from rest_framework import viewsets, filters, generics, status
@@ -166,35 +167,35 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = models.Dataset.objects.all()
- 
+
         name = self.request.query_params.get('name', None)
         if name is not None:
             queryset = queryset.filter(name=name)
- 
+
         project = self.request.query_params.get('project', None)
         if project is not None:
             queryset = queryset.filter(project=project)
- 
+
         type = self.request.query_params.get('type', None)
         if type is not None:
             queryset = queryset.filter(type=type)
- 
+
         datetime_start = self.request.query_params.get('record__datetime__start', None)
         if datetime_start is not None:
             queryset = queryset.filter(record__datetime__gte=datetime_start)
- 
+
         datetime_end = self.request.query_params.get('record__datetime__end', None)
         if datetime_end is not None:
             queryset = queryset.filter(record__datetime__lte=datetime_end)
- 
+
         species_name = self.request.query_params.get('record__species_name', None)
         if species_name is not None:
             queryset = queryset.filter(record__species_name=species_name)
- 
+
         name_id = self.request.query_params.get('record__name_id', None)
         if name_id is not None:
             queryset = queryset.filter(record__name_id=name_id)
- 
+
         return queryset.distinct()
 
 
@@ -428,8 +429,18 @@ class DatasetUploadRecordsView(APIView):
 class SpeciesView(APIView, SpeciesMixin):
     def get(self, request, *args, **kwargs):
         """
-        Get the map 'species name' => name_id from Herbie
-        :return: a dict { 'species name': name_id }
+        Get a list of all species name present in the system
+        :return: a list of species name.
         """
-        data = self.species_facade_class().name_id_by_species_name()
+        qs = Record.objects.exclude(species_name__isnull=True)
+        query = Q()
+        search = self.request.query_params.get('search')
+        if search:
+            query &= Q(species_name__icontains=search)
+        qs = qs.filter(query)
+        # we output just the species name
+        data = qs \
+            .distinct('species_name') \
+            .order_by('species_name') \
+            .values_list('species_name', flat=True)
         return Response(data=data)
