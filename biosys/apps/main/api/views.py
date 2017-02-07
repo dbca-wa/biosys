@@ -320,6 +320,18 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
         else:
             return super(RecordViewSet, self).list(request, *args, **kwargs)
 
+    def filter_queryset(self, queryset):
+        # apply the model filters: filter_fields
+        queryset = super(RecordViewSet, self).filter_queryset(queryset)
+        # other filters
+        datetime_start = self.request.query_params.get('datetime__start', None)
+        if datetime_start is not None:
+            queryset = queryset.filter(datetime__gte=datetime_start)
+        datetime_end = self.request.query_params.get('datetime__end', None)
+        if datetime_end is not None:
+            queryset = queryset.filter(datetime__lte=datetime_end)
+        return queryset
+
 
 class StatisticsView(APIView):
     permission_classes = (IsAuthenticated,)
@@ -433,14 +445,22 @@ class SpeciesView(APIView, SpeciesMixin):
         :return: a list of species name.
         """
         qs = Record.objects.exclude(species_name__isnull=True)
-        query = Q()
-        search = self.request.query_params.get('search')
-        if search:
-            query &= Q(species_name__icontains=search)
-        qs = qs.filter(query)
+        qs = self.filter_queryset(qs)
         # we output just the species name
         data = qs \
             .distinct('species_name') \
             .order_by('species_name') \
             .values_list('species_name', flat=True)
         return Response(data=data)
+
+    def filter_queryset(self, queryset):
+        query = Q()
+        # search
+        search = self.request.query_params.get('search')
+        if search:
+            query &= Q(species_name__icontains=search)
+        # strict
+        strict = to_bool(self.request.query_params.get('strict', False))
+        if strict:
+            query &= ~Q(name_id=-1)
+        return queryset.filter(query)
