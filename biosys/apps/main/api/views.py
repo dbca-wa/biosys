@@ -445,6 +445,7 @@ class SpeciesView(APIView, SpeciesMixin):
         :return: a list of species name.
         """
         qs = Record.objects.exclude(species_name__isnull=True)
+        qs = self.filter_queryset(qs)
         # we output just the species name
         data = qs \
             .distinct('species_name') \
@@ -461,8 +462,5 @@ class SpeciesView(APIView, SpeciesMixin):
         # strict
         strict = to_bool(self.request.query_params.get('strict', False))
         if strict:
-            query &= Q(name_id__gt=0)
-
+            query &= ~Q(name_id=-1)
         return queryset.filter(query)
-
-        return queryset
