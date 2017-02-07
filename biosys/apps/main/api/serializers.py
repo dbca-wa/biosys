@@ -27,7 +27,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     timezone = serializers.CharField(required=False)
-    centroid = serializers_gis.GeometryField(required=False)
+    centroid = serializers_gis.GeometryField(required=False, read_only=True)
 
     class Meta:
         model = Project
