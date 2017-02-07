@@ -357,12 +357,13 @@ class StatisticsView(APIView):
         ])
         # records
         total_records_count = Record.objects.count()
-        observation_record_count = Record.objects.filter(geometry__isnull=False).count()
-        species_observation_count = Record.objects.filter(species_name__isnull=False).exclude(species_name='').count()
+        generic_record_count = Record.objects.filter(dataset__type=Dataset.TYPE_GENERIC).count()
+        observation_record_count = Record.objects.filter(dataset__type=Dataset.TYPE_OBSERVATION).count()
+        species_observation_count = Record.objects.filter(dataset__type=Dataset.TYPE_SPECIES_OBSERVATION).count()
         data['records'] = OrderedDict([
             ('total', total_records_count),
             ('generic', {
-                'total': total_records_count - observation_record_count - species_observation_count
+                'total': generic_record_count
             }),
             ('observation', {
                 'total': observation_record_count
