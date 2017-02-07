@@ -4,10 +4,9 @@ import datetime
 from django.contrib.gis.geos import GEOSGeometry
 from django.test import TestCase
 from django.utils import timezone
-from django.utils import six
 from jsontableschema.exceptions import *
 
-from main.models import Dataset, Observation, Project
+from main.models import Dataset, Project, Record
 from main.utils_data_package import *
 
 
@@ -1242,7 +1241,7 @@ class TestObservationSchemaCast(TestCase):
             name='test',
             data_package=GENERIC_DATA_PACKAGE
         )
-        record = Observation.objects.create(
+        record = Record.objects.create(
             dataset=ds,
             datetime=timezone.now(),
             geometry=point,

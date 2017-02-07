@@ -21,6 +21,177 @@ logger = logging.getLogger(__name__)
 
 
 @python_2_unicode_compatible
+class Project(models.Model):
+    DEFAULT_TIMEZONE = settings.TIME_ZONE
+
+    title = models.CharField(max_length=300, null=False, blank=False, unique=True,
+                             verbose_name="Title", help_text="Enter a name for the project (required).")
+    code = models.CharField(max_length=30, null=True, blank=True,
+                            verbose_name="Code",
+                            help_text="Provide a brief code or acronym for this project. "
+                                      "This code could be used for prefixing site codes.")
+
+    datum = models.IntegerField(null=True, blank=True, choices=DATUM_CHOICES, default=MODEL_SRID,
+                                verbose_name="Default Datum",
+                                help_text="The datum all locations will be assumed to have unless otherwise specified.")
+
+    timezone = TimeZoneField(blank=True, default=DEFAULT_TIMEZONE,
+                             help_text="The Timezone of your project e.g 'Australia/Perth.")
+
+    attributes = JSONField(null=True, blank=True,
+                           help_text="Define here all specific attributes of your project in the form of json "
+                                     "'attribute name': 'attribute value")
+    comments = models.TextField(null=True, blank=True,
+                                verbose_name="Comments", help_text="")
+
+    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
+                                    verbose_name="Extent",
+                                    help_text="The boundary of your project (not required). "
+                                              "Can also be calculated from the extents of the project sites")
+    site_data_package = JSONField(null=True, blank=True,
+                                  verbose_name='Site attributes schema',
+                                  help_text='Define here the attributes that all your sites will share. '
+                                            'This allows validation when importing sites.')
+
+    custodians = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True,
+                                        help_text="Users that have write/upload access to the data of this project.")
+
+    def is_custodian(self, user):
+        return user in self.custodians.all()
+
+    # API permissions
+    @staticmethod
+    def has_read_permission(request):
+        return True
+
+    def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_metadata_permission(request):
+        return True
+
+    def has_object_metadata_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_create_permission(request):
+        return is_admin(request.user)
+
+    @staticmethod
+    def has_update_permission(request):
+        """
+        The update is managed at the object level (see below)
+        :param request:
+        :return:
+        """
+        return True
+
+    def has_object_update_permission(self, request):
+        return is_admin(request.user) or self.is_custodian(request.user)
+
+    @staticmethod
+    def has_destroy_permission(request):
+        return True
+
+    def has_object_destroy_permission(self, request):
+        return is_admin(request.user) or self.is_custodian(request.user)
+
+    @property
+    def centroid(self):
+        return self.geometry.centroid if self.geometry else None
+
+    class Meta:
+        ordering = ['title']
+
+    def __str__(self):
+        return self.title
+
+
+@python_2_unicode_compatible
+class Site(models.Model):
+    project = models.ForeignKey('Project', null=False, blank=False,
+                                verbose_name="Project", help_text="Select the project this site is part of (required)")
+    parent_site = models.ForeignKey('self', null=True, blank=True,
+                                    verbose_name="Parent Site",
+                                    help_text="Sites can be grouped together. "
+                                              "If you have a subregion within the project that contains a number "
+                                              "of sites, create that region as a parent site first, "
+                                              "then select that parent when you're creating this site.")
+    name = models.CharField(max_length=150, blank=True,
+                            verbose_name="Name",
+                            help_text="Enter a more descriptive name for this site, if one exists.")
+    code = models.CharField(max_length=100, null=False, blank=False,
+                            verbose_name="Code",
+                            help_text="Local site code must be unique to this project. e.g. LCI123 (required)")
+    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
+                                    verbose_name="Location", help_text="")
+    comments = models.TextField(null=True, blank=True,
+                                verbose_name="Comments", help_text="")
+    attributes = JSONField(null=True, blank=True)
+
+    def is_custodian(self, user):
+        return self.project.is_custodian(user)
+
+    # API permissions
+    @staticmethod
+    def has_read_permission(request):
+        return True
+
+    def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_metadata_permission(request):
+        return True
+
+    def has_object_metadata_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_create_permission(request):
+        """
+        Custodian and admin only
+        Check that the user is a custodian of the project pk passed in the POST data.
+        :param request:
+        :return:
+        """
+        result = False
+        if is_admin(request.user):
+            result = True
+        elif 'project' in request.data:
+            project = Project.objects.filter(pk=request.data['project']).first()
+            result = project is not None and project.is_custodian(request.user)
+        return result
+
+    @staticmethod
+    def has_update_permission(request):
+        """
+        The update is managed at the object level (see below)
+        :param request:
+        :return:
+        """
+        return True
+
+    def has_object_update_permission(self, request):
+        return is_admin(request.user) or self.is_custodian(request.user)
+
+    @staticmethod
+    def has_destroy_permission(request):
+        return True
+
+    def has_object_destroy_permission(self, request):
+        return is_admin(request.user) or self.is_custodian(request.user)
+
+    class Meta:
+        unique_together = ('project', 'code')
+        ordering = ['code']
+
+    def __str__(self):
+        return self.code
+
+
+@python_2_unicode_compatible
 class Dataset(models.Model):
     TYPE_GENERIC = 'generic'
     TYPE_OBSERVATION = 'observation'
@@ -48,12 +219,7 @@ class Dataset(models.Model):
 
     @property
     def record_model(self):
-        if self.type == Dataset.TYPE_SPECIES_OBSERVATION:
-            return SpeciesObservation
-        elif self.type == Dataset.TYPE_OBSERVATION:
-            return Observation
-        else:
-            return GenericRecord
+        return Record
 
     @property
     def record_queryset(self):
@@ -197,31 +363,22 @@ class Dataset(models.Model):
 
     class Meta:
         unique_together = ('project', 'name')
+        ordering = ['name']
 
 
 @python_2_unicode_compatible
-class DatasetFile(models.Model):
-    file = models.FileField(upload_to='%Y/%m/%d')
-    uploaded_date = models.DateTimeField(auto_now_add=True)
-    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
-    dataset = models.ForeignKey(Dataset, blank=False, null=True)
-
-    def __str__(self):
-        return self.file.name
-
-    @property
-    def path(self):
-        return self.file.path
-
-    @property
-    def filename(self):
-        return path.basename(self.path)
-
-
-@python_2_unicode_compatible
-class AbstractRecord(models.Model):
-    data = JSONField()
+class Record(models.Model):
     dataset = models.ForeignKey(Dataset, null=False, blank=False)
+    data = JSONField()
+    site = models.ForeignKey(Site, null=True, blank=True)
+    # Fields for Observation and Species Observation
+    datetime = models.DateTimeField(null=True, blank=True)
+    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
+    # Fields specific for Species Observation
+    species_name = models.CharField(max_length=500, null=True, blank=True,
+                                    verbose_name="Species Name", help_text="Species Name (as imported)")
+    name_id = models.IntegerField(default=-1,
+                                  verbose_name="Name ID", help_text="The unique ID from the species database")
 
     def __str__(self):
         return "{0}: {1}".format(self.dataset.name, Truncator(self.data).chars(100))
@@ -284,206 +441,23 @@ class AbstractRecord(models.Model):
         return is_admin(request.user) or self.is_custodian(request.user)
 
     class Meta:
-        abstract = True
-
-
-class AbstractObservationRecord(AbstractRecord):
-    datetime = models.DateTimeField(null=True, blank=True)
-    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
-
-    class Meta:
-        abstract = True
-
-
-class GenericRecord(AbstractRecord):
-    site = models.ForeignKey('Site', null=True, blank=True)
-
-
-class Observation(AbstractObservationRecord):
-    site = models.ForeignKey('Site', null=True, blank=True)
+        ordering = ['id']
 
 
 @python_2_unicode_compatible
-class SpeciesObservation(AbstractObservationRecord):
-    """
-    If the species_name has been validated against the species database the name_id is populated with the value from the
-    databasedate
-    """
-    site = models.ForeignKey('Site', null=True, blank=True)
-    species_name = models.CharField(max_length=500, null=True, blank=True,
-                                    verbose_name="Species Name", help_text="Species Name (as imported)")
-    name_id = models.IntegerField(default=-1,
-                                  verbose_name="Name ID", help_text="The unique ID from the species database")
+class DatasetFile(models.Model):
+    file = models.FileField(upload_to='%Y/%m/%d')
+    uploaded_date = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
+    dataset = models.ForeignKey(Dataset, blank=False, null=True)
 
     def __str__(self):
-        return self.species_name
+        return self.file.name
 
     @property
-    def valid(self):
-        return self.name_id > 0
+    def path(self):
+        return self.file.path
 
-
-@python_2_unicode_compatible
-class Project(models.Model):
-    DEFAULT_TIMEZONE = settings.TIME_ZONE
-
-    title = models.CharField(max_length=300, null=False, blank=False, unique=True,
-                             verbose_name="Title", help_text="Enter a name for the project (required).")
-    code = models.CharField(max_length=30, null=True, blank=True,
-                            verbose_name="Code",
-                            help_text="Provide a brief code or acronym for this project. "
-                                      "This code could be used for prefixing site codes.")
-
-    datum = models.IntegerField(null=True, blank=True, choices=DATUM_CHOICES, default=MODEL_SRID,
-                                verbose_name="Default Datum",
-                                help_text="The datum all locations will be assumed to have unless otherwise specified.")
-
-    timezone = TimeZoneField(blank=True, default=DEFAULT_TIMEZONE,
-                             help_text="The Timezone of your project e.g 'Australia/Perth.")
-
-    attributes = JSONField(null=True, blank=True,
-                           help_text="Define here all specific attributes of your project in the form of json "
-                                     "'attribute name': 'attribute value")
-    comments = models.TextField(null=True, blank=True,
-                                verbose_name="Comments", help_text="")
-
-    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
-                                    verbose_name="Extent",
-                                    help_text="The boundary of your project (not required). "
-                                              "Can also be calculated from the extents of the project sites")
-    site_data_package = JSONField(null=True, blank=True,
-                                  verbose_name='Site attributes schema',
-                                  help_text='Define here the attributes that all your sites will share. '
-                                            'This allows validation when importing sites.')
-
-    custodians = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True,
-                                        help_text="Users that have write/upload access to the data of this project.")
-
-    def is_custodian(self, user):
-        return user in self.custodians.all()
-
-    # API permissions
-    @staticmethod
-    def has_read_permission(request):
-        return True
-
-    def has_object_read_permission(self, request):
-        return True
-
-    @staticmethod
-    def has_metadata_permission(request):
-        return True
-
-    def has_object_metadata_permission(self, request):
-        return True
-
-    @staticmethod
-    def has_create_permission(request):
-        return is_admin(request.user)
-
-    @staticmethod
-    def has_update_permission(request):
-        """
-        The update is managed at the object level (see below)
-        :param request:
-        :return:
-        """
-        return True
-
-    def has_object_update_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
-
-    @staticmethod
-    def has_destroy_permission(request):
-        return True
-
-    def has_object_destroy_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
-
-    class Meta:
-        pass
-
-    def __str__(self):
-        return self.title
-
-
-@python_2_unicode_compatible
-class Site(models.Model):
-    project = models.ForeignKey('Project', null=False, blank=False,
-                                verbose_name="Project", help_text="Select the project this site is part of (required)")
-    parent_site = models.ForeignKey('self', null=True, blank=True,
-                                    verbose_name="Parent Site",
-                                    help_text="Sites can be grouped together. "
-                                              "If you have a subregion within the project that contains a number "
-                                              "of sites, create that region as a parent site first, "
-                                              "then select that parent when you're creating this site.")
-    name = models.CharField(max_length=150, blank=True,
-                            verbose_name="Name",
-                            help_text="Enter a more descriptive name for this site, if one exists.")
-    code = models.CharField(max_length=100, null=False, blank=False,
-                            verbose_name="Code",
-                            help_text="Local site code must be unique to this project. e.g. LCI123 (required)")
-    geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
-                                    verbose_name="Location", help_text="")
-    comments = models.TextField(null=True, blank=True,
-                                verbose_name="Comments", help_text="")
-    attributes = JSONField(null=True, blank=True)
-
-    def is_custodian(self, user):
-        return self.project.is_custodian(user)
-
-    # API permissions
-    @staticmethod
-    def has_read_permission(request):
-        return True
-
-    def has_object_read_permission(self, request):
-        return True
-
-    @staticmethod
-    def has_metadata_permission(request):
-        return True
-
-    def has_object_metadata_permission(self, request):
-        return True
-
-    @staticmethod
-    def has_create_permission(request):
-        """
-        Custodian and admin only
-        Check that the user is a custodian of the project pk passed in the POST data.
-        :param request:
-        :return:
-        """
-        result = False
-        if is_admin(request.user):
-            result = True
-        elif 'project' in request.data:
-            project = Project.objects.filter(pk=request.data['project']).first()
-            result = project is not None and project.is_custodian(request.user)
-        return result
-
-    @staticmethod
-    def has_update_permission(request):
-        """
-        The update is managed at the object level (see below)
-        :param request:
-        :return:
-        """
-        return True
-
-    def has_object_update_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
-
-    @staticmethod
-    def has_destroy_permission(request):
-        return True
-
-    def has_object_destroy_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
-
-    class Meta:
-        unique_together = ('project', 'code')
-
-    def __str__(self):
-        return self.code
+    @property
+    def filename(self):
+        return path.basename(self.path)

@@ -1,6 +1,6 @@
 [
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 1,
   "fields": {
     "data": {
@@ -32,7 +32,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 2,
   "fields": {
     "data": {
@@ -64,7 +64,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 3,
   "fields": {
     "data": {
@@ -96,7 +96,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 4,
   "fields": {
     "data": {
@@ -128,7 +128,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 5,
   "fields": {
     "data": {
@@ -160,7 +160,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 6,
   "fields": {
     "data": {
@@ -192,7 +192,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 7,
   "fields": {
     "data": {
@@ -224,7 +224,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 8,
   "fields": {
     "data": {
@@ -256,7 +256,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 9,
   "fields": {
     "data": {
@@ -288,7 +288,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 10,
   "fields": {
     "data": {
@@ -320,7 +320,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 11,
   "fields": {
     "data": {
@@ -352,7 +352,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 12,
   "fields": {
     "data": {
@@ -384,7 +384,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 13,
   "fields": {
     "data": {
@@ -416,7 +416,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 14,
   "fields": {
     "data": {
@@ -448,7 +448,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 15,
   "fields": {
     "data": {
@@ -480,7 +480,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 16,
   "fields": {
     "data": {
@@ -512,7 +512,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 17,
   "fields": {
     "data": {
@@ -544,7 +544,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 18,
   "fields": {
     "data": {
@@ -576,7 +576,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 19,
   "fields": {
     "data": {
@@ -608,7 +608,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 20,
   "fields": {
     "data": {
@@ -640,7 +640,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 21,
   "fields": {
     "data": {
@@ -672,7 +672,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 22,
   "fields": {
     "data": {
@@ -704,7 +704,7 @@
   }
 },
 {
-  "model": "main.speciesobservation",
+  "model": "main.record",
   "pk": 23,
   "fields": {
     "data": {
