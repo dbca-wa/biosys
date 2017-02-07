@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
+from rest_framework_gis import serializers as serializers_gis
 
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
@@ -26,6 +27,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     timezone = serializers.CharField(required=False)
+    centroid = serializers_gis.GeometryField(required=False)
 
     class Meta:
         model = Project
