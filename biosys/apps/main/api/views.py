@@ -3,7 +3,7 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 import datetime
 from collections import OrderedDict
 
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, logout
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from dry_rest_permissions.generics import DRYPermissions
@@ -465,3 +465,13 @@ class SpeciesView(APIView, SpeciesMixin):
         if strict:
             query &= ~Q(name_id=-1)
         return queryset.filter(query)
+
+
+class LogoutView(APIView):
+    def get(self, request, *args, **kwargs):
+        """
+        Logout of the system.
+        """
+        logout(request)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

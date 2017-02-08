@@ -23,7 +23,7 @@ url_patterns = [
     url(r'statistics/?', main_views.StatisticsView.as_view(), name="statistics"),
     url(r'whoami/?', main_views.WhoamiView.as_view(), name="whoami"),
     url(r'species/?', main_views.SpeciesView.as_view(), name="species"),
-
+    url(r'logout/?', main_views.LogoutView.as_view(), name="logout"),
 ]
 
 urls = router.urls + url_patterns
