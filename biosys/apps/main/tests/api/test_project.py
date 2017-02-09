@@ -99,11 +99,12 @@ class TestPermissions(TestCase):
         data = {
             "title": "A new project for Unit test",
             "code": "T1234",
-            "timezone": "Australia/Perth"
+            "timezone": "Australia/Perth",
+            "custodians": [self.custodian_1_user.pk]
         }
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client],
-            "allowed": [self.admin_client]
+            "forbidden": [self.anonymous_client],
+            "allowed": [self.admin_client, self.readonly_client, self.custodian_1_client]
         }
         for client in access['forbidden']:
             for url in urls:
@@ -114,6 +115,8 @@ class TestPermissions(TestCase):
 
         for client in access['allowed']:
             for url in urls:
+                # Title must me unique
+                data['title'] += '1'
                 self.assertEqual(
                     client.post(url, data, format='json').status_code,
                     status.HTTP_201_CREATED
@@ -608,17 +611,25 @@ class TestProjectCustodians(TestCase):
         resp = client.get(url)
         self.assertEquals(status.HTTP_200_OK, resp.status_code)
         self.assertEquals(expected_custodians, resp.json()['custodians'])
-        # clear custodians list
 
+        # clear custodians list
+        # custodians can't be empty
         data = {
             'custodians': []
         }
         resp = client.patch(url, data, format='json')
+        self.assertEquals(status.HTTP_400_BAD_REQUEST, resp.status_code)
+
+        # add someone else
+        data = {
+            'custodians': [self.custodian_2_user.pk]
+        }
+        resp = client.patch(url, data, format='json')
         self.assertEquals(status.HTTP_200_OK, resp.status_code)
         resp = client.get(url)
-        expected_custodians = []
+        expected_custodians = data['custodians']
         self.assertEquals(expected_custodians, resp.json()['custodians'])
-        # still a custodian
+        # no more a custodian
         self.assertFalse(project.is_custodian(custodian))
 
         # oops! try to get back on board
