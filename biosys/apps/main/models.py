@@ -76,7 +76,7 @@ class Project(models.Model):
 
     @staticmethod
     def has_create_permission(request):
-        return is_admin(request.user)
+        return True
 
     @staticmethod
     def has_update_permission(request):
