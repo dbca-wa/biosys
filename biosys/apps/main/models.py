@@ -53,7 +53,7 @@ class Project(models.Model):
                                   help_text='Define here the attributes that all your sites will share. '
                                             'This allows validation when importing sites.')
 
-    custodians = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True,
+    custodians = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=False,
                                         help_text="Users that have write/upload access to the data of this project.")
 
     def is_custodian(self, user):
@@ -76,7 +76,7 @@ class Project(models.Model):
 
     @staticmethod
     def has_create_permission(request):
-        return is_admin(request.user)
+        return True
 
     @staticmethod
     def has_update_permission(request):

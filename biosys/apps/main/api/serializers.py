@@ -16,7 +16,7 @@ from main.models import Project, Site, Dataset, Record
 class SimpleUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
-        fields = ('id', 'username', 'first_name', 'last_name', 'email')
+        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'is_superuser', 'is_staff')
 
 
 class UserSerializer(serializers.ModelSerializer):
