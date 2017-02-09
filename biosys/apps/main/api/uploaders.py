@@ -63,7 +63,10 @@ class FileReader(object):
             self.file = xlsx_to_csv(file)
             self.reader = csv.DictReader(self.file)
         else:
-            self.reader = csv.DictReader(codecs.iterdecode(self.file, 'utf-8'))
+            if six.PY3:
+                self.reader = csv.DictReader(codecs.iterdecode(self.file, 'utf-8'))
+            else:
+                self.reader = csv.DictReader(self.file)
 
     def __iter__(self):
         for row in self.reader:
