@@ -475,3 +475,36 @@ class TestSiteExtraction(TestCase):
         )
         record.refresh_from_db()
         self.assertEqual(record.site, site)
+
+
+class TestExport(helpers.BaseUserTestCase):
+    fixtures = helpers.BaseUserTestCase.fixtures + [
+        'test-sites',
+        'test-datasets',
+        'test-generic-records'
+    ]
+
+    def _more_setup(self):
+        self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
+        self.assertIsNotNone(self.ds_1)
+        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
+        self.record_1 = Record.objects.filter(dataset=self.ds_1).first()
+        self.assertIsNotNone(self.record_1)
+        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
+
+        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
+        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
+        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
+
+    def test_happy_path_no_filter(self):
+        client = self.custodian_1_client
+        dataset = self.ds_1
+        all_records = Record.objects.filter(dataset=dataset)
+        self.assertTrue(all_records.count() > 0)
+        url = reverse('api:record-list')
+        query = {
+            'dataset__id': dataset.pk,
+            'output': 'xlsx'
+        }
+        resp = client.get(url, query=query)
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
