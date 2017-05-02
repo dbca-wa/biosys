@@ -1,3 +1,7 @@
+import re
+from os import path
+from openpyxl import load_workbook
+
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
@@ -506,5 +510,19 @@ class TestExport(helpers.BaseUserTestCase):
             'dataset__id': dataset.pk,
             'output': 'xlsx'
         }
-        resp = client.get(url, query=query)
+        try:
+            resp = client.get(url, query)
+        except Exception as e:
+            self.fail("Export should not raise an exception: {}".format(e))
         self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        # check headers
+        self.assertEqual(resp.get('content-type'),
+                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        content_disposition = resp.get('content-disposition')
+        # should be something like:
+        # 'attachment; filename=DatasetName_YYYY_MM_DD-HHMMSS.xlsx
+        match = re.match('attachment; filename=(.+)', content_disposition)
+        self.assertIsNotNone(match)
+        filename, ext = path.splitext(match.group(1))
+        self.assertEquals(ext, '.xlsx')
+        filename.startswith(dataset.name)

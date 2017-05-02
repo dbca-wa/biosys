@@ -745,7 +745,11 @@ class Exporter:
         for record in self.records:
             row = []
             for field in self.schema.field_names:
-                row.append(six.u(record.data.get(field, '')))
+                value = record.data.get(field, '')
+                # TODO: remove that when running in Python3
+                if isinstance(value, six.string_types) and not isinstance(value, six.text_type):
+                    value = six.u(value)
+                row.append(value)
             yield row
 
     def to_csv(self):
