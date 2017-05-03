@@ -1,6 +1,11 @@
+import re
+from os import path
+from openpyxl import load_workbook
+
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
+from django.utils import six
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -475,3 +480,94 @@ class TestSiteExtraction(TestCase):
         )
         record.refresh_from_db()
         self.assertEqual(record.site, site)
+
+
+class TestExport(helpers.BaseUserTestCase):
+    fixtures = helpers.BaseUserTestCase.fixtures + [
+        'test-sites',
+        'test-datasets',
+        'test-generic-records'
+    ]
+
+    def _more_setup(self):
+        self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
+        self.assertIsNotNone(self.ds_1)
+        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
+        self.record_1 = Record.objects.filter(dataset=self.ds_1).first()
+        self.assertIsNotNone(self.record_1)
+        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
+
+        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
+        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
+        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
+
+    def test_happy_path_no_filter(self):
+        client = self.custodian_1_client
+        dataset = self.ds_1
+        all_records = Record.objects.filter(dataset=dataset)
+        self.assertTrue(all_records.count() > 0)
+        url = reverse('api:record-list')
+        query = {
+            'dataset__id': dataset.pk,
+            'output': 'xlsx'
+        }
+        try:
+            resp = client.get(url, query)
+        except Exception as e:
+            self.fail("Export should not raise an exception: {}".format(e))
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        # check headers
+        self.assertEqual(resp.get('content-type'),
+                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        content_disposition = resp.get('content-disposition')
+        # should be something like:
+        # 'attachment; filename=DatasetName_YYYY_MM_DD-HHMMSS.xlsx
+        match = re.match('attachment; filename=(.+)', content_disposition)
+        self.assertIsNotNone(match)
+        filename, ext = path.splitext(match.group(1))
+        self.assertEquals(ext, '.xlsx')
+        filename.startswith(dataset.name)
+        # read content
+        wb = load_workbook(six.BytesIO(resp.content), read_only=True)
+        # one datasheet named from dataset
+        sheet_names = wb.get_sheet_names()
+        self.assertEquals(1, len(sheet_names))
+        self.assertEquals(dataset.name, sheet_names[0])
+        ws = wb.get_sheet_by_name(dataset.name)
+        rows = list(ws.rows)
+        expected_records = Record.objects.filter(dataset=dataset)
+        self.assertEquals(len(rows), expected_records.count() + 1)
+        headers = [c.value for c in rows[0]]
+        schema = dataset.schema
+        # all the columns of the schema should be in the excel
+        self.assertEquals(schema.headers, headers)
+
+    def test_permission_ok_for_not_custodian(self):
+        """Export is a read action. Should be authorised for every logged-in user."""
+        client = self.custodian_2_client
+        dataset = self.ds_1
+        url = reverse('api:record-list')
+        query = {
+            'dataset__id': dataset.pk,
+            'output': 'xlsx'
+        }
+        try:
+            resp = client.get(url, query)
+        except Exception as e:
+            self.fail("Export should not raise an exception: {}".format(e))
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+
+    def test_permission_denied_if_not_logged_in(self):
+        """Must be logged-in."""
+        client = self.anonymous_client
+        dataset = self.ds_1
+        url = reverse('api:record-list')
+        query = {
+            'dataset__id': dataset.pk,
+            'output': 'xlsx'
+        }
+        try:
+            resp = client.get(url, query)
+        except Exception as e:
+            self.fail("Export should not raise an exception: {}".format(e))
+        self.assertEquals(resp.status_code, status.HTTP_403_FORBIDDEN)
