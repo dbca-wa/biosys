@@ -224,10 +224,50 @@ SPECIES_DATA_PACKAGE = clone(GENERIC_DATA_PACKAGE)
 SPECIES_DATA_PACKAGE['resources'][0]['schema'] = clone(SPECIES_SCHEMA)
 
 
-def create_data_package_from_fields(fields):
-    result = clone(GENERIC_DATA_PACKAGE)
-    result['resources'][0]['schema']['fields'] = fields
+def create_schema_from_fields(fields):
+    result = clone(GENERIC_SCHEMA)
+    result['fields'] = fields
     return result
+
+
+def create_data_package_from_schema(schema):
+    result = clone(GENERIC_DATA_PACKAGE)
+    result['resources'][0]['schema'] = schema
+    return result
+
+
+def create_data_package_from_fields(fields):
+    schema = create_schema_from_fields(fields)
+    return create_data_package_from_schema(schema)
+
+
+def add_foreign_key_to_schema(schema, options):
+    """
+    :param schema:
+    :param options: expected format, e.g for a Site code foreign key:
+    {
+        'schema_field': 'Site Code',  # the schema field name (or column name)
+        'model': 'Site',
+        'model_field': 'code'
+    }
+    :return:
+    """
+    foreign_keys = schema.get('foreignKeys', [])
+    foreign_keys.append(
+        {
+            'reference': {
+                'resource': options['model'],
+                'fields': [
+                    options['model_field']
+                ]
+            },
+            'fields': [
+                options['schema_field']
+            ]
+        }
+    )
+    schema['foreignKeys'] = foreign_keys
+    return schema
 
 
 def set_strict_mode(url):

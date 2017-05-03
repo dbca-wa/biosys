@@ -1,14 +1,13 @@
+import datetime
 import re
 from os import path
-import datetime
-
-from openpyxl import load_workbook
 
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
 from django.utils import timezone, six
+from openpyxl import load_workbook
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -762,6 +761,92 @@ class TestDateTimeAndGeometryExtraction(TestCase):
         dtz = timezone.localtime(ds.record_queryset.first().datetime)
         self.assertEquals(dtz.date(), expected_date)
         self.assertEquals(ds.record_queryset.first().geometry.geojson, expected_geojson)
+
+
+class TestGeometryFromSite(helpers.BaseUserTestCase):
+    """
+     Use case: the observation dataset doesn't contain any geometry columns/fields
+     but a reference (foreign key) to the site code. In this case the when yhe user uploads observations with a site
+     reference only the observation geometry should be copied (not referenced) from the site geometry.
+    """
+
+    def _more_setup(self):
+        pass
+
+    def test_observation_schema_valid_without_geometry(self):
+        """
+        An observation schema should be valid without geometry fields as long it has a foreign key to site.
+        """
+        schema_fields = [
+            {
+                "name": "What",
+                "type": "string",
+                "constraint": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraint": helpers.REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Site Code",
+                "type": "string",
+                "constraint": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        schema = helpers.add_foreign_key_to_schema(schema, {
+            'schema_field': 'Site Code',
+            'model': 'Site',
+            'model_field': 'code'
+        })
+        dataset_desc = helpers.create_data_package_from_schema(schema)
+        print(dataset_desc)
+        self.fail("not implemented")
+
+    def test_geometry_extracted_create_api(self):
+        """
+        Test that the record geometry is properly copied from the site when posting
+        """
+        self.fail("not implemented")
+
+    def test_geometry_extracted_update_api(self):
+        """
+        Test that the record geometry is properly copied from the site when updating/patching
+        """
+        self.fail("not implemented")
+
+    def test_geometry_extracted_upload(self):
+        """
+        Test that the record geometry is properly copied from the site when using an csv upload
+        """
+        self.fail("not implemented")
+
+    def test_record_rejected_if_site_has_no_geometry_api(self):
+        """
+        When using api
+        If the referenced site has no geometry the record should be rejected
+        """
+        self.fail("not implemented")
+
+    def test_record_rejected_if_site_has_no_geometry_upload(self):
+        """
+        When uploading with Excel
+        If the referenced site has no geometry the record should be rejected
+        """
+        self.fail("not implemented")
+
+    def test_site_geometry_updated(self):
+        """
+        Use case:
+        observations has been created with a site geometry, user update the site location.
+        user expect that the associated observations have their geometry updated.
+        This can only if the observations has the site as a FK (of course) and exactly the same geometry.
+        """
+        self.fail("not implemented")
 
 
 class TestSerialization(TestCase):
