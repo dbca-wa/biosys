@@ -7,6 +7,7 @@ from django.contrib.gis.geos import Point
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
 from django.utils import timezone, six
+from django_dynamic_fixture import G
 from openpyxl import load_workbook
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -770,23 +771,19 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
      reference only the observation geometry should be copied (not referenced) from the site geometry.
     """
 
-    def _more_setup(self):
-        pass
-
-    def test_observation_schema_valid_without_geometry(self):
-        """
-        An observation schema should be valid without geometry fields as long it has a foreign key to site.
-        """
+    @staticmethod
+    def schema_with_site_code_fk():
         schema_fields = [
             {
                 "name": "What",
                 "type": "string",
-                "constraint": helpers.REQUIRED_CONSTRAINTS
+                "constraints": helpers.REQUIRED_CONSTRAINTS
             },
             {
                 "name": "When",
                 "type": "date",
-                "constraint": helpers.REQUIRED_CONSTRAINTS,
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
                 "biosys": {
                     'type': 'observationDate'
                 }
@@ -794,7 +791,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             {
                 "name": "Site Code",
                 "type": "string",
-                "constraint": helpers.REQUIRED_CONSTRAINTS
+                "constraints": helpers.REQUIRED_CONSTRAINTS
             },
         ]
         schema = helpers.create_schema_from_fields(schema_fields)
@@ -803,50 +800,401 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             'model': 'Site',
             'model_field': 'code'
         })
-        dataset_desc = helpers.create_data_package_from_schema(schema)
-        print(dataset_desc)
-        self.fail("not implemented")
+        return schema
 
-    def test_geometry_extracted_create_api(self):
-        """
-        Test that the record geometry is properly copied from the site when posting
-        """
-        self.fail("not implemented")
+    @staticmethod
+    def schema_with_latlong_and_site_code_fk():
+        schema_fields = [
+            {
+                "name": "What",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": 'latitude'
+                }
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": 'longitude'
+                }
+            },
+            {
+                "name": "Site Code",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        schema = helpers.add_foreign_key_to_schema(schema, {
+            'schema_field': 'Site Code',
+            'model': 'Site',
+            'model_field': 'code'
+        })
+        return schema
 
-    def test_geometry_extracted_update_api(self):
+    def _create_dataset_with_schema(self, project, client, schema):
+        resp = client.post(
+            reverse('api:dataset-list'),
+            data={
+                "name": "Test site code geometry",
+                "type": Dataset.TYPE_OBSERVATION,
+                "project": project.pk,
+                'data_package': helpers.create_data_package_from_schema(schema)
+            },
+            format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(dataset)
+        return dataset
+
+    def test_observation_schema_valid_with_site_foreign_key(self):
+        """
+        An observation schema should be valid without geometry fields as long it has a foreign key to site.
+        """
+        schema_fields = [
+            {
+                "name": "What",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Site Code",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        schema = helpers.add_foreign_key_to_schema(schema, {
+            'schema_field': 'Site Code',
+            'model': 'Site',
+            'model_field': 'code'
+        })
+        data_package = helpers.create_data_package_from_schema(schema)
+        # create data set
+        url = reverse('api:dataset-list')
+        project = self.project_1
+        client = self.custodian_1_client
+        dataset_name = "Observation with site foreign key and no geometry"
+        payload = {
+            "name": dataset_name,
+            "type": Dataset.TYPE_OBSERVATION,
+            "project": project.pk,
+            'data_package': data_package
+        }
+
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        # double check
+        self.assertIsNotNone(Dataset.objects.filter(project=project, name=dataset_name).first())
+
+    def test_observation_schema_not_valid_with_other_foreign_key(self):
+        """
+        only a foreign key to the site code is accepted.
+        """
+        schema_fields = [
+            {
+                "name": "What",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Project",  # project not site
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        schema = helpers.add_foreign_key_to_schema(schema, {
+            'schema_field': 'Project',  # project not site
+            'model': 'Project',
+            'model_field': 'title'
+        })
+        data_package = helpers.create_data_package_from_schema(schema)
+        # create data set
+        url = reverse('api:dataset-list')
+        project = self.project_1
+        client = self.custodian_1_client
+        dataset_name = "Observation with project foreign key and no geometry"
+        payload = {
+            "name": dataset_name,
+            "type": Dataset.TYPE_OBSERVATION,
+            "project": project.pk,
+            'data_package': data_package
+        }
+
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_geometry_extracted_create(self):
+        """
+        Test that the record geometry is properly copied from the site when posting through api
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_site_code_fk()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        site_code = 'Cottesloe'
+        site_geometry = Point(115.76, -32.0)
+        # create the site
+        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+        record_data = {
+            'What': 'Hello! This is a test.',
+            'When': '12/12/2017',
+            'Site Code': site_code
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        self.assertEqual(record.site, site)
+        self.assertEqual(record.geometry, site_geometry)
+
+    def test_geometry_extracted_update(self):
         """
         Test that the record geometry is properly copied from the site when updating/patching
         """
-        self.fail("not implemented")
+        # create the record
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_site_code_fk()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        site_code = 'Cottesloe'
+        site_geometry = Point(115.76, -32.0)
+        # create the site
+        G(Site, code=site_code, geometry=site_geometry, project=project)
+        record_data = {
+            'What': 'Hello! This is a test.',
+            'When': '12/12/2017',
+            'Site Code': site_code
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        self.assertEqual(record.geometry, site_geometry)
 
-    def test_geometry_extracted_upload(self):
-        """
-        Test that the record geometry is properly copied from the site when using an csv upload
-        """
-        self.fail("not implemented")
+        # update record with new site
+        site_code = 'Somewhere'
+        site_geometry = Point(116.0, -30.0)
+        # create the site
+        G(Site, code=site_code, geometry=site_geometry, project=project)
+        record_data = {
+            'What': 'Yellow!',
+            'When': '01/01/2017',
+            'Site Code': site_code
+        }
+        payload = {
+            'data': record_data
+        }
+        url = reverse('api:record-detail', kwargs={'pk': record.pk})
+        resp = client.patch(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        record.refresh_from_db()
+        self.assertIsNotNone(record)
+        self.assertEqual(timezone.make_naive(record.datetime), datetime.datetime(2017, 1, 1, 0, 0))
+        self.assertEqual(record.geometry, site_geometry)
 
     def test_record_rejected_if_site_has_no_geometry_api(self):
         """
         When using api
         If the referenced site has no geometry the record should be rejected
         """
-        self.fail("not implemented")
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_site_code_fk()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        site_code = 'Cottesloe'
+        # create the site
+        site = G(Site, code=site_code, geometry=None, project=project)
+        self.assertIsNone(site.geometry)
+        record_data = {
+            'What': 'Hello! This is a test.',
+            'When': '12/12/2017',
+            'Site Code': site_code
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        # check error
+        errors = resp.json().get('data')
+        # errors is of string of format 'field_name::message'
+        self.assertIsNotNone(errors)
+        self.assertTrue(isinstance(errors, list))
+        self.assertEqual(len(errors), 1)
+        field_name, message = errors[0].split('::')
+        self.assertEqual(field_name, 'Site Code')
+        # message should be something like:
+        expected_message = 'The site Cottesloe does not exist or has no geometry'
+        self.assertEqual(message, expected_message)
 
-    def test_record_rejected_if_site_has_no_geometry_upload(self):
-        """
-        When uploading with Excel
-        If the referenced site has no geometry the record should be rejected
-        """
-        self.fail("not implemented")
-
-    def test_site_geometry_updated(self):
+    def test_schema_with_lat_long_and_site_fk(self):
         """
         Use case:
-        observations has been created with a site geometry, user update the site location.
-        user expect that the associated observations have their geometry updated.
-        This can only if the observations has the site as a FK (of course) and exactly the same geometry.
+        The schema contains a classic lat/lon fields and a site_code foreign key.
+        Test that:
+        1 - the lat/long provided takes precedence over the site geometry
+        2 - if lat/long not provided the site geometry is used
         """
-        self.fail("not implemented")
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_latlong_and_site_code_fk()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        self.assertIsNotNone(dataset.schema.latitude_field)
+        self.assertIsNotNone(dataset.schema.longitude_field)
+        site_code = 'Cottesloe'
+        site_geometry = Point(115.76, -32.0)
+        # create the site
+        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+        # the observation geometry different than the site geometry
+        observation_geometry = Point(site_geometry.x + 2, site_geometry.y + 2)
+        self.assertNotEqual(site.geometry, observation_geometry)
+
+        # lat/long + site
+        record_data = {
+            'What': 'Hello! This is a test.',
+            'When': '12/12/2017',
+            'Longitude': observation_geometry.x,
+            'Latitude': observation_geometry.y,
+            'Site Code': site_code
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        self.assertEqual(record.site, site)
+        self.assertEqual(record.geometry, observation_geometry)
+
+        # lat/long no site
+        record_data = {
+            'What': 'Hello! This is a test.',
+            'When': '12/12/2017',
+            'Longitude': observation_geometry.x,
+            'Latitude': observation_geometry.y,
+            'Site Code': None
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        self.assertIsNone(record.site)
+        self.assertEqual(record.geometry, observation_geometry)
+
+        # site without lat/long
+        record_data = {
+            'What': 'Hello! This is a test.',
+            'When': '12/12/2017',
+            'Longitude': None,
+            'Latitude': None,
+            'Site Code': site_code
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        self.assertEqual(record.site, site)
+        self.assertEqual(record.geometry, site_geometry)
+
+        # no lat/long no site -> error
+        record_data = {
+            'What': 'Hello! This is a test.',
+            'When': '12/12/2017',
+            'Longitude': None,
+            'Latitude': None,
+            'Site Code': None
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+        #
+        # def test_geometry_extracted_upload(self):
+        #     """
+        #     Test that the record geometry is properly copied from the site when using an csv upload
+        #     """
+        #     self.fail("not implemented")
+        #
+        # def test_record_rejected_if_site_has_no_geometry_upload(self):
+        #     """
+        #     When uploading with Excel
+        #     If the referenced site has no geometry the record should be rejected
+        #     """
+        #     self.fail("not implemented")
+        #
+        # def test_site_geometry_updated(self):
+        #     """
+        #     Use case:
+        #     observations has been created with a site geometry, user update the site location.
+        #     user expect that the associated observations have their geometry updated.
+        #     This can only if the observations has the site as a FK (of course) and exactly the same geometry.
+        #     """
+        #     self.fail("not implemented")
+        #
 
 
 class TestSerialization(TestCase):

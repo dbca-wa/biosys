@@ -67,7 +67,6 @@ class GenericRecordValidator(object):
 
     def validate_schema(self, data):
         """
-        :param schema_error_as_warning: if True the schema error are reported as warnings not errors
         :param data: must be a dictionary or a list of key => value
         :return: a RecordValidatorResult. To obtain the result as dict call the to_dict method of the result.
         """
@@ -97,25 +96,28 @@ class GenericRecordValidator(object):
 class ObservationValidator(GenericRecordValidator):
     def __init__(self, dataset, schema_error_as_warning=True):
         super(ObservationValidator, self).__init__(dataset, schema_error_as_warning)
-        self.date_col = self.schema.observation_date_field.name
-        self.lat_col = self.schema.latitude_field.name
-        self.lon_col = self.schema.longitude_field.name
+        self.date_col = self.schema.observation_date_field.name if self.schema.observation_date_field else None
+        self.lat_col = self.schema.latitude_field.name if self.schema.latitude_field else None
+        self.lon_col = self.schema.longitude_field.name if self.schema.longitude_field else None
+        self.site_col = self.schema.site_code_field.name if self.schema.site_code_field else None
 
     def validate(self, data):
         result = super(ObservationValidator, self).validate(data)
         # Every warnings on date or lat/long becomes error
-        if self.date_col in result.warnings:
+        if self.date_col and self.date_col in result.warnings:
             result.add_column_error(self.date_col, result.warnings[self.date_col])
             del result.warnings[self.date_col]
-        if self.lat_col in result.warnings:
+        if self.lat_col and self.lat_col in result.warnings:
             result.add_column_error(self.lat_col, result.warnings[self.lat_col])
             del result.warnings[self.lat_col]
-        if self.lon_col in result.warnings:
+        if self.lon_col and self.lon_col in result.warnings:
             result.add_column_error(self.lon_col, result.warnings[self.lon_col])
             del result.warnings[self.lon_col]
-        if not result.has_errors:
-            result = result.merge(self.validate_date(data))
-            result = result.merge(self.validate_geometry(data))
+        if self.site_col and self.site_col in result.warnings:
+            result.add_column_error(self.site_col, result.warnings[self.site_col])
+            del result.warnings[self.site_col]
+        result = result.merge(self.validate_date(data))
+        result = result.merge(self.validate_geometry(data))
         return result
 
     def validate_date(self, data):
@@ -130,14 +132,20 @@ class ObservationValidator(GenericRecordValidator):
 
     def validate_geometry(self, data):
         result = RecordValidatorResult()
-        lat_field = self.schema.latitude_field
-        long_field = self.schema.longitude_field
         try:
             self.schema.cast_geometry(data)
         except Exception as e:
             msg = str(e)
-            result.add_column_error(lat_field.name, msg)
-            result.add_column_error(long_field.name, msg)
+            # the fields involved in the geometry error depends of the schema fields.
+            # It could come from a site without geometry
+            lat_field = self.schema.latitude_field
+            long_field = self.schema.longitude_field
+            site_code_field = self.schema.site_code_field
+            if lat_field and long_field:
+                result.add_column_error(lat_field.name, msg)
+                result.add_column_error(long_field.name, msg)
+            if site_code_field:
+                result.add_column_error(site_code_field.name, msg)
         return result
 
 
@@ -151,8 +159,7 @@ class SpeciesObservationValidator(ObservationValidator):
         if self.species_name_col in result.warnings:
             result.add_column_error(self.species_name_col, result.warnings[self.species_name_col])
             del result.warnings[self.species_name_col]
-        if not result.has_errors:
-            result = result.merge(self.validate_species(data))
+        result = result.merge(self.validate_species(data))
         return result
 
     def validate_species(self, data):

@@ -272,3 +272,4 @@ def add_foreign_key_to_schema(schema, options):
 
 def set_strict_mode(url):
     return url + '?strict'
+
