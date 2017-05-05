@@ -80,7 +80,7 @@ class ProjectPermission(BasePermission):
             or (hasattr(view, 'project') and view.project and view.project.is_custodian(user))
 
 
-class ProjectSitesView(generics.ListCreateAPIView):
+class ProjectSitesView(generics.ListCreateAPIView, generics.DestroyAPIView):
     permission_classes = (IsAuthenticated, ProjectPermission)
     serializer_class = serializers.SiteSerializer
 
@@ -108,6 +108,13 @@ class ProjectSitesView(generics.ListCreateAPIView):
             for r in ser.initial_data:
                 r['project'] = self.project.pk
         return ser
+
+    def destroy(self, request, *args, **kwargs):
+        site_ids = request.data
+        if not site_ids and not isinstance(site_ids, list):
+            return Response("A list of site ids must be provided", status=status.HTTP_400_BAD_REQUEST)
+        Site.objects.filter(project=self.project, id__in=site_ids).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ProjectSitesUploadView(APIView):
