@@ -488,7 +488,7 @@ class GenericSchema(object):
 class ObservationSchema(GenericSchema):
     """
      A schema specific to an Observation Dataset.
-     It's main job is to deal with the observation date and it's geometry
+     Its main job is to deal with the observation date and its geometry
      (lat/long or geojson)
      There's a special case: a lat/long or geometry field can be omitted if there's a reference (foreign key)
      to a site code (only)
@@ -520,8 +520,14 @@ class ObservationSchema(GenericSchema):
             self.datum_field = self.find_datum_field_or_none(self)
         else:
             # we have a site code foreign key but we also can have lat/long field to overwrite the geometry
-            self.latitude_field = self.find_latitude_field(enforce_required=False)
-            self.longitude_field = self.find_longitude_field(enforce_required=False)
+            try:
+                self.latitude_field = self.find_latitude_field_or_throw(self, enforce_required=False)
+            except ObservationSchemaError:
+                self.latitude_field = None
+            try:
+                self.longitude_field = self.find_longitude_field_or_throw(self, enforce_required=False)
+            except ObservationSchemaError:
+                self.longitude_field = None
             self.datum_field = self.find_datum_field_or_none(self)
 
     # The following methods are static for testing purposes.
@@ -694,18 +700,6 @@ class ObservationSchema(GenericSchema):
         if len(fields) == 1:
             return fields[0]
         return None
-
-    def find_latitude_field(self, enforce_required=True):
-        try:
-            return self.find_latitude_field_or_throw(self, enforce_required=enforce_required)
-        except ObservationSchemaError:
-            return None
-
-    def find_longitude_field(self, enforce_required=True):
-        try:
-            return self.find_longitude_field_or_throw(self, enforce_required=enforce_required)
-        except ObservationSchemaError:
-            return None
 
     def find_site_code_foreign(self):
         return self.get_fk_for_model_field('Site', 'code')
