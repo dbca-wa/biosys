@@ -35,6 +35,8 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 
 class SiteSerializer(serializers.ModelSerializer):
+    centroid = serializers_gis.GeometryField(required=False, read_only=True)
+
     class Meta:
         model = Site
         fields = '__all__'
