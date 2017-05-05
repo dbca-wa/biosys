@@ -1,6 +1,7 @@
 import datetime
 import re
 from os import path
+from unittest import skip
 
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
@@ -1172,29 +1173,164 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         resp = client.post(url, data=payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
-        #
-        # def test_geometry_extracted_upload(self):
-        #     """
-        #     Test that the record geometry is properly copied from the site when using an csv upload
-        #     """
-        #     self.fail("not implemented")
-        #
-        # def test_record_rejected_if_site_has_no_geometry_upload(self):
-        #     """
-        #     When uploading with Excel
-        #     If the referenced site has no geometry the record should be rejected
-        #     """
-        #     self.fail("not implemented")
-        #
-        # def test_site_geometry_updated(self):
-        #     """
-        #     Use case:
-        #     observations has been created with a site geometry, user update the site location.
-        #     user expect that the associated observations have their geometry updated.
-        #     This can only if the observations has the site as a FK (of course) and exactly the same geometry.
-        #     """
-        #     self.fail("not implemented")
-        #
+    def test_geometry_extracted_upload(self):
+        """
+        Test that the record geometry is properly copied from the site when using an xlsx upload
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_site_code_fk()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        # create two sites
+        site_1_code = 'Cottesloe'
+        site_1_geometry = Point(115.76, -32.0)
+        site_1 = G(Site, code=site_1_code, geometry=site_1_geometry, project=project)
+
+        site_2_code = 'Somewhere'
+        site_2_geometry = Point(116.0, -30.0)
+        # create the site
+        site_2 = G(Site, code=site_2_code, geometry=site_2_geometry, project=project)
+
+        # data
+        csv_data = [
+            ['What', 'When', 'Site Code'],
+            ['what_1', '01/01/2017', site_1_code],
+            ['what_2', '02/02/2017', site_2_code]
+        ]
+        file_ = helpers.to_xlsx_file(csv_data)
+        self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
+        url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp
+            }
+            resp = client.post(url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            records = Record.objects.filter(dataset=dataset)
+            self.assertEquals(records.count(), len(csv_data) - 1)
+            r = [r for r in records if r.data['What'] == 'what_1'][0]
+            self.assertEqual(r.site, site_1)
+            self.assertEqual(r.geometry, site_1_geometry)
+            r = [r for r in records if r.data['What'] == 'what_2'][0]
+            self.assertEqual(r.site, site_2)
+            self.assertEqual(r.geometry, site_2_geometry)
+
+    def test_record_rejected_if_site_has_no_geometry_upload(self):
+        """
+        When uploading with Excel
+        If the referenced site has no geometry the record should be rejected
+        """
+        # same as above but site_2 has no geometry
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_site_code_fk()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        # create two sites the number 2 without a geometry
+        site_1_code = 'Cottesloe'
+        site_1_geometry = Point(115.76, -32.0)
+        site_1 = G(Site, code=site_1_code, geometry=site_1_geometry, project=project)
+
+        site_2_code = 'Somewhere'
+        site_2_geometry = None
+        G(Site, code=site_2_code, geometry=site_2_geometry, project=project)
+
+        csv_data = [
+            ['What', 'When', 'Site Code'],
+            ['what_1', '01/01/2017', site_1_code],
+            ['what_2', '02/02/2017', site_2_code]
+        ]
+        file_ = helpers.to_xlsx_file(csv_data)
+        self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
+        url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp
+            }
+            resp = client.post(url, data=payload, format='multipart')
+            self.assertEquals(resp.status_code, status.HTTP_400_BAD_REQUEST)
+            # Check that the good record is there.
+            records = Record.objects.filter(dataset=dataset)
+            self.assertEquals(records.count(), 1)
+            r = records.first()
+            self.assertEqual(r.site, site_1)
+            self.assertEqual(r.geometry, site_1_geometry)
+
+    @skip('Wait for the implementation')
+    def test_site_geometry_updated(self):
+        """
+        Use case:
+        observations has been created with a site geometry, user update the site location.
+        user expect that the associated observations have their geometry updated.
+        This can only if the observations has the site as a FK (of course) and exactly the same geometry.
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_site_code_fk()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        # create two sites
+        site_1_code = 'Cottesloe'
+        site_1_geometry = Point(115.76, -32.0)
+        site_1 = G(Site, code=site_1_code, geometry=site_1_geometry, project=project)
+
+        site_2_code = 'Somewhere'
+        site_2_geometry = Point(116.0, -30.0)
+        # create the site
+        site_2 = G(Site, code=site_2_code, geometry=site_2_geometry, project=project)
+
+        # data
+        csv_data = [
+            ['What', 'When', 'Site Code'],
+            ['what_1', '01/01/2017', site_1_code],
+            ['what_2', '02/02/2017', site_2_code]
+        ]
+        file_ = helpers.to_xlsx_file(csv_data)
+        self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
+        url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp
+            }
+            resp = client.post(url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            records = Record.objects.filter(dataset=dataset)
+            self.assertEquals(records.count(), len(csv_data) - 1)
+            record_1 = [r for r in records if r.data['What'] == 'what_1'][0]
+            self.assertEqual(record_1.site, site_1)
+            self.assertEqual(record_1.geometry, site_1_geometry)
+            record_2 = [r for r in records if r.data['What'] == 'what_2'][0]
+            self.assertEqual(record_2.site, site_2)
+            self.assertEqual(record_2.geometry, site_2_geometry)
+
+            # Change the site_1 geometry and expect the record_1 to have its geometry updated
+            previous_geometry = site_1_geometry
+            new_geometry = Point(previous_geometry.x + 2, previous_geometry.y + 2)
+            self.assertNotEqual(previous_geometry, new_geometry)
+            site_1.geometry = new_geometry
+            site_1.save()
+
+            # check that the record has been updated
+            record_1.refresh_from_db()
+            self.assertEqual(record_1.geometry, new_geometry)
+            # site_2 record should be untouched
+            record_2.refresh_from_db()
+            self.assertEqual(record_2.geometry, site_2_geometry)
+
+            # Use case: the record geometry should be updated ONLY if it matches exactly the site geometry
+            # new geometry for record_1
+            new_site_geometry = Point(179, -30)
+            self.assertNotEqual(new_site_geometry, site_1.geometry)
+            new_record_geometry = Point(180, -35)
+            self.assertNotEqual(new_record_geometry, new_site_geometry)
+            record_1.geometry = new_record_geometry
+            record_1.save()
+            self.assertNotEqual(record_1.geometry, record_1.site.geometry)
+            site = record_1.site
+            site.geometry = new_site_geometry
+            site.save()
+            # check record not changed
+            record_1.refresh_from_db()
+            self.assertEqual(record_1.geometry, new_record_geometry)
+            self.assertNotEqual(record_1.geometry, record_1.site.geometry)
 
 
 class TestSerialization(TestCase):

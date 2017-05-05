@@ -219,6 +219,11 @@ class Dataset(models.Model):
 
     @property
     def record_model(self):
+        """
+        This is a legacy method from the time where there were 3 different models
+        (generic, observation, species_observation)
+        :return:
+        """
         return Record
 
     @property
