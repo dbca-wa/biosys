@@ -183,6 +183,10 @@ class Site(models.Model):
     def has_object_destroy_permission(self, request):
         return is_admin(request.user) or self.is_custodian(request.user)
 
+    @property
+    def centroid(self):
+        return self.geometry.centroid if self.geometry else None
+
     class Meta:
         unique_together = ('project', 'code')
         ordering = ['code']

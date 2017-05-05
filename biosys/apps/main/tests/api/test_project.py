@@ -418,7 +418,7 @@ class TestProjectSiteBulk(TestCase):
 
     def test_permissions_delete(self):
         """
-        Bulk delete is not a valid method
+        Bulk delete is possible for custodian as long as we provide a list of ids
         :return:
         """
         project = self.project_1
@@ -426,21 +426,20 @@ class TestProjectSiteBulk(TestCase):
             reverse('api:project-sites', kwargs={'pk': project.pk})
         ]
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_1_client, self.custodian_2_client,
-                          self.admin_client],
-            "allowed": []
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
+            "allowed": [self.custodian_1_client, self.admin_client]
         }
         for client in access['forbidden']:
             for url in urls:
                 self.assertIn(
-                    client.delete(url, format='json').status_code,
+                    client.delete(url, data=[], format='json').status_code,
                     [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN, status.HTTP_405_METHOD_NOT_ALLOWED]
                 )
         for client in access['allowed']:
             for url in urls:
                 self.assertEqual(
-                    client.delete(url, format='json').status_code,
-                    status.HTTP_200_OK
+                    client.delete(url, data=[], format='json').status_code,
+                    status.HTTP_204_NO_CONTENT
                 )
 
     def test_bulk_update_forbidden(self):
@@ -528,6 +527,20 @@ class TestProjectSiteBulk(TestCase):
         self.assertEqual(sdb_2.name, site_2['name'])
         self.assertEqual(sdb_2.comments, site_2['comments'])
         self.assertEqual(sdb_2.attributes, site_2['attributes'])
+
+    def test_bulk_delete_happy_path(self):
+        project = self.project_1
+        client = self.custodian_1_client
+        url = reverse('api:project-sites', kwargs={'pk': project.pk})
+        all_sites_ids = [s.pk for s in Site.objects.filter(project=project)]
+        self.assertTrue(len(all_sites_ids) > 1)
+        to_delete = all_sites_ids[:2]
+        resp = client.delete(url, data=to_delete, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+        sites = Site.objects.filter(project=project)
+        self.assertEqual(sites.count(), len(all_sites_ids) - len(to_delete))
+        for pk in to_delete:
+            self.assertIsNone(Site.objects.filter(pk=pk).first())
 
 
 class TestProjectCustodians(TestCase):
