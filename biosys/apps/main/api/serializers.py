@@ -77,7 +77,9 @@ class SchemaValidator:
             validator.schema_error_as_warning = not self.strict
             result = validator.validate(data)
             if result.has_errors:
-                raise ValidationError(list(result.errors.items()))
+                error_messages = ['{col_name}::{message}'.format(col_name=k, message=v) for k, v in
+                                  result.errors.items()]
+                raise ValidationError(error_messages)
 
     def set_context(self, serializer_field):
         ctx = serializer_field.parent.context
@@ -206,6 +208,8 @@ class RecordSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         instance = super(RecordSerializer, self).update(instance, validated_data)
+        # case of a patch where the dataset is not sent
+        self.dataset = self.dataset or instance.dataset
         return self.set_fields_from_data(instance, validated_data)
 
     class Meta:

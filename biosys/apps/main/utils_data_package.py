@@ -365,7 +365,7 @@ class SchemaForeignKey:
 
 
 @python_2_unicode_compatible
-class GenericSchema:
+class GenericSchema(object):
     """
     A utility class for schema.
     It uses internally an instance SchemaModel of the frictionless jsontableschema for help.
@@ -472,28 +472,65 @@ class GenericSchema:
                 return fk
         return None
 
+    def has_fk_for_model_field(self, model_name, model_field):
+        return self.get_fk_for_model_field(model_name, model_field) is not None
+
+    def get_fk_for_model_field(self, model_name, model_field):
+        for fk in self.foreign_keys:
+            if fk.model == model_name and fk.model_field == model_field:
+                return fk
+        return None
+
     def __str__(self):
         return self.get('name')
 
 
 class ObservationSchema(GenericSchema):
     """
-    A schema specific to an Observation Dataset.
-    It's main job is to deal with the observation date and it's geometry
-    (lat/long or geojson)
+     A schema specific to an Observation Dataset.
+     Its main job is to deal with the observation date and its geometry
+     (lat/long or geojson)
+     There's a special case: a lat/long or geometry field can be omitted if there's a reference (foreign key)
+     to a site code (only)
     """
     OBSERVATION_DATE_FIELD_NAME = 'Observation Date'
     LATITUDE_FIELD_NAME = 'Latitude'
     LONGITUDE_FIELD_NAME = 'Longitude'
     DATUM_FIELD_NAME = 'Datum'
+    SITE_CODE_FOREIGN_KEY_EXAMPLE = """
+        "foreignKeys": [
+            {
+                "fields": ["Site Code"],
+                "reference": {
+                    "fields": ["code"],
+                    "resource": "Site"
+                }
+            }
+        ]
+     """
 
     def __init__(self, schema):
-        GenericSchema.__init__(self, schema)
+        super(ObservationSchema, self).__init__(schema)
         self.observation_date_field = self.find_observation_date_field_or_throw(self)
-        self.latitude_field = self.find_latitude_field_or_throw(self)
-        self.longitude_field = self.find_longitude_field_or_throw(self)
-        self.datum_field = self.find_datum_field_or_none(self)
+        site_code_fk = self.get_fk_for_model_field('Site', 'code')
+        self.site_code_field = self.get_field_by_mame(site_code_fk.data_field) if site_code_fk else None
+        if self.site_code_field is None:
+            self.latitude_field = self.find_latitude_field_or_throw(self)
+            self.longitude_field = self.find_longitude_field_or_throw(self)
+            self.datum_field = self.find_datum_field_or_none(self)
+        else:
+            # we have a site code foreign key but we also can have lat/long field to overwrite the geometry
+            try:
+                self.latitude_field = self.find_latitude_field_or_throw(self, enforce_required=False)
+            except ObservationSchemaError:
+                self.latitude_field = None
+            try:
+                self.longitude_field = self.find_longitude_field_or_throw(self, enforce_required=False)
+            except ObservationSchemaError:
+                self.longitude_field = None
+            self.datum_field = self.find_datum_field_or_none(self)
 
+    # The following methods are static for testing purposes.
     @staticmethod
     def find_observation_date_field_or_throw(schema):
         """
@@ -551,11 +588,12 @@ class ObservationSchema(GenericSchema):
             raise ObservationSchemaError(msg)
 
     @staticmethod
-    def find_latitude_field_or_throw(schema):
+    def find_latitude_field_or_throw(schema, enforce_required=True):
         """
         Precedence Rules:
         2- Look for biosys.type = 'latitude'
         3- Look for a field with name 'Latitude' case insensitive
+        :param enforce_required: if True the field must have a required constraints
         :param schema: a dict descriptor or a Schema instance
         :return: The SchemaField or raise an exception if none or more than one
         """
@@ -567,7 +605,7 @@ class ObservationSchema(GenericSchema):
             raise ObservationSchemaError(msg)
         if len(fields) == 1:
             field = fields[0]
-            if not field.required:
+            if enforce_required and not field.required:
                 msg = "The Biosys latitude field must be set as 'required'. {}".format(field)
                 raise ObservationSchemaError(msg)
             else:
@@ -579,23 +617,28 @@ class ObservationSchema(GenericSchema):
             raise ObservationSchemaError(msg)
         if len(fields) == 1:
             field = fields[0]
-            if not field.required:
+            if enforce_required and not field.required:
                 msg = "The Latitude field must be set as 'required'. {}".format(field)
                 raise ObservationSchemaError(msg)
             else:
                 return field
         msg = "The schema doesn't include a required latitude field. " \
-              "It must have a field named {} or tagged with biosys type {}". \
-            format(ObservationSchema.LATITUDE_FIELD_NAME, BiosysSchema.LATITUDE_TYPE_NAME)
+              "It must have a field named {} or tagged with biosys type {}. " \
+              "Alternatively you can add a foreign key the site code to extract the geometry from it. " \
+              "To create site code foreign key, add the following to you schema:{}". \
+            format(ObservationSchema.LATITUDE_FIELD_NAME,
+                   BiosysSchema.LATITUDE_TYPE_NAME,
+                   ObservationSchema.SITE_CODE_FOREIGN_KEY_EXAMPLE)
         raise ObservationSchemaError(msg)
 
     @staticmethod
-    def find_longitude_field_or_throw(schema):
+    def find_longitude_field_or_throw(schema, enforce_required=True):
         """
         Precedence Rules:
         1- Look for biosys.type = 'longitude'
         2- Look for a field with name 'Longitude' case insensitive
         :param schema: a dict descriptor or a Schema instance
+        :param enforce_required: if True the field must have a required constraints
         :return: The SchemaField or raise an exception if none or more than one
         """
         if not isinstance(schema, GenericSchema):
@@ -606,7 +649,7 @@ class ObservationSchema(GenericSchema):
             raise ObservationSchemaError(msg)
         if len(fields) == 1:
             field = fields[0]
-            if not field.required:
+            if enforce_required and not field.required:
                 msg = "The Biosys longitude field must be set as 'required'. {}".format(field)
                 raise ObservationSchemaError(msg)
             else:
@@ -618,14 +661,18 @@ class ObservationSchema(GenericSchema):
             raise ObservationSchemaError(msg)
         if len(fields) == 1:
             field = fields[0]
-            if not field.required:
+            if enforce_required and not field.required:
                 msg = "The Longitude field must be set as 'required'. {}".format(field)
                 raise ObservationSchemaError(msg)
             else:
                 return field
         msg = "The schema doesn't include a required longitude field. " \
-              "It must have a field named {} or tagged with biosys type {}". \
-            format(ObservationSchema.LONGITUDE_FIELD_NAME, BiosysSchema.LONGITUDE_TYPE_NAME)
+              "It must have a field named {} or tagged with biosys type {}" \
+              "Alternatively you can add a foreign key the site code to extract the geometry from it. " \
+              "To create site code foreign key, add the following to you schema:{}". \
+            format(ObservationSchema.LONGITUDE_FIELD_NAME,
+                   BiosysSchema.LONGITUDE_TYPE_NAME,
+                   ObservationSchema.SITE_CODE_FOREIGN_KEY_EXAMPLE)
         raise ObservationSchemaError(msg)
 
     @staticmethod
@@ -654,6 +701,9 @@ class ObservationSchema(GenericSchema):
             return fields[0]
         return None
 
+    def find_site_code_foreign(self):
+        return self.get_fk_for_model_field('Site', 'code')
+
     def get_record_observation_date_value(self, record):
         return record.get(self.observation_date_field.name)
 
@@ -662,19 +712,38 @@ class ObservationSchema(GenericSchema):
         return field.cast(record.get(field.name))
 
     def cast_geometry(self, record, default_srid=MODEL_SRID):
-        lat_val = record.get(self.latitude_field.name)
-        lon_val = record.get(self.longitude_field.name)
-        lat = self.latitude_field.cast(lat_val)
-        lon = self.longitude_field.cast(lon_val)
-        srid = default_srid
-        if self.datum_field is not None:
-            datum_val = record.get(self.datum_field.name)
-            if not is_supported_datum(datum_val):
-                msg = "Invalid Datum '{}'. Should be one of: {}".format(datum_val, SUPPORTED_DATUMS)
-                raise InvalidDatumError(msg)
+        """
+        Two cases: either a lat/lon or a site code foreign key.
+        The lat/lon values take precedence over the site.
+        :param record:
+        :param default_srid:
+        :return:
+        """
+        lat_val = record.get(self.latitude_field.name) if self.latitude_field is not None else None
+        lon_val = record.get(self.longitude_field.name) if self.longitude_field is not None else None
+        if lat_val and lon_val:
+            lat = self.latitude_field.cast(lat_val)
+            lon = self.longitude_field.cast(lon_val)
+            srid = default_srid
+            if self.datum_field is not None:
+                datum_val = record.get(self.datum_field.name)
+                if not is_supported_datum(datum_val):
+                    msg = "Invalid Datum '{}'. Should be one of: {}".format(datum_val, SUPPORTED_DATUMS)
+                    raise InvalidDatumError(msg)
+                else:
+                    srid = get_datum_srid(datum_val)
+            return Point(x=float(lon), y=float(lat), srid=srid)
+        elif self.site_code_field:
+            from main.models import Site  # import here to avoid cyclic import problem
+            site_code = record.get(self.site_code_field.name)
+            site = Site.objects.filter(code=site_code, geometry__isnull=False).first()
+            if site is None:
+                raise Exception('The site {} does not exist or has no geometry'.format(site_code))
             else:
-                srid = get_datum_srid(datum_val)
-        return Point(x=float(lon), y=float(lat), srid=srid)
+                return site.geometry
+        else:
+            # problem.
+            raise Exception('No lat/long or site code found!')
 
 
 class SpeciesObservationSchema(ObservationSchema):
@@ -684,7 +753,7 @@ class SpeciesObservationSchema(ObservationSchema):
     SPECIES_NAME_FIELD_NAME = 'Species Name'
 
     def __init__(self, schema):
-        ObservationSchema.__init__(self, schema)
+        super(SpeciesObservationSchema, self).__init__(schema)
         self.species_name_field = self.find_species_name_field_or_throws(self)
 
     @staticmethod
