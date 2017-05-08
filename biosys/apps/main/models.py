@@ -183,6 +183,10 @@ class Site(models.Model):
     def has_object_destroy_permission(self, request):
         return is_admin(request.user) or self.is_custodian(request.user)
 
+    @property
+    def centroid(self):
+        return self.geometry.centroid if self.geometry else None
+
     class Meta:
         unique_together = ('project', 'code')
         ordering = ['code']
@@ -219,6 +223,11 @@ class Dataset(models.Model):
 
     @property
     def record_model(self):
+        """
+        This is a legacy method from the time where there were 3 different models
+        (generic, observation, species_observation)
+        :return:
+        """
         return Record
 
     @property

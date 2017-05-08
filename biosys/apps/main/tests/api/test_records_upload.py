@@ -17,12 +17,12 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             {
                 "name": "Column A",
                 "type": "string",
-                "constraint": helpers.NOT_REQUIRED_CONSTRAINTS
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
             },
             {
                 "name": "Column B",
                 "type": "string",
-                "constraint": helpers.REQUIRED_CONSTRAINTS
+                "constraints": helpers.REQUIRED_CONSTRAINTS
             }
         ]
         self.data_package = helpers.create_data_package_from_fields(self.fields)

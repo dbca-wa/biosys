@@ -1,4 +1,7 @@
+import json
+
 from django.contrib.auth.models import User
+from django.contrib.gis.geos import GEOSGeometry
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
 from rest_framework import status
@@ -434,3 +437,24 @@ class TestSiteUpload(TestCase):
                 'Attribute2': 'attr12'}
 
             self.assertEquals(expected_attributes, s.attributes)
+
+
+class TestSerialization(helpers.BaseUserTestCase):
+    fixtures = [
+        'test-users',
+        'test-projects',
+        'test-sites'
+    ]
+
+    def test_centroid(self):
+        project = self.project_1
+        client = self.custodian_1_client
+        site = Site.objects.filter(project=project, geometry__isnull=False).first()
+        self.assertIsNotNone(site)
+        url = reverse('api:site-detail', kwargs={'pk': site.pk})
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertTrue('centroid' in data)
+        centroid = GEOSGeometry(json.dumps(data['centroid']))
+        self.assertEqual(centroid, site.geometry.centroid)
