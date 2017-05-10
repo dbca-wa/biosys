@@ -12,7 +12,7 @@ from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
 from main.models import Site, Dataset
 from main.utils_misc import get_value
-from main.utils_species import HerbieFacade
+from main.utils_species import HerbieFacade, get_key_for_value
 
 
 def xlsx_to_csv(file):
@@ -187,9 +187,19 @@ class RecordCreator:
                 geometry = self.schema.cast_geometry(row, default_srid=MODEL_SRID)
                 record.geometry = geometry
                 if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
-                    # species stuff. Lookup for species match in herbie
+                    # species stuff. Lookup for species match in herbie.
+                    # either a species name or a nameId
                     species_name = self.schema.cast_species_name(row)
-                    name_id = int(self.species_id_by_name.get(species_name, -1))
+                    name_id = self.schema.cast_species_name_id(row)
+                    # name id takes precedence
+                    if name_id:
+                        species_name = get_key_for_value(self.species_id_by_name, int(name_id), None)
+                        if not species_name:
+                            raise Exception("Cannot find a species with nameId={}".format(name_id))
+                    elif species_name:
+                        name_id = int(self.species_id_by_name.get(species_name, -1))
+                    else:
+                        raise Exception('Missing Species Name or Species NameId')
                     record.species_name = species_name
                     record.name_id = name_id
             if self.commit:
