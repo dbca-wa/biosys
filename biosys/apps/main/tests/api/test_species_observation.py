@@ -1,14 +1,13 @@
+import datetime
 import re
 from os import path
-import datetime
-
-from openpyxl import load_workbook
 
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
 from django.utils import timezone, six
+from openpyxl import load_workbook
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -817,7 +816,7 @@ class TestSpeciesNameExtraction(TestCase):
         self.assertEqual(ds.record_queryset.filter(species_name=name).count(), 1)
 
 
-class TestNameID(TestCase):
+class TestNameIDFromSpeciesName(TestCase):
     """
     Test that we retrieve the name id from the species facade
     """
@@ -1023,3 +1022,443 @@ class TestExport(helpers.BaseUserTestCase):
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
         self.assertEquals(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
+    """
+    Use case:
+    The schema doesn't include a Species Name but just a NameId column.
+    Test that using the upload (excel) or API the species name is collected from herbie and populated.
+    The test suite uses a mock herbie facade with a static species_name -> nameId dict
+    @see helpers.SOME_SPECIES_NAME_NAME_ID_MAP
+    """
+    fixtures = [
+        'test-users',
+        'test-projects'
+    ]
+
+    species_facade_class = helpers.LightSpeciesFacade
+
+    def _more_setup(self):
+        # set the HerbieFacade class
+        from main.api.views import SpeciesMixin
+        SpeciesMixin.species_facade_class = self.species_facade_class
+
+    @staticmethod
+    def schema_with_name_id():
+        schema_fields = [
+            {
+                "name": "NameId",
+                "type": "integer",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        return schema
+
+    def _create_dataset_with_schema(self, project, client, schema):
+        resp = client.post(
+            reverse('api:dataset-list'),
+            data={
+                "name": "Test NameId",
+                "type": Dataset.TYPE_SPECIES_OBSERVATION,
+                "project": project.pk,
+                'data_package': helpers.create_data_package_from_schema(schema)
+            },
+            format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(dataset)
+        return dataset
+
+    def test_species_name_collected_upload(self):
+        """
+        Happy path: upload excel with a valid nameId.
+        :return:
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_name_id()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        # data
+        csv_data = [
+            ['NameId', 'When', 'Latitude', 'Longitude'],
+            [25454, '01/01/2017', -32.0, 115.75],  # "Canis lupus"
+            ['24204', '02/02/2017', -33.0, 116.0]  # "Vespadelus douglasorum"
+        ]
+        file_ = helpers.to_xlsx_file(csv_data)
+        self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
+        url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp
+            }
+            resp = client.post(url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            records = Record.objects.filter(dataset=dataset)
+            self.assertEquals(records.count(), len(csv_data) - 1)
+            for r in records:
+                self.assertTrue(r.name_id > 0)
+                self.assertIsNotNone(r.species_name)
+            canis_lupus = records.filter(name_id=25454).first()
+            self.assertIsNotNone(canis_lupus)
+            self.assertEqual(canis_lupus.species_name, "Canis lupus")
+            vespadelus = records.filter(name_id=24204).first()
+            self.assertIsNotNone(vespadelus)
+            self.assertEqual(vespadelus.species_name, "Vespadelus douglasorum")
+
+    def test_species_name_collected_api_create(self):
+        """
+        Same as above: testing that the species name is collected when using the API create
+        :return:
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_name_id()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        record_data = {
+            'NameId': 25454,  # "Canis lupus"
+            'When': '12/12/2017',
+            'Latitude': -32.0,
+            'Longitude': 115.756
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        self.assertEqual(record.name_id, 25454)
+        self.assertEqual(record.species_name, "Canis lupus")
+
+    def test_species_name_collected_api_update(self):
+        """
+        Updating the nameId should update the species name
+        :return:
+        """
+        # create record
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_name_id()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        record_data = {
+            'NameId': 25454,  # "Canis lupus"
+            'When': '12/12/2017',
+            'Latitude': -32.0,
+            'Longitude': 115.756
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        self.assertEqual(record.name_id, 25454)
+        self.assertEqual(record.species_name, "Canis lupus")
+
+        # patch nameId
+        new_name_id = 24204
+        record_data['NameId'] = new_name_id
+        expected_species_name = 'Vespadelus douglasorum'
+        url = reverse('api:record-detail', kwargs={'pk': record.pk})
+        payload = {
+            'data': record_data
+        }
+        resp = client.patch(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        record.refresh_from_db()
+        self.assertEqual(record.name_id, new_name_id)
+        self.assertEqual(record.species_name, expected_species_name)
+
+    def test_wrong_id_rejected_upload(self):
+        """
+        If a wrong nameId is provided the system assume its an error
+        :return:
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_name_id()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        # data
+        csv_data = [
+            ['NameId', 'When', 'Latitude', 'Longitude'],
+            [99934, '01/01/2017', -32.0, 115.75],  # wrong
+            ['24204', '02/02/2017', -33.0, 116.0]  # "Vespadelus douglasorum"
+        ]
+        file_ = helpers.to_xlsx_file(csv_data)
+        self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
+        url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp
+            }
+            resp = client.post(url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_400_BAD_REQUEST, resp.status_code)
+            records = Record.objects.filter(dataset=dataset)
+            # should be only one record (the good one)
+            self.assertEquals(records.count(), 1)
+            vespadelus = records.filter(name_id=24204).first()
+            self.assertIsNotNone(vespadelus)
+            self.assertEqual(vespadelus.species_name, "Vespadelus douglasorum")
+
+    def test_wrong_id_rejected_api_create(self):
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_name_id()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        record_data = {
+            'NameId': 9999,  # wrong
+            'When': '12/12/2017',
+            'Latitude': -32.0,
+            'Longitude': 115.756
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Record.objects.filter(dataset=dataset).count(), 0)
+
+
+class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
+    """
+    Use case:
+    The schema includes a Species Name and a NameId column.
+    Test that the nameID takes precedence
+    The test suite uses a mock herbie facade with a static species_name -> nameId dict
+    @see helpers.SOME_SPECIES_NAME_NAME_ID_MAP
+    """
+    fixtures = [
+        'test-users',
+        'test-projects'
+    ]
+
+    species_facade_class = helpers.LightSpeciesFacade
+
+    def _more_setup(self):
+        # set the HerbieFacade class
+        from main.api.views import SpeciesMixin
+        SpeciesMixin.species_facade_class = self.species_facade_class
+
+    @staticmethod
+    def schema_with_name_id_and_species_name():
+        schema_fields = [
+            {
+                "name": "NameId",
+                "type": "integer",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Species Name",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        return schema
+
+    def _create_dataset_with_schema(self, project, client, schema):
+        resp = client.post(
+            reverse('api:dataset-list'),
+            data={
+                "name": "Test NameId",
+                "type": Dataset.TYPE_SPECIES_OBSERVATION,
+                "project": project.pk,
+                'data_package': helpers.create_data_package_from_schema(schema)
+            },
+            format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(dataset)
+        return dataset
+
+    def test_species_name_collected_upload(self):
+        """
+        Happy path: upload excel with a valid nameId.
+        :return:
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_name_id_and_species_name()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        # data
+        csv_data = [
+            ['NameId', 'Species Name', 'When', 'Latitude', 'Longitude'],
+            [25454, 'Chubby Bat', '01/01/2017', -32.0, 115.75],  # "Canis lupus"
+            ['24204', 'French Frog', '02/02/2017', -33.0, 116.0]  # "Vespadelus douglasorum"
+        ]
+        file_ = helpers.to_xlsx_file(csv_data)
+        self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
+        url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp
+            }
+            resp = client.post(url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            records = Record.objects.filter(dataset=dataset)
+            self.assertEquals(records.count(), len(csv_data) - 1)
+            for r in records:
+                self.assertTrue(r.name_id > 0)
+                self.assertIsNotNone(r.species_name)
+            canis_lupus = records.filter(name_id=25454).first()
+            self.assertIsNotNone(canis_lupus)
+            self.assertEqual(canis_lupus.species_name, "Canis lupus")
+            vespadelus = records.filter(name_id=24204).first()
+            self.assertIsNotNone(vespadelus)
+            self.assertEqual(vespadelus.species_name, "Vespadelus douglasorum")
+
+    def test_nameId_collected_upload(self):
+        """
+        Test that if nameId is not provided it is collected from the species list
+        :return:
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_name_id_and_species_name()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        # data
+        csv_data = [
+            ['NameId', 'Species Name', 'When', 'Latitude', 'Longitude'],
+            ['', 'Canis lupus', '01/01/2017', -32.0, 115.75],  # "Canis lupus"
+            ['', 'Vespadelus douglasorum', '02/02/2017', -33.0, 116.0]  # "Vespadelus douglasorum"
+        ]
+        file_ = helpers.to_xlsx_file(csv_data)
+        self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
+        url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp
+            }
+            resp = client.post(url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            records = Record.objects.filter(dataset=dataset)
+            self.assertEquals(records.count(), len(csv_data) - 1)
+            for r in records:
+                self.assertTrue(r.name_id > 0)
+                self.assertIsNotNone(r.species_name)
+            canis_lupus = records.filter(name_id=25454).first()
+            self.assertIsNotNone(canis_lupus)
+            self.assertEqual(canis_lupus.species_name, "Canis lupus")
+            vespadelus = records.filter(name_id=24204).first()
+            self.assertIsNotNone(vespadelus)
+            self.assertEqual(vespadelus.species_name, "Vespadelus douglasorum")
+
+    def test_species_name_collected_api_create(self):
+        """
+        Same as above: testing that the species name is collected when using the API create
+        :return:
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_name_id_and_species_name()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        record_data = {
+            'NameId': 25454,  # "Canis lupus"
+            'Species Name': 'Chubby Bat',
+            'When': '12/12/2017',
+            'Latitude': -32.0,
+            'Longitude': 115.756
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        self.assertEqual(record.name_id, 25454)
+        self.assertEqual(record.species_name, "Canis lupus")
+
+    def test_species_name_collected_api_update(self):
+        """
+        Updating the nameId should update the species name
+        :return:
+        """
+        # create record
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_name_id_and_species_name()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        record_data = {
+            'NameId': 25454,  # "Canis lupus"
+            'Species Name': 'Chubby Bat',
+            'When': '12/12/2017',
+            'Latitude': -32.0,
+            'Longitude': 115.756
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        self.assertEqual(record.name_id, 25454)
+        self.assertEqual(record.species_name, "Canis lupus")
+        # TODO: the species name in the data is not updated. Should we?
+        self.assertEqual(record.data.get('Species Name'), 'Chubby Bat')
+
+        # patch nameId
+        new_name_id = 24204
+        record_data['NameId'] = new_name_id
+        expected_species_name = 'Vespadelus douglasorum'
+        url = reverse('api:record-detail', kwargs={'pk': record.pk})
+        payload = {
+            'data': record_data
+        }
+        resp = client.patch(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        record.refresh_from_db()
+        self.assertEqual(record.name_id, new_name_id)
+        self.assertEqual(record.species_name, expected_species_name)

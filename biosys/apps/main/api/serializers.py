@@ -11,6 +11,7 @@ from rest_framework_gis import serializers as serializers_gis
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
 from main.models import Project, Site, Dataset, Record
+from main.utils_species import get_key_for_value
 
 
 class SimpleUserSerializer(serializers.ModelSerializer):
@@ -66,16 +67,17 @@ class DatasetSerializer(serializers.ModelSerializer):
 
 
 class SchemaValidator:
-    def __init__(self, strict=True):
+    def __init__(self, strict=True, **kwargs):
         self.strict = strict
-        self.dataset = None
+        self.dataset = None,
+        self.kwargs = kwargs
 
     def __call__(self, data):
         if not data:
             msg = "cannot be null or empty"
             raise ValidationError(('data', msg))
         if self.dataset is not None:
-            validator = get_record_validator_for_dataset(self.dataset)
+            validator = get_record_validator_for_dataset(self.dataset, **self.kwargs)
             validator.schema_error_as_warning = not self.strict
             result = validator.validate(data)
             if result.has_errors:
@@ -92,8 +94,10 @@ class SchemaValidator:
 class RecordSerializer(serializers.ModelSerializer):
     def __init__(self, instance=None, **kwargs):
         super(RecordSerializer, self).__init__(instance, **kwargs)
-        strict = kwargs.get('context', {}).get('strict', False)
-        schema_validator = SchemaValidator(strict=strict)
+        ctx = kwargs.get('context', {})
+        strict = ctx.get('strict', False)
+        species_mapping = ctx.get('species_mapping')
+        schema_validator = SchemaValidator(strict=strict, species_mapping=species_mapping)
         self.fields['data'].validators = [schema_validator]
         self.dataset = kwargs.get('context', {}).get('dataset', None)
 
@@ -160,35 +164,31 @@ class RecordSerializer(serializers.ModelSerializer):
         self.set_geometry(instance, validated_data, commit=commit)
         return instance
 
-    @staticmethod
-    def get_species_name(dataset, data):
-        return dataset.schema.cast_species_name(data)
-
-    @classmethod
-    def set_species_name(cls, instance, validated_data, commit=True):
-        species_name = cls.get_species_name(instance.dataset, validated_data['data'])
-        if species_name:
-            instance.species_name = species_name
-            if commit:
-                instance.save()
-        return instance
-
-    def get_name_id(self, species_name):
-        name_id = -1
-        if 'species_mapping' in self.context and species_name:
-            name_id = int(self.context['species_mapping'].get(species_name, -1))
-        return name_id
-
-    def set_name_id(self, instance, commit=True):
-        name_id = self.get_name_id(instance.species_name)
+    def set_species_name_and_id(self, instance, validated_data, commit=True):
+        dataset = instance.dataset
+        schema = dataset.schema
+        schema_data = validated_data['data']
+        # either a species name or a nameId
+        species_name = schema.cast_species_name(schema_data)
+        name_id = schema.cast_species_name_id(schema_data)
+        species_mapping = self.context.get('species_mapping')
+        if species_mapping:
+            # name id takes precedence
+            if name_id:
+                species_name = get_key_for_value(species_mapping, int(name_id), None)
+                if not species_name:
+                    raise Exception("Cannot find a species with nameId={}".format(name_id))
+            elif species_name:
+                name_id = int(species_mapping.get(species_name, -1))
+            else:
+                raise Exception('Missing Species Name or Species NameId')
+        else:
+            # what to do if we don't have an species mapping (herbie down?)
+            name_id = name_id or -1
+        instance.species_name = species_name
         instance.name_id = name_id
         if commit:
             instance.save()
-        return instance
-
-    def set_species_name_and_id(self, instance, validated_data, commit=True):
-        self.set_species_name(instance, validated_data, commit=commit)
-        self.set_name_id(instance, commit=commit)
         return instance
 
     def set_fields_from_data(self, instance, validated_data):
@@ -210,8 +210,6 @@ class RecordSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         instance = super(RecordSerializer, self).update(instance, validated_data)
-        # case of a patch where the dataset is not sent
-        self.dataset = self.dataset or instance.dataset
         return self.set_fields_from_data(instance, validated_data)
 
     class Meta:

@@ -122,6 +122,7 @@ class BiosysSchema:
     LONGITUDE_TYPE_NAME = 'longitude'
     DATUM_TYPE_NAME = 'datum'
     SPECIES_NAME_TYPE_NAME = 'speciesName'
+    SPECIES_NAME_ID_TYPE_NAME = 'speciesNameId'
 
     BIOSYS_TYPE_MAP = {
         OBSERVATION_DATE_TYPE_NAME: DayFirstDateType,
@@ -158,6 +159,9 @@ class BiosysSchema:
 
     def is_species_name(self):
         return self.type == self.SPECIES_NAME_TYPE_NAME
+
+    def is_species_name_id(self):
+        return self.type == self.SPECIES_NAME_ID_TYPE_NAME
 
 
 @python_2_unicode_compatible
@@ -751,13 +755,42 @@ class SpeciesObservationSchema(ObservationSchema):
     An ObservationSchema with a Species Name
     """
     SPECIES_NAME_FIELD_NAME = 'Species Name'
+    SPECIES_NAME_ID_FIELD_NAMES_LOWER = ['name id', 'nameid', 'species nameid', 'species name id']
 
     def __init__(self, schema):
+        """
+        An ObservationSchema with a field for species name or species nameid
+        :param schema:
+        """
         super(SpeciesObservationSchema, self).__init__(schema)
-        self.species_name_field = self.find_species_name_field_or_throws(self)
+        try:
+            self.species_name_field = self.find_species_name_field_or_throws(self, enforce_required=False)
+        except SpeciesObservationSchemaError:
+            self.species_name_field = None
+        try:
+            self.species_name_id_field = self.find_species_name_id_field(self)
+        except SpeciesObservationSchemaError:
+            self.species_name_field = None
+        if not self.species_name_field and not self.species_name_id_field:
+            msg = "The schema doesn't include a 'Species Name' field or a 'NameId' field. " \
+                  "In order to be a valid Species Observation one of these fields must be specified. " \
+                  "Alternatively you can 'tag' a field by adding a biosys type {} or {}" \
+                .format(BiosysSchema.SPECIES_NAME_TYPE_NAME, BiosysSchema.SPECIES_NAME_ID_TYPE_NAME)
+            raise SpeciesObservationSchemaError(msg)
+        # if only one of the fields it must be required
+        if self.species_name_field and not self.species_name_id_field and not self.species_name_field.required:
+            msg = 'The {field_name} field must be set as "required" (add "required": true in the constraints)'.format(
+                field_name=self.species_name_field.name
+            )
+            raise SpeciesObservationSchemaError(msg)
+        if not self.species_name_field and self.species_name_id_field and not self.species_name_id_field.required:
+            msg = 'The {field_name} field must be set as "required" (add "required": true in the constraints)'.format(
+                field_name=self.species_name_id_field.name
+            )
+            raise SpeciesObservationSchemaError(msg)
 
     @staticmethod
-    def find_species_name_field_or_throws(schema):
+    def find_species_name_field_or_throws(schema, enforce_required=True):
         """
         Precedence Rules:
         2- Look for biosys.type = 'speciesName'
@@ -773,7 +806,7 @@ class SpeciesObservationSchema(ObservationSchema):
             raise SpeciesObservationSchemaError(msg)
         if len(fields) == 1:
             field = fields[0]
-            if not field.required:
+            if enforce_required and not field.required:
                 msg = "The Biosys speciesName field must be set as 'required'. {}".format(field)
                 raise SpeciesObservationSchemaError(msg)
             else:
@@ -786,7 +819,7 @@ class SpeciesObservationSchema(ObservationSchema):
             raise SpeciesObservationSchemaError(msg)
         if len(fields) == 1:
             field = fields[0]
-            if not field.required:
+            if enforce_required and not field.required:
                 msg = "The 'Species Name' field must be set as 'required'. {}".format(field)
                 raise SpeciesObservationSchemaError(msg)
             else:
@@ -796,9 +829,42 @@ class SpeciesObservationSchema(ObservationSchema):
             format(SpeciesObservationSchema.SPECIES_NAME_FIELD_NAME, BiosysSchema.SPECIES_NAME_TYPE_NAME)
         raise SpeciesObservationSchemaError(msg)
 
+    @staticmethod
+    def find_species_name_id_field(schema):
+        """
+        Precedence Rules:
+        2- Look for biosys.type = 'speciesNameId'
+        3- Look for a field with name 'NameId' or one the the possible names, case insensitive
+        Note:
+            the method will raise an SpeciesObservationSchemaError if two or more fields match either of the two rules.
+        """
+
+        result = None
+        if not isinstance(schema, GenericSchema):
+            schema = GenericSchema(schema)
+        fields = [f for f in schema.fields if f.biosys.is_species_name_id()]
+        if len(fields) > 1:
+            msg = "More than one Biosys {} type field found!. {}".format(BiosysSchema.SPECIES_NAME_ID_TYPE_NAME, fields)
+            raise SpeciesObservationSchemaError(msg)
+        if len(fields) == 1:
+            result = fields[0]
+
+        fields = [f for f in schema.fields if
+                  f.name.lower() in SpeciesObservationSchema.SPECIES_NAME_ID_FIELD_NAMES_LOWER]
+        if len(fields) > 1:
+            msg = "More than one 'Species NameId' field found!. {}".format(fields)
+            raise SpeciesObservationSchemaError(msg)
+        if len(fields) == 1:
+            result = fields[0]
+        return result
+
     def cast_species_name(self, record):
         field = self.species_name_field
-        return field.cast(record.get(field.name))
+        return field.cast(record.get(field.name)) if field is not None else None
+
+    def cast_species_name_id(self, record):
+        field = self.species_name_id_field
+        return field.cast(record.get(field.name)) if field is not None else None
 
 
 class Exporter:

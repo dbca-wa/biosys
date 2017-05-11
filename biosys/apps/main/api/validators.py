@@ -1,13 +1,13 @@
 from main.models import Dataset
 
 
-def get_record_validator_for_dataset(dataset):
+def get_record_validator_for_dataset(dataset, **kwargs):
     if dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
-        return SpeciesObservationValidator(dataset)
+        return SpeciesObservationValidator(dataset, **kwargs)
     elif dataset.type == Dataset.TYPE_OBSERVATION:
-        return ObservationValidator(dataset)
+        return ObservationValidator(dataset, **kwargs)
     else:
-        return GenericRecordValidator(dataset)
+        return GenericRecordValidator(dataset, **kwargs)
 
 
 def merge_dicts(*dict_args):
@@ -58,7 +58,7 @@ class RecordValidatorResult:
 
 
 class GenericRecordValidator(object):
-    def __init__(self, dataset, schema_error_as_warning=True):
+    def __init__(self, dataset, schema_error_as_warning=True, **kwargs):
         self.schema = dataset.schema
         self.schema_error_as_warning = schema_error_as_warning
 
@@ -94,8 +94,8 @@ class GenericRecordValidator(object):
 
 
 class ObservationValidator(GenericRecordValidator):
-    def __init__(self, dataset, schema_error_as_warning=True):
-        super(ObservationValidator, self).__init__(dataset, schema_error_as_warning)
+    def __init__(self, dataset, schema_error_as_warning=True, **kwargs):
+        super(ObservationValidator, self).__init__(dataset, schema_error_as_warning, **kwargs)
         self.date_col = self.schema.observation_date_field.name if self.schema.observation_date_field else None
         self.lat_col = self.schema.latitude_field.name if self.schema.latitude_field else None
         self.lon_col = self.schema.longitude_field.name if self.schema.longitude_field else None
@@ -150,19 +150,28 @@ class ObservationValidator(GenericRecordValidator):
 
 
 class SpeciesObservationValidator(ObservationValidator):
-    def __init__(self, dataset, schema_error_as_warning=True):
+    def __init__(self, dataset, schema_error_as_warning=True, **kwargs):
         super(SpeciesObservationValidator, self).__init__(dataset, schema_error_as_warning)
-        self.species_name_col = self.schema.species_name_field.name
+        self.species_name_col = self.schema.species_name_field.name if self.schema.species_name_field else None
+        self.species_name_id_col = self.schema.species_name_id_field.name if self.schema.species_name_id_field else None
+        self.species_mapping = kwargs.get('species_mapping')
 
     def validate(self, data, schema_error_as_warning=True):
         result = super(SpeciesObservationValidator, self).validate(data)
-        if self.species_name_col in result.warnings:
+        if self.species_name_col and self.species_name_col in result.warnings:
             result.add_column_error(self.species_name_col, result.warnings[self.species_name_col])
             del result.warnings[self.species_name_col]
+        if self.species_name_id_col and self.species_name_id_col in result.warnings:
+            result.add_column_error(self.species_name_id_col, result.warnings[self.species_name_id_col])
+            del result.warnings[self.species_name_id_col]
         result = result.merge(self.validate_species(data))
         return result
 
     def validate_species(self, data):
-        # TODO: Species validation!! ??
         result = RecordValidatorResult()
+        name_id = self.schema.cast_species_name_id(data)
+        if name_id and self.species_mapping is not None:
+            if name_id not in self.species_mapping.values():
+                message = "Cannot find a species with nameId={}".format(name_id)
+                result.add_column_error(self.species_name_id_col, message)
         return result
