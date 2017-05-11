@@ -170,7 +170,7 @@ class SpeciesObservationValidator(ObservationValidator):
     def validate_species(self, data):
         result = RecordValidatorResult()
         name_id = self.schema.cast_species_name_id(data)
-        if name_id and self.species_mapping:
+        if name_id and self.species_mapping is not None:
             if name_id not in self.species_mapping.values():
                 message = "Cannot find a species with nameId={}".format(name_id)
                 result.add_column_error(self.species_name_id_col, message)
