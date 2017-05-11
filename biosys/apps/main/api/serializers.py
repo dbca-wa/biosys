@@ -67,16 +67,17 @@ class DatasetSerializer(serializers.ModelSerializer):
 
 
 class SchemaValidator:
-    def __init__(self, strict=True):
+    def __init__(self, strict=True, **kwargs):
         self.strict = strict
-        self.dataset = None
+        self.dataset = None,
+        self.kwargs = kwargs
 
     def __call__(self, data):
         if not data:
             msg = "cannot be null or empty"
             raise ValidationError(('data', msg))
         if self.dataset is not None:
-            validator = get_record_validator_for_dataset(self.dataset)
+            validator = get_record_validator_for_dataset(self.dataset, **self.kwargs)
             validator.schema_error_as_warning = not self.strict
             result = validator.validate(data)
             if result.has_errors:
@@ -93,8 +94,10 @@ class SchemaValidator:
 class RecordSerializer(serializers.ModelSerializer):
     def __init__(self, instance=None, **kwargs):
         super(RecordSerializer, self).__init__(instance, **kwargs)
-        strict = kwargs.get('context', {}).get('strict', False)
-        schema_validator = SchemaValidator(strict=strict)
+        ctx = kwargs.get('context', {})
+        strict = ctx.get('strict', False)
+        species_mapping = ctx.get('species_mapping')
+        schema_validator = SchemaValidator(strict=strict, species_mapping=species_mapping)
         self.fields['data'].validators = [schema_validator]
         self.dataset = kwargs.get('context', {}).get('dataset', None)
 

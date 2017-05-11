@@ -1195,6 +1195,57 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         self.assertEqual(record.name_id, new_name_id)
         self.assertEqual(record.species_name, expected_species_name)
 
+    def test_wrong_id_rejected_upload(self):
+        """
+        If a wrong nameId is provided the system assume its an error
+        :return:
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_name_id()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        # data
+        csv_data = [
+            ['NameId', 'When', 'Latitude', 'Longitude'],
+            [99934, '01/01/2017', -32.0, 115.75],  # wrong
+            ['24204', '02/02/2017', -33.0, 116.0]  # "Vespadelus douglasorum"
+        ]
+        file_ = helpers.to_xlsx_file(csv_data)
+        self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
+        url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp
+            }
+            resp = client.post(url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_400_BAD_REQUEST, resp.status_code)
+            records = Record.objects.filter(dataset=dataset)
+            # should be only one record (the good one)
+            self.assertEquals(records.count(), 1)
+            vespadelus = records.filter(name_id=24204).first()
+            self.assertIsNotNone(vespadelus)
+            self.assertEqual(vespadelus.species_name, "Vespadelus douglasorum")
+
+    def test_wrong_id_rejected_api_create(self):
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_name_id()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        record_data = {
+            'NameId': 9999,  # wrong
+            'When': '12/12/2017',
+            'Latitude': -32.0,
+            'Longitude': 115.756
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Record.objects.filter(dataset=dataset).count(), 0)
+
 
 class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
     """
