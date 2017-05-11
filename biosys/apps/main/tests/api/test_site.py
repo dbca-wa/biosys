@@ -403,6 +403,8 @@ class TestSiteUpload(TestCase):
 
             self.assertEquals(expected_attributes, s.attributes)
 
+            self.assertEqual(project.site_count, len(csv_data) - 1)
+
     def test_upload_xlsx_happy_path(self):
         csv_data = [
             ['Site Code', 'Site Name', 'Comments', 'Latitude', 'Longitude', 'Datum', 'Attribute1', 'Attribute2'],
@@ -438,6 +440,7 @@ class TestSiteUpload(TestCase):
 
             self.assertEquals(expected_attributes, s.attributes)
 
+            self.assertEqual(project.site_count, len(csv_data) - 1)
 
 class TestSerialization(helpers.BaseUserTestCase):
     fixtures = [
