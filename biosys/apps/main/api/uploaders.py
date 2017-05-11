@@ -141,7 +141,8 @@ class SiteUploader(FileReader):
 
 
 class RecordCreator:
-    def __init__(self, dataset, data_generator, commit=True, create_site=False, validator=None):
+    def __init__(self, dataset, data_generator,
+                 commit=True, create_site=False, validator=None, species_facade_class=HerbieFacade):
         self.dataset = dataset
         self.generator = data_generator
         self.create_site = create_site
@@ -152,7 +153,7 @@ class RecordCreator:
         # if species. First load species list from herbie. Should raise an exception if problem.
         self.species_id_by_name = {}
         if dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
-            self.species_id_by_name = HerbieFacade().name_id_by_species_name()
+            self.species_id_by_name = species_facade_class().name_id_by_species_name()
         # Schema foreign key for site.
         self.site_fk = self.schema.get_fk_for_model('Site')
         self.commit = commit

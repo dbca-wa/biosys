@@ -339,6 +339,11 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
             queryset = queryset.filter(datetime__lte=datetime_end)
         return queryset
 
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.dataset = instance.dataset
+        return super(RecordViewSet, self).update(request, *args, **kwargs)
+
 
 class StatisticsView(APIView):
     permission_classes = (IsAuthenticated,)
@@ -396,7 +401,7 @@ class WhoamiView(APIView):
         return Response(data)
 
 
-class DatasetUploadRecordsView(APIView):
+class DatasetUploadRecordsView(APIView, SpeciesMixin):
     """
     Upload file for records (xlsx, csv)
     """
@@ -427,7 +432,9 @@ class DatasetUploadRecordsView(APIView):
         generator = FileReader(file_obj)
         validator = get_record_validator_for_dataset(self.dataset)
         validator.schema_error_as_warning = not strict
-        creator = RecordCreator(self.dataset, generator, validator=validator, create_site=create_site, commit=True)
+        creator = RecordCreator(self.dataset, generator,
+                                validator=validator, create_site=create_site, commit=True,
+                                species_facade_class=self.species_facade_class)
         data = []
         has_error = False
         row = 0

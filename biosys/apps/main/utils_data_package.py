@@ -765,15 +765,17 @@ class SpeciesObservationSchema(ObservationSchema):
         super(SpeciesObservationSchema, self).__init__(schema)
         try:
             self.species_name_field = self.find_species_name_field_or_throws(self, enforce_required=False)
-        except ObservationSchemaError:
+        except SpeciesObservationSchemaError:
             self.species_name_field = None
         try:
             self.species_name_id_field = self.find_species_name_id_field(self)
-        except ObservationSchemaError:
+        except SpeciesObservationSchemaError:
             self.species_name_field = None
         if not self.species_name_field and not self.species_name_id_field:
             msg = "The schema doesn't include a 'Species Name' field or a 'NameId' field. " \
-                  "In order to be a valid Species Observation one of these fields must be specified."
+                  "In order to be a valid Species Observation one of these fields must be specified. " \
+                  "Alternatively you can 'tag' a field by adding a biosys type {} or {}" \
+                .format(BiosysSchema.SPECIES_NAME_TYPE_NAME, BiosysSchema.SPECIES_NAME_ID_TYPE_NAME)
             raise SpeciesObservationSchemaError(msg)
         # if only one of the fields it must be required
         if self.species_name_field and not self.species_name_id_field and not self.species_name_field.required:

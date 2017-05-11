@@ -152,13 +152,17 @@ class ObservationValidator(GenericRecordValidator):
 class SpeciesObservationValidator(ObservationValidator):
     def __init__(self, dataset, schema_error_as_warning=True):
         super(SpeciesObservationValidator, self).__init__(dataset, schema_error_as_warning)
-        self.species_name_col = self.schema.species_name_field.name
+        self.species_name_col = self.schema.species_name_field.name if self.schema.species_name_field else None
+        self.species_name_id_col = self.schema.species_name_id_field.name if self.schema.species_name_id_field else None
 
     def validate(self, data, schema_error_as_warning=True):
         result = super(SpeciesObservationValidator, self).validate(data)
-        if self.species_name_col in result.warnings:
+        if self.species_name_col and self.species_name_col in result.warnings:
             result.add_column_error(self.species_name_col, result.warnings[self.species_name_col])
             del result.warnings[self.species_name_col]
+        if self.species_name_id_col and self.species_name_id_col in result.warnings:
+            result.add_column_error(self.species_name_id_col, result.warnings[self.species_name_id_col])
+            del result.warnings[self.species_name_id_col]
         result = result.merge(self.validate_species(data))
         return result
 
