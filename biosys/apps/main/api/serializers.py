@@ -28,6 +28,9 @@ class UserSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     timezone = serializers.CharField(required=False)
     centroid = serializers_gis.GeometryField(required=False, read_only=True)
+    dataset_count = serializers.IntegerField(required=False)
+    site_count = serializers.IntegerField(required=False)
+    record_count = serializers.IntegerField(required=False)
 
     class Meta:
         model = Project
@@ -43,6 +46,8 @@ class SiteSerializer(serializers.ModelSerializer):
 
 
 class DatasetSerializer(serializers.ModelSerializer):
+    record_count = serializers.IntegerField(required=False)
+
     class DataPackageValidator:
         def __init__(self):
             self.dataset_type = Dataset.TYPE_GENERIC

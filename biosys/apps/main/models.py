@@ -101,6 +101,18 @@ class Project(models.Model):
     def centroid(self):
         return self.geometry.centroid if self.geometry else None
 
+    @property
+    def dataset_count(self):
+        return self.projects.count()
+
+    @property
+    def site_count(self):
+        return self.site_set.count()
+
+    @property
+    def record_count(self):
+        return Record.objects.filter(dataset__project=self).count()
+
     class Meta:
         ordering = ['title']
 
@@ -233,6 +245,10 @@ class Dataset(models.Model):
     @property
     def record_queryset(self):
         return self.record_model.objects.filter(dataset=self)
+
+    @property
+    def record_count(self):
+        return self.record_model.objects.filter(dataset=self).count()
 
     @property
     def schema_class(self):

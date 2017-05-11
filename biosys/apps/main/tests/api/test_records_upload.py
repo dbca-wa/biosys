@@ -63,6 +63,9 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             }
             self.assertEquals(expected_data, qs[1].data)
 
+            self.assertEquals(self.project_1.record_count, len(csv_data) - 1)
+            self.assertEquals(self.ds.record_count, len(csv_data) - 1)
+
     def test_upload_xlsx_happy_path(self):
         csv_data = [
             ['Column A', 'Column B'],
@@ -92,3 +95,6 @@ class TestGenericRecord(helpers.BaseUserTestCase):
                 'Column B': 'B2',
             }
             self.assertEquals(expected_data, qs[1].data)
+
+            self.assertEquals(self.project_1.record_count, len(csv_data) - 1)
+            self.assertEquals(self.ds.record_count, len(csv_data) - 1)
