@@ -321,7 +321,7 @@ class TestDataPackageValidation(TestCase):
         self.ds_1 = Dataset.objects.filter(name="Bats1", project=self.project_1).first()
         self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
 
-    def test_generic_happy_path(self):
+    def test_generic_create_happy_path(self):
         data_package = clone(GENERIC_DATA_PACKAGE)
 
         url = reverse('api:dataset-list')
@@ -338,7 +338,7 @@ class TestDataPackageValidation(TestCase):
             status.HTTP_201_CREATED
         )
 
-    def test_observation_happy_path(self):
+    def test_observation_create_happy_path(self):
         data_package = clone(LAT_LONG_OBSERVATION_DATA_PACKAGE)
 
         url = reverse('api:dataset-list')
@@ -355,7 +355,7 @@ class TestDataPackageValidation(TestCase):
             status.HTTP_201_CREATED
         )
 
-    def test_species_observation_happy_path(self):
+    def test_species_observation_create_happy_path(self):
         data_package = clone(SPECIES_OBSERVATION_DATA_PACKAGE)
 
         url = reverse('api:dataset-list')
