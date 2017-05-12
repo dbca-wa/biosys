@@ -21,7 +21,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
 
 class UploadDataSetView(LoginRequiredMixin, FormView):
-    # TODO: use API for this view
+    # TODO: this view is obsolete. Should use the API view.
     template_name = 'main/data_upload.html'
     form_class = UploadDatasetForm
     success_url = reverse_lazy('admin:main_dataset_changelist')

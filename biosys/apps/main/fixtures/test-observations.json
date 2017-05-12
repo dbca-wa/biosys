@@ -1,692 +1,354 @@
 [
-{
-  "model": "main.record",
-  "pk": 1,
-  "fields": {
-    "data": {
-      "Family": "MOLOSSIDAE",
-      "Comments": "Anabat-minidisc File name: Adolophus Is site2 15Aug08 X16.mp3  Call ID by: RB",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 2. Dry creek bed lined by paperbark trees. A salt water pool is approx 10m away.",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Chaerephon jobensis",
-      "Longitude": "128.14111",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.08306",
-      "Collector": "NMcK teams",
-      "Date": "15 Aug 2008",
-      "Species": "jobensis",
-      "Datum": "WGS84",
-      "Genus": "Chaerephon",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-14T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
-    "site": 3
+  {
+    "model": "main.record",
+    "pk": 1,
+    "fields": {
+      "data": {
+        "Family": "MOLOSSIDAE",
+        "Comments": "Anabat-minidisc File name: Adolophus Is site2 15Aug08 X16.mp3  Call ID by: RB",
+        "Class": "MAMMALIA",
+        "Institution": "Department of Parks and Wildlife",
+        "Island": "Adolphus",
+        "Description": "Adolphus Island,site 2. Dry creek bed lined by paperbark trees. A salt water pool is approx 10m away.",
+        "Method": "Anabat-minidisc",
+        "Species whole": "Chaerephon jobensis",
+        "Longitude": "128.14111",
+        "Order": "CHIROPTERA",
+        "Latitude": "-15.08306",
+        "Collector": "NMcK teams",
+        "Date": "15 Aug 2008",
+        "Species": "jobensis",
+        "Datum": "WGS84",
+        "Genus": "Chaerephon",
+        "Expedition": "Kimberley Island Biodiversity Survey",
+        "Record type": "call ID"
+      },
+      "dataset": 5,
+      "datetime": "2008-08-14T16:00:00Z",
+      "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
+      "created": "2017-05-12T01:50:26.715740Z",
+      "last_modified": "2017-05-12T01:50:26.715796Z",
+      "site": 3
+    }
+  },
+  {
+    "model": "main.record",
+    "pk": 2,
+    "fields": {
+      "data": {
+        "Family": "VESPERTILIONIDAE",
+        "Comments": "Anabat-minidisc File name: Adolophus Is site2 15Aug08 X16.mp3  Call ID by: RB",
+        "Class": "MAMMALIA",
+        "Institution": "Department of Parks and Wildlife",
+        "Island": "Adolphus",
+        "Description": "Adolphus Island,site 2. Dry creek bed lined by paperbark trees. A salt water pool is approx 10m away.",
+        "Method": "Anabat-minidisc",
+        "Species whole": "Chalinolobus nigrogriseus",
+        "Longitude": "128.14111",
+        "Order": "CHIROPTERA",
+        "Latitude": "-15.08306",
+        "Collector": "NMcK teams",
+        "Date": "15 Aug 2008",
+        "Species": "nigrogriseus",
+        "Datum": "WGS84",
+        "Genus": "Chalinolobus",
+        "Expedition": "Kimberley Island Biodiversity Survey",
+        "Record type": "call ID"
+      },
+      "dataset": 5,
+      "datetime": "2008-08-14T16:00:00Z",
+      "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
+      "created": "2017-05-12T01:50:26.715740Z",
+      "last_modified": "2017-05-12T01:50:26.715796Z",
+      "site": 3
+    }
+  },
+  {
+    "model": "main.record",
+    "pk": 3,
+    "fields": {
+      "data": {
+        "Family": "VESPERTILIONIDAE",
+        "Comments": "Anabat-minidisc File name: Adolphus Is site1 9Aug08 x16.mp3  Call ID by: RB&NMcK",
+        "Class": "MAMMALIA",
+        "Institution": "Department of Parks and Wildlife",
+        "Island": "Adolphus",
+        "Description": "Adolphus Island,site 4. Dry creek line in Euc tall woodland",
+        "Method": "Anabat-minidisc",
+        "Species whole": "Chalinolobus nigrogriseus",
+        "Longitude": "128.15639",
+        "Order": "CHIROPTERA",
+        "Latitude": "-15.10556",
+        "Collector": "NMcK teams",
+        "Date": "09 Aug 2008",
+        "Species": "nigrogriseus",
+        "Datum": "WGS84",
+        "Genus": "Chalinolobus",
+        "Expedition": "Kimberley Island Biodiversity Survey",
+        "Record type": "call ID"
+      },
+      "dataset": 5,
+      "datetime": "2008-08-08T16:00:00Z",
+      "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
+      "created": "2017-05-12T01:50:26.715740Z",
+      "last_modified": "2017-05-12T01:50:26.715796Z",
+      "site": 3
+    }
+  },
+  {
+    "model": "main.record",
+    "pk": 4,
+    "fields": {
+      "data": {
+        "Family": "MEGADERMATIDAE",
+        "Comments": "Anabat-minidisc File name: Adolophus Is site2 15Aug08 X16.mp3  Call ID by: RB",
+        "Class": "MAMMALIA",
+        "Institution": "Department of Parks and Wildlife",
+        "Island": "Adolphus",
+        "Description": "Adolphus Island,site 2. Dry creek bed lined by paperbark trees. A salt water pool is approx 10m away.",
+        "Method": "Anabat-minidisc",
+        "Species whole": "Macroderma gigas",
+        "Longitude": "128.14111",
+        "Order": "CHIROPTERA",
+        "Latitude": "-15.08306",
+        "Collector": "NMcK teams",
+        "Date": "15 Aug 2008",
+        "Species": "gigas",
+        "Datum": "WGS84",
+        "Genus": "Macroderma",
+        "Expedition": "Kimberley Island Biodiversity Survey",
+        "Record type": "call ID"
+      },
+      "dataset": 5,
+      "datetime": "2008-08-14T16:00:00Z",
+      "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
+      "created": "2017-05-12T01:50:26.715740Z",
+      "last_modified": "2017-05-12T01:50:26.715796Z",
+      "site": 3
+    }
+  },
+  {
+    "model": "main.record",
+    "pk": 5,
+    "fields": {
+      "data": {
+        "Family": "MEGADERMATIDAE",
+        "Comments": "Anabat-minidisc File name: Adolphus Is site1 9Aug08 x16.mp3  Call ID by: RB&NMcK",
+        "Class": "MAMMALIA",
+        "Institution": "Department of Parks and Wildlife",
+        "Island": "Adolphus",
+        "Description": "Adolphus Island,site 4. Dry creek line in Euc tall woodland",
+        "Method": "Anabat-minidisc",
+        "Species whole": "Macroderma gigas",
+        "Longitude": "128.15639",
+        "Order": "CHIROPTERA",
+        "Latitude": "-15.10556",
+        "Collector": "NMcK teams",
+        "Date": "09 Aug 2008",
+        "Species": "gigas",
+        "Datum": "WGS84",
+        "Genus": "Macroderma",
+        "Expedition": "Kimberley Island Biodiversity Survey",
+        "Record type": "call ID"
+      },
+      "dataset": 5,
+      "datetime": "2008-08-08T16:00:00Z",
+      "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
+      "created": "2017-05-12T01:50:26.715740Z",
+      "last_modified": "2017-05-12T01:50:26.715796Z",
+      "site": 3
+    }
+  },
+  {
+    "model": "main.record",
+    "pk": 6,
+    "fields": {
+      "data": {
+        "Family": "VESPERTILIONIDAE",
+        "Comments": "Anabat-minidisc File name: Adolphus Is Site2 16Aug08 x16.mp3  Call ID by: NMcK",
+        "Class": "MAMMALIA",
+        "Institution": "Department of Parks and Wildlife",
+        "Island": "Adolphus",
+        "Description": "Adolphus Island,site 1. At Camp2 in open woodland at foot of Pkp scree slope ",
+        "Method": "Anabat-minidisc",
+        "Species whole": "Miniopterus schreibersii",
+        "Longitude": "128.14111",
+        "Order": "CHIROPTERA",
+        "Latitude": "-15.07833",
+        "Collector": "NMcK teams",
+        "Date": "16 Aug 2008",
+        "Species": "schreibersii",
+        "Datum": "WGS84",
+        "Genus": "Miniopterus",
+        "Expedition": "Kimberley Island Biodiversity Survey",
+        "Record type": "call ID"
+      },
+      "dataset": 5,
+      "datetime": "2008-08-15T16:00:00Z",
+      "geometry": "SRID=4326;POINT (128.14111 -15.07833)",
+      "created": "2017-05-12T01:50:26.715740Z",
+      "last_modified": "2017-05-12T01:50:26.715796Z",
+      "site": 3
+    }
+  },
+  {
+    "model": "main.record",
+    "pk": 7,
+    "fields": {
+      "data": {
+        "Family": "VESPERTILIONIDAE",
+        "Comments": "Anabat-minidisc File name: Adolophus Is site2 15Aug08 X16.mp3  Call ID by: RB",
+        "Class": "MAMMALIA",
+        "Institution": "Department of Parks and Wildlife",
+        "Island": "Adolphus",
+        "Description": "Adolphus Island,site 2. Dry creek bed lined by paperbark trees. A salt water pool is approx 10m away.",
+        "Method": "Anabat-minidisc",
+        "Species whole": "Miniopterus schreibersii",
+        "Longitude": "128.14111",
+        "Order": "CHIROPTERA",
+        "Latitude": "-15.08306",
+        "Collector": "NMcK teams",
+        "Date": "15 Aug 2008",
+        "Species": "schreibersii",
+        "Datum": "WGS84",
+        "Genus": "Miniopterus",
+        "Expedition": "Kimberley Island Biodiversity Survey",
+        "Record type": "call ID"
+      },
+      "dataset": 5,
+      "datetime": "2008-08-14T16:00:00Z",
+      "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
+      "created": "2017-05-12T01:50:26.715740Z",
+      "last_modified": "2017-05-12T01:50:26.715796Z",
+      "site": 3
+    }
+  },
+  {
+    "model": "main.record",
+    "pk": 8,
+    "fields": {
+      "data": {
+        "Family": "VESPERTILIONIDAE",
+        "Comments": "Anabat-minidisc File name: Adolphus Is site1 10Aug08 X16.mp3  Call ID by: RB",
+        "Class": "MAMMALIA",
+        "Institution": "Department of Parks and Wildlife",
+        "Island": "Adolphus",
+        "Description": "Adolphus Island,site 3. Dry rocky creek line with scattered vine thicket trees to 5m - steep heavy boulder slopes both sides",
+        "Method": "Anabat-minidisc",
+        "Species whole": "Miniopterus schreibersii",
+        "Longitude": "128.15306",
+        "Order": "CHIROPTERA",
+        "Latitude": "-15.10861",
+        "Collector": "NMcK teams",
+        "Date": "10 Aug 2008",
+        "Species": "schreibersii",
+        "Datum": "WGS84",
+        "Genus": "Miniopterus",
+        "Expedition": "Kimberley Island Biodiversity Survey",
+        "Record type": "call ID"
+      },
+      "dataset": 5,
+      "datetime": "2008-08-09T16:00:00Z",
+      "geometry": "SRID=4326;POINT (128.15306 -15.10861)",
+      "created": "2017-05-12T01:50:26.715740Z",
+      "last_modified": "2017-05-12T01:50:26.715796Z",
+      "site": 3
+    }
+  },
+  {
+    "model": "main.record",
+    "pk": 9,
+    "fields": {
+      "data": {
+        "Family": "VESPERTILIONIDAE",
+        "Comments": "Anabat-minidisc File name: Adolphus Is site1 9Aug08 x16.mp3  Call ID by: RB&NMcK",
+        "Class": "MAMMALIA",
+        "Institution": "Department of Parks and Wildlife",
+        "Island": "Adolphus",
+        "Description": "Adolphus Island,site 4. Dry creek line in Euc tall woodland",
+        "Method": "Anabat-minidisc",
+        "Species whole": "Miniopterus schreibersii",
+        "Longitude": "128.15639",
+        "Order": "CHIROPTERA",
+        "Latitude": "-15.10556",
+        "Collector": "NMcK teams",
+        "Date": "09 Aug 2008",
+        "Species": "schreibersii",
+        "Datum": "WGS84",
+        "Genus": "Miniopterus",
+        "Expedition": "Kimberley Island Biodiversity Survey",
+        "Record type": "call ID"
+      },
+      "dataset": 5,
+      "datetime": "2008-08-08T16:00:00Z",
+      "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
+      "created": "2017-05-12T01:50:26.715740Z",
+      "last_modified": "2017-05-12T01:50:26.715796Z",
+      "site": 3
+    }
+  },
+  {
+    "model": "main.record",
+    "pk": 10,
+    "fields": {
+      "data": {
+        "Family": "MOLOSSIDAE",
+        "Comments": "Anabat-minidisc File name: Adolphus Is site1 10Aug08 X16.mp3  Call ID by: RB",
+        "Class": "MAMMALIA",
+        "Institution": "Department of Parks and Wildlife",
+        "Island": "Adolphus",
+        "Description": "Adolphus Island,site 3. Dry rocky creek line with scattered vine thicket trees to 5m - steep heavy boulder slopes both sides",
+        "Method": "Anabat-minidisc",
+        "Species whole": "Mormopterus beccarii",
+        "Longitude": "128.15306",
+        "Order": "CHIROPTERA",
+        "Latitude": "-15.10861",
+        "Collector": "NMcK teams",
+        "Date": "10 Aug 2008",
+        "Species": "beccarii",
+        "Datum": "WGS84",
+        "Genus": "Mormopterus",
+        "Expedition": "Kimberley Island Biodiversity Survey",
+        "Record type": "call ID"
+      },
+      "dataset": 5,
+      "datetime": "2008-08-09T16:00:00Z",
+      "geometry": "SRID=4326;POINT (128.15306 -15.10861)",
+      "created": "2017-05-12T01:50:26.715740Z",
+      "last_modified": "2017-05-12T01:50:26.715796Z",
+      "site": 3
+    }
+  },
+  {
+    "model": "main.record",
+    "pk": 11,
+    "fields": {
+      "data": {
+        "Family": "VESPERTILIONIDAE",
+        "Comments": "Anabat-minidisc File name: Adolphus Is Site2 16Aug08 x16.mp3  Call ID by: NMcK",
+        "Class": "MAMMALIA",
+        "Institution": "Department of Parks and Wildlife",
+        "Island": "Adolphus",
+        "Description": "Adolphus Island,site 1. At Camp2 in open woodland at foot of Pkp scree slope ",
+        "Method": "Anabat-minidisc",
+        "Species whole": "Nyctophilus arnhemensis",
+        "Longitude": "128.14111",
+        "Order": "CHIROPTERA",
+        "Latitude": "-15.07833",
+        "Collector": "NMcK teams",
+        "Date": "16 Aug 2008",
+        "Species": "arnhemensis",
+        "Datum": "WGS84",
+        "Genus": "Nyctophilus",
+        "Expedition": "Kimberley Island Biodiversity Survey",
+        "Record type": "call ID"
+      },
+      "dataset": 5,
+      "datetime": "2008-08-15T16:00:00Z",
+      "geometry": "SRID=4326;POINT (128.14111 -15.07833)",
+      "created": "2017-05-12T01:50:26.715740Z",
+      "last_modified": "2017-05-12T01:50:26.715796Z",
+      "site": 3
+    }
   }
-},
-{
-  "model": "main.record",
-  "pk": 2,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolophus Is site2 15Aug08 X16.mp3  Call ID by: RB",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 2. Dry creek bed lined by paperbark trees. A salt water pool is approx 10m away.",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Chalinolobus nigrogriseus",
-      "Longitude": "128.14111",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.08306",
-      "Collector": "NMcK teams",
-      "Date": "15 Aug 2008",
-      "Species": "nigrogriseus",
-      "Datum": "WGS84",
-      "Genus": "Chalinolobus",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-14T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 3,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is site1 9Aug08 x16.mp3  Call ID by: RB&NMcK",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 4. Dry creek line in Euc tall woodland",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Chalinolobus nigrogriseus",
-      "Longitude": "128.15639",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.10556",
-      "Collector": "NMcK teams",
-      "Date": "09 Aug 2008",
-      "Species": "nigrogriseus",
-      "Datum": "WGS84",
-      "Genus": "Chalinolobus",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-08T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 4,
-  "fields": {
-    "data": {
-      "Family": "MEGADERMATIDAE",
-      "Comments": "Anabat-minidisc File name: Adolophus Is site2 15Aug08 X16.mp3  Call ID by: RB",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 2. Dry creek bed lined by paperbark trees. A salt water pool is approx 10m away.",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Macroderma gigas",
-      "Longitude": "128.14111",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.08306",
-      "Collector": "NMcK teams",
-      "Date": "15 Aug 2008",
-      "Species": "gigas",
-      "Datum": "WGS84",
-      "Genus": "Macroderma",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-14T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 5,
-  "fields": {
-    "data": {
-      "Family": "MEGADERMATIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is site1 9Aug08 x16.mp3  Call ID by: RB&NMcK",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 4. Dry creek line in Euc tall woodland",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Macroderma gigas",
-      "Longitude": "128.15639",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.10556",
-      "Collector": "NMcK teams",
-      "Date": "09 Aug 2008",
-      "Species": "gigas",
-      "Datum": "WGS84",
-      "Genus": "Macroderma",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-08T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 6,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is Site2 16Aug08 x16.mp3  Call ID by: NMcK",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 1. At Camp2 in open woodland at foot of Pkp scree slope ",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Miniopterus schreibersii",
-      "Longitude": "128.14111",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.07833",
-      "Collector": "NMcK teams",
-      "Date": "16 Aug 2008",
-      "Species": "schreibersii",
-      "Datum": "WGS84",
-      "Genus": "Miniopterus",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-15T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.14111 -15.07833)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 7,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolophus Is site2 15Aug08 X16.mp3  Call ID by: RB",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 2. Dry creek bed lined by paperbark trees. A salt water pool is approx 10m away.",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Miniopterus schreibersii",
-      "Longitude": "128.14111",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.08306",
-      "Collector": "NMcK teams",
-      "Date": "15 Aug 2008",
-      "Species": "schreibersii",
-      "Datum": "WGS84",
-      "Genus": "Miniopterus",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-14T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 8,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is site1 10Aug08 X16.mp3  Call ID by: RB",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 3. Dry rocky creek line with scattered vine thicket trees to 5m - steep heavy boulder slopes both sides",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Miniopterus schreibersii",
-      "Longitude": "128.15306",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.10861",
-      "Collector": "NMcK teams",
-      "Date": "10 Aug 2008",
-      "Species": "schreibersii",
-      "Datum": "WGS84",
-      "Genus": "Miniopterus",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-09T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.15306 -15.10861)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 9,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is site1 9Aug08 x16.mp3  Call ID by: RB&NMcK",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 4. Dry creek line in Euc tall woodland",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Miniopterus schreibersii",
-      "Longitude": "128.15639",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.10556",
-      "Collector": "NMcK teams",
-      "Date": "09 Aug 2008",
-      "Species": "schreibersii",
-      "Datum": "WGS84",
-      "Genus": "Miniopterus",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-08T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 10,
-  "fields": {
-    "data": {
-      "Family": "MOLOSSIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is site1 10Aug08 X16.mp3  Call ID by: RB",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 3. Dry rocky creek line with scattered vine thicket trees to 5m - steep heavy boulder slopes both sides",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Mormopterus beccarii",
-      "Longitude": "128.15306",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.10861",
-      "Collector": "NMcK teams",
-      "Date": "10 Aug 2008",
-      "Species": "beccarii",
-      "Datum": "WGS84",
-      "Genus": "Mormopterus",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-09T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.15306 -15.10861)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 11,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is Site2 16Aug08 x16.mp3  Call ID by: NMcK",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 1. At Camp2 in open woodland at foot of Pkp scree slope ",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Nyctophilus arnhemensis",
-      "Longitude": "128.14111",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.07833",
-      "Collector": "NMcK teams",
-      "Date": "16 Aug 2008",
-      "Species": "arnhemensis",
-      "Datum": "WGS84",
-      "Genus": "Nyctophilus",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-15T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.14111 -15.07833)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 12,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is site1 10Aug08 X16.mp3  Call ID by: RB",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 3. Dry rocky creek line with scattered vine thicket trees to 5m - steep heavy boulder slopes both sides",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Nyctophilus arnhemensis",
-      "Longitude": "128.15306",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.10861",
-      "Collector": "NMcK teams",
-      "Date": "10 Aug 2008",
-      "Species": "arnhemensis",
-      "Datum": "WGS84",
-      "Genus": "Nyctophilus",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-09T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.15306 -15.10861)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 13,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is Site2 16Aug08 x16.mp3  Call ID by: NMcK",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 1. At Camp2 in open woodland at foot of Pkp scree slope ",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Nyctophilus walkeri",
-      "Longitude": "128.14111",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.07833",
-      "Collector": "NMcK teams",
-      "Date": "16 Aug 2008",
-      "Species": "walkeri",
-      "Datum": "WGS84",
-      "Genus": "Nyctophilus",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-15T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.14111 -15.07833)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 14,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolophus Is site2 15Aug08 X16.mp3  Call ID by: RB",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 2. Dry creek bed lined by paperbark trees. A salt water pool is approx 10m away.",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Nyctophilus walkeri",
-      "Longitude": "128.14111",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.08306",
-      "Collector": "NMcK teams",
-      "Date": "15 Aug 2008",
-      "Species": "walkeri",
-      "Datum": "WGS84",
-      "Genus": "Nyctophilus",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-14T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 15,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is site1 9Aug08 x16.mp3  Call ID by: RB&NMcK",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 4. Dry creek line in Euc tall woodland",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Pipistrellus westralis",
-      "Longitude": "128.15639",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.10556",
-      "Collector": "NMcK teams",
-      "Date": "09 Aug 2008",
-      "Species": "westralis",
-      "Datum": "WGS84",
-      "Genus": "Pipistrellus",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-08T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 16,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is Site2 16Aug08 x16.mp3  Call ID by: NMcK",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 1. At Camp2 in open woodland at foot of Pkp scree slope ",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Scotorepens greyi",
-      "Longitude": "128.14111",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.07833",
-      "Collector": "NMcK teams",
-      "Date": "16 Aug 2008",
-      "Species": "greyi",
-      "Datum": "WGS84",
-      "Genus": "Scotorepens",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-15T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.14111 -15.07833)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 17,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolophus Is site2 15Aug08 X16.mp3  Call ID by: RB",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 2. Dry creek bed lined by paperbark trees. A salt water pool is approx 10m away.",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Scotorepens greyi",
-      "Longitude": "128.14111",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.08306",
-      "Collector": "NMcK teams",
-      "Date": "15 Aug 2008",
-      "Species": "greyi",
-      "Datum": "WGS84",
-      "Genus": "Scotorepens",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-14T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 18,
-  "fields": {
-    "data": {
-      "Family": "EMBALLONURIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is Site2 16Aug08 x16.mp3  Call ID by: NMcK",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 1. At Camp2 in open woodland at foot of Pkp scree slope ",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Taphozous georgianus",
-      "Longitude": "128.14111",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.07833",
-      "Collector": "NMcK teams",
-      "Date": "16 Aug 2008",
-      "Species": "georgianus",
-      "Datum": "WGS84",
-      "Genus": "Taphozous",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-15T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.14111 -15.07833)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 19,
-  "fields": {
-    "data": {
-      "Family": "EMBALLONURIDAE",
-      "Comments": "Anabat-minidisc File name: Adolophus Is site2 15Aug08 X16.mp3  Call ID by: RB",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 2. Dry creek bed lined by paperbark trees. A salt water pool is approx 10m away.",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Taphozous georgianus",
-      "Longitude": "128.14111",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.08306",
-      "Collector": "NMcK teams",
-      "Date": "15 Aug 2008",
-      "Species": "georgianus",
-      "Datum": "WGS84",
-      "Genus": "Taphozous",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-14T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.14111 -15.08306)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 20,
-  "fields": {
-    "data": {
-      "Family": "EMBALLONURIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is site1 10Aug08 X16.mp3  Call ID by: RB",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 3. Dry rocky creek line with scattered vine thicket trees to 5m - steep heavy boulder slopes both sides",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Taphozous georgianus",
-      "Longitude": "128.15306",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.10861",
-      "Collector": "NMcK teams",
-      "Date": "10 Aug 2008",
-      "Species": "georgianus",
-      "Datum": "WGS84",
-      "Genus": "Taphozous",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-09T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.15306 -15.10861)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 21,
-  "fields": {
-    "data": {
-      "Family": "EMBALLONURIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is site1 9Aug08 x16.mp3  Call ID by: RB&NMcK",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 4. Dry creek line in Euc tall woodland",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Taphozous georgianus",
-      "Longitude": "128.15639",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.10556",
-      "Collector": "NMcK teams",
-      "Date": "09 Aug 2008",
-      "Species": "georgianus",
-      "Datum": "WGS84",
-      "Genus": "Taphozous",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-08T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 22,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is site1 10Aug08 X16.mp3  Call ID by: RB",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 3. Dry rocky creek line with scattered vine thicket trees to 5m - steep heavy boulder slopes both sides",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Vespadelus douglasorum",
-      "Longitude": "128.15306",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.10861",
-      "Collector": "NMcK teams",
-      "Date": "10 Aug 2008",
-      "Species": "douglasorum",
-      "Datum": "WGS84",
-      "Genus": "Vespadelus",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-09T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.15306 -15.10861)",
-    "site": 3
-  }
-},
-{
-  "model": "main.record",
-  "pk": 23,
-  "fields": {
-    "data": {
-      "Family": "VESPERTILIONIDAE",
-      "Comments": "Anabat-minidisc File name: Adolphus Is site1 9Aug08 x16.mp3  Call ID by: RB&NMcK",
-      "Class": "MAMMALIA",
-      "Institution": "Department of Parks and Wildlife",
-      "Island": "Adolphus",
-      "Description": "Adolphus Island,site 4. Dry creek line in Euc tall woodland",
-      "Method": "Anabat-minidisc",
-      "Species whole": "Vespadelus douglasorum",
-      "Longitude": "128.15639",
-      "Order": "CHIROPTERA",
-      "Latitude": "-15.10556",
-      "Collector": "NMcK teams",
-      "Date": "09 Aug 2008",
-      "Species": "douglasorum",
-      "Datum": "WGS84",
-      "Genus": "Vespadelus",
-      "Expedition": "Kimberley Island Biodiversity Survey",
-      "Record type": "call ID"
-    },
-    "dataset": 5,
-    "datetime": "2008-08-08T16:00:00Z",
-    "geometry": "SRID=4326;POINT (128.15639 -15.10556)",
-    "site": 3
-  }
-}
 ]

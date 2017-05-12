@@ -404,6 +404,10 @@ class Record(models.Model):
                                     verbose_name="Species Name", help_text="Species Name (as imported)")
     name_id = models.IntegerField(default=-1,
                                   verbose_name="Name ID", help_text="The unique ID from the species database")
+    # to store information about the source of the record, like excel filename, row number in file etc...
+    source_info = JSONField(null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return "{0}: {1}".format(self.dataset.name, Truncator(self.data).chars(100))

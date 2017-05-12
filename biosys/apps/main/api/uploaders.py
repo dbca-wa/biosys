@@ -57,6 +57,8 @@ class FileReader(object):
             raise Exception(msg)
 
         self.file = file
+        if hasattr(file, 'name'):
+            self.file_name = file.name
         extension = path.splitext(file.name)[1].lower() if file.name else ''
         # On windows a .csv file can be send with an excel mime type.
         if file.content_type in self.XLSX_TYPES and extension != '.csv':
@@ -157,12 +159,15 @@ class RecordCreator:
         # Schema foreign key for site.
         self.site_fk = self.schema.get_fk_for_model('Site')
         self.commit = commit
+        self.file_name = self.generator.file_name if hasattr(self.generator, 'file_name') else None
 
     def __iter__(self):
+        counter = 0
         for data in self.generator:
-            yield self._create_record(data)
+            counter += 1
+            yield self._create_record(data, counter)
 
-    def _create_record(self, row):
+    def _create_record(self, row, counter):
         """
         :param row:
         :return: record, RecordValidatorResult
@@ -175,6 +180,10 @@ class RecordCreator:
                 site=site,
                 dataset=self.dataset,
                 data=row,
+                source_info={
+                    'file_name': self.file_name,
+                    'row': counter + 1  # add one to match excel/csv row id
+                }
             )
             # specific fields
             if self.dataset.type == Dataset.TYPE_OBSERVATION or self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:

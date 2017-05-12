@@ -437,7 +437,7 @@ class DatasetUploadRecordsView(APIView, SpeciesMixin):
                                 species_facade_class=self.species_facade_class)
         data = []
         has_error = False
-        row = 0
+        row = 1  # starts at 1 to match excel row id
         for record, validator_result in creator:
             row += 1
             result = {
