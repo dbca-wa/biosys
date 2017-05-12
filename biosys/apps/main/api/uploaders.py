@@ -182,7 +182,7 @@ class RecordCreator:
                 data=row,
                 source_info={
                     'file_name': self.file_name,
-                    'row_counter': counter
+                    'row': counter + 1  # add one to match excel/csv row id
                 }
             )
             # specific fields

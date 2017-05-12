@@ -1,3 +1,5 @@
+from os import path
+
 from django.core.urlresolvers import reverse
 from django_dynamic_fixture import G
 from rest_framework import status
@@ -41,6 +43,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
         file_ = helpers.to_csv_file(csv_data)
         client = self.custodian_1_client
         self.assertEquals(0, self.ds.record_queryset.count())
+        file_name = path.basename(file_)
         with open(file_) as fp:
             data = {
                 'file': fp
@@ -51,17 +54,37 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             qs = self.ds.record_queryset.order_by('pk')
             self.assertEquals(len(csv_data) - 1, qs.count())
 
+            index = 0
+            record = qs[index]
             expected_data = {
                 'Column A': 'A1',
                 'Column B': 'B1',
             }
-            self.assertEquals(expected_data, qs[0].data)
+            self.assertEquals(expected_data, record.data)
+            # test that source_info contains the file_name and row_counter
+            source_info = record.source_info
+            self.assertIsNotNone(source_info)
+            expected_info = {
+                'file_name': file_name,
+                'row': index + 2
+            }
+            self.assertEqual(source_info, expected_info)
 
+            index = 1
+            record = qs[index]
             expected_data = {
                 'Column A': 'A2',
                 'Column B': 'B2',
             }
-            self.assertEquals(expected_data, qs[1].data)
+            self.assertEquals(expected_data, record.data)
+            # test that source_info contains the file_name and row_counter
+            source_info = record.source_info
+            self.assertIsNotNone(source_info)
+            expected_info = {
+                'file_name': file_name,
+                'row': index + 2
+            }
+            self.assertEqual(source_info, expected_info)
 
             self.assertEquals(self.project_1.record_count, len(csv_data) - 1)
             self.assertEquals(self.ds.record_count, len(csv_data) - 1)
@@ -75,6 +98,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
         file_ = helpers.to_xlsx_file(csv_data)
         client = self.custodian_1_client
         self.assertEquals(0, self.ds.record_queryset.count())
+        file_name = path.basename(file_)
         with open(file_, 'rb') as fp:
             data = {
                 'file': fp
@@ -84,17 +108,38 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             # The records should be saved in order of the row
             qs = self.ds.record_queryset.order_by('pk')
             self.assertEquals(len(csv_data) - 1, qs.count())
+
+            index = 0
+            record = qs[index]
             expected_data = {
                 'Column A': 'A1',
                 'Column B': 'B1',
             }
-            self.assertEquals(expected_data, qs[0].data)
+            self.assertEquals(expected_data, record.data)
+            # test that source_info contains the file_name and row_counter
+            source_info = record.source_info
+            self.assertIsNotNone(source_info)
+            expected_info = {
+                'file_name': file_name,
+                'row': index + 2
+            }
+            self.assertEqual(source_info, expected_info)
 
+            index = 1
+            record = qs[index]
             expected_data = {
                 'Column A': 'A2',
                 'Column B': 'B2',
             }
-            self.assertEquals(expected_data, qs[1].data)
+            self.assertEquals(expected_data, record.data)
+            # test that source_info contains the file_name and row_counter
+            source_info = record.source_info
+            self.assertIsNotNone(source_info)
+            expected_info = {
+                'file_name': file_name,
+                'row': index + 2
+            }
+            self.assertEqual(source_info, expected_info)
 
             self.assertEquals(self.project_1.record_count, len(csv_data) - 1)
             self.assertEquals(self.ds.record_count, len(csv_data) - 1)
