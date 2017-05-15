@@ -1210,10 +1210,12 @@ class TestObservationSchemaCast(TestCase):
         with self.assertRaises(Exception):
             schema.cast_geometry(record)
 
-    def test_cast_point_Zone50(self):
+    def test_cast_point_easting_northing_no_zone_field(self):
         """
+        Use case:
+         - Location entered with easting and northing instead of lat/long
+         - The datum (with zone) is specified in a single column 'datum'
         The easting/northing problem can be solved by tagging easting=longitude and northing=longitude
-        :return:
         """
         datum = 'GDA94 / MGA zone 50'
         self.assertTrue(is_supported_datum(datum))
@@ -1230,6 +1232,59 @@ class TestObservationSchemaCast(TestCase):
         self.assertTrue(isinstance(point, Point))
         self.assertEquals((easting, northing), point.coords)
         self.assertEquals(get_datum_srid(datum), point.get_srid())
+
+        # create a db record with geometry = east/north and check geometry conversion
+        # create dataset
+        project = Project.objects.create(
+            title="Test"
+        )
+        ds = Dataset.objects.create(
+            project=project,
+            name='test',
+            data_package=GENERIC_DATA_PACKAGE
+        )
+        record = Record.objects.create(
+            dataset=ds,
+            datetime=timezone.now(),
+            geometry=point,
+            data=record)
+        record.refresh_from_db()
+        self.assertEqual(MODEL_SRID, record.geometry.get_srid())
+        self.assertEqual((116, -31), (int(record.geometry.x), int(record.geometry.y)))
+
+    def test_cast_point_easting_northing_with_zone_field(self):
+        """
+        Use case:
+         - Location entered with easting and northing instead of lat/long
+         - The datum is specified in a column and the zone in another
+        """
+        datum = 'GDA94'
+        zone = 50
+        expected_srid = 28350
+
+        descriptor = clone(EASTING_NORTHING_OBSERVATION_SCHEMA)
+        # add a Zone column
+        descriptor['fields'].append({
+            "name": "Zone",
+            "type": "integer",
+            "constraints": {
+                "required": False
+            },
+        })
+        schema = ObservationSchema(descriptor)
+        self.assertIsNotNone(schema.datum_field)
+        easting = 405542.537
+        northing = 6459127.469
+        record = {
+            'Observation Date': '23/12/2016', 'Easting': easting, 'Northing': northing, 'Datum': datum, 'Zone': zone
+        }
+        srid = schema.cast_srid(record)
+        self.assertEqual(srid, expected_srid)
+        point = schema.cast_geometry(record)
+        self.assertIsNotNone(point)
+        self.assertTrue(isinstance(point, Point))
+        self.assertEquals((easting, northing), point.coords)
+        self.assertEquals(expected_srid, point.get_srid())
 
         # create a db record with geometry = east/north and check geometry conversion
         # create dataset
