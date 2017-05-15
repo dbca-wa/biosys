@@ -215,7 +215,7 @@ class DatasetDataPermission(BasePermission):
             or (hasattr(view, 'dataset') and view.dataset and view.dataset.is_custodian(user))
 
 
-class SpeciesMixin:
+class SpeciesMixin(object):
     species_facade_class = HerbieFacade
 
 

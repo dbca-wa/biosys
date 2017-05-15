@@ -29,9 +29,9 @@ class UserSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     timezone = serializers.CharField(required=False)
     centroid = serializers_gis.GeometryField(required=False, read_only=True)
-    dataset_count = serializers.IntegerField(required=False)
-    site_count = serializers.IntegerField(required=False)
-    record_count = serializers.IntegerField(required=False)
+    dataset_count = serializers.IntegerField(required=False, read_only=True)
+    site_count = serializers.IntegerField(required=False, read_only=True)
+    record_count = serializers.IntegerField(required=False, read_only=True)
 
     class Meta:
         model = Project
@@ -47,7 +47,7 @@ class SiteSerializer(serializers.ModelSerializer):
 
 
 class DatasetSerializer(serializers.ModelSerializer):
-    record_count = serializers.IntegerField(required=False)
+    record_count = serializers.IntegerField(required=False, read_only=True)
 
     class DataPackageValidator:
         def __init__(self):
@@ -65,6 +65,23 @@ class DatasetSerializer(serializers.ModelSerializer):
             DataPackageValidator()
         ]
     )
+
+    def update(self, instance, validated_data):
+        has_data = Record.objects.filter(dataset=instance).count() > 0
+        if has_data:
+            different_type = instance.type != validated_data.get('type')
+            different_data_package = instance.data_package != validated_data.get('data_package')
+            if different_type or different_data_package:
+                message = "This dataset already contains records. " \
+                          "You cannot change this field. " \
+                          "Please delete the dataset, recreate it and re-import the records."
+                response = {}
+                if different_type:
+                    response['type'] = message
+                if different_data_package:
+                    response['data_package'] = message
+                raise serializers.ValidationError(response)
+        return super(DatasetSerializer, self).update(instance, validated_data)
 
     class Meta:
         model = Dataset
