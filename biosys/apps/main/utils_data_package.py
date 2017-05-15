@@ -18,7 +18,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.writer.write_only import WriteOnlyCell
 
-from main.constants import MODEL_SRID, SUPPORTED_DATUMS, get_datum_srid, is_supported_datum
+from main.constants import MODEL_SRID, SUPPORTED_DATUMS, get_datum_srid, is_supported_datum, get_australian_zone_srid
 
 COLUMN_HEADER_FONT = Font(bold=True)
 YYYY_MM_DD_REGEX = re.compile(r'^\d{4}-\d{2}-\d{2}')
@@ -121,6 +121,7 @@ class BiosysSchema:
     LATITUDE_TYPE_NAME = 'latitude'
     LONGITUDE_TYPE_NAME = 'longitude'
     DATUM_TYPE_NAME = 'datum'
+    ZONE_TYPE_NAME = 'zone'
     SPECIES_NAME_TYPE_NAME = 'speciesName'
     SPECIES_NAME_ID_TYPE_NAME = 'speciesNameId'
 
@@ -156,6 +157,9 @@ class BiosysSchema:
 
     def is_datum(self):
         return self.type == self.DATUM_TYPE_NAME
+
+    def is_zone(self):
+        return self.type == self.ZONE_TYPE_NAME
 
     def is_species_name(self):
         return self.type == self.SPECIES_NAME_TYPE_NAME
@@ -501,6 +505,7 @@ class ObservationSchema(GenericSchema):
     LATITUDE_FIELD_NAME = 'Latitude'
     LONGITUDE_FIELD_NAME = 'Longitude'
     DATUM_FIELD_NAME = 'Datum'
+    ZONE_FIELD_NAME = 'Zone'
     SITE_CODE_FOREIGN_KEY_EXAMPLE = """
         "foreignKeys": [
             {
@@ -521,7 +526,6 @@ class ObservationSchema(GenericSchema):
         if self.site_code_field is None:
             self.latitude_field = self.find_latitude_field_or_throw(self)
             self.longitude_field = self.find_longitude_field_or_throw(self)
-            self.datum_field = self.find_datum_field_or_none(self)
         else:
             # we have a site code foreign key but we also can have lat/long field to overwrite the geometry
             try:
@@ -532,7 +536,8 @@ class ObservationSchema(GenericSchema):
                 self.longitude_field = self.find_longitude_field_or_throw(self, enforce_required=False)
             except ObservationSchemaError:
                 self.longitude_field = None
-            self.datum_field = self.find_datum_field_or_none(self)
+        self.datum_field = self.find_datum_field_or_none(self)
+        self.zone_field = self.find_zone_field_or_none(self)
 
     # The following methods are static for testing purposes.
     @staticmethod
@@ -705,6 +710,32 @@ class ObservationSchema(GenericSchema):
             return fields[0]
         return None
 
+    @staticmethod
+    def find_zone_field_or_none(schema):
+        """
+        Precedence Rules:
+        1- Look for biosys.type = 'zone'
+        2- Look for a field with name 'Zone' case insensitive
+        :param schema: a dict descriptor or a Schema instance
+        :return: None if not found
+        """
+        if not isinstance(schema, GenericSchema):
+            schema = GenericSchema(schema)
+        fields = [f for f in schema.fields if f.biosys.is_zone()]
+        if len(fields) > 1:
+            msg = "More than one Biosys zone type field found!. {}".format(fields)
+            raise ObservationSchemaError(msg)
+        if len(fields) == 1:
+            return fields[0]
+        # no Biosys zone type field found look for column name
+        fields = [f for f in schema.fields if f.name.lower() == ObservationSchema.ZONE_FIELD_NAME.lower()]
+        if len(fields) > 1:
+            msg = "More than one Zone field found!. {}".format(fields)
+            raise ObservationSchemaError(msg)
+        if len(fields) == 1:
+            return fields[0]
+        return None
+
     def find_site_code_foreign(self):
         return self.get_fk_for_model_field('Site', 'code')
 
@@ -714,6 +745,36 @@ class ObservationSchema(GenericSchema):
     def cast_record_observation_date(self, record):
         field = self.observation_date_field
         return field.cast(record.get(field.name))
+
+    def cast_srid(self, record, default_srid=MODEL_SRID):
+        """
+        Two cases:
+        Datum only or datum + zone
+        :param record:
+        :param default_srid:
+        :return:
+        """
+        result = default_srid
+        if self.datum_field:
+            datum_val = record.get(self.datum_field.name)
+            if self.zone_field:
+                zone_val = record.get(self.zone_field.name)
+                try:
+                    int(zone_val)
+                except:
+                    msg = "Invalid Zone '{}'. Should be an integer.".format(zone_val)
+                    raise InvalidDatumError(msg)
+                try:
+                    result = get_australian_zone_srid(datum_val, zone_val)
+                except Exception as e:
+                    raise InvalidDatumError(e)
+            else:
+                if not is_supported_datum(datum_val):
+                    msg = "Invalid Datum '{}'. Should be one of: {}".format(datum_val, SUPPORTED_DATUMS)
+                    raise InvalidDatumError(msg)
+                else:
+                    result = get_datum_srid(datum_val)
+        return result
 
     def cast_geometry(self, record, default_srid=MODEL_SRID):
         """
@@ -728,14 +789,7 @@ class ObservationSchema(GenericSchema):
         if lat_val and lon_val:
             lat = self.latitude_field.cast(lat_val)
             lon = self.longitude_field.cast(lon_val)
-            srid = default_srid
-            if self.datum_field is not None:
-                datum_val = record.get(self.datum_field.name)
-                if not is_supported_datum(datum_val):
-                    msg = "Invalid Datum '{}'. Should be one of: {}".format(datum_val, SUPPORTED_DATUMS)
-                    raise InvalidDatumError(msg)
-                else:
-                    srid = get_datum_srid(datum_val)
+            srid = self.cast_srid(record, default_srid=default_srid)
             return Point(x=float(lon), y=float(lat), srid=srid)
         elif self.site_code_field:
             from main.models import Site  # import here to avoid cyclic import problem

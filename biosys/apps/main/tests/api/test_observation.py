@@ -765,6 +765,176 @@ class TestDateTimeAndGeometryExtraction(TestCase):
         self.assertEquals(ds.record_queryset.first().geometry.geojson, expected_geojson)
 
 
+class TestEastingNorthing(helpers.BaseUserTestCase):
+    """
+    Use case: the schema contains a datum and a zone field and easting/northing.
+    """
+
+    @staticmethod
+    def schema_with_easting_northing():
+        schema_fields = [
+            {
+                "name": "What",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Northing",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": "latitude"
+                }
+            },
+            {
+                "name": "Easting",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": "longitude"
+                }
+            },
+            {
+                "name": "Datum",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Zone",
+                "type": "integer",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            }
+        ]
+        return helpers.create_schema_from_fields(schema_fields)
+
+    def _create_dataset_with_schema(self, project, client, schema):
+        resp = client.post(
+            reverse('api:dataset-list'),
+            data={
+                "name": "Test site code geometry",
+                "type": Dataset.TYPE_OBSERVATION,
+                "project": project.pk,
+                'data_package': helpers.create_data_package_from_schema(schema)
+            },
+            format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(dataset)
+        return dataset
+
+    def test_create_happy_path(self):
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_easting_northing()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        self.assertIsNotNone(dataset.schema.datum_field)
+        self.assertIsNotNone(dataset.schema.zone_field)
+
+        easting = 405542.537
+        northing = 6459127.469
+        datum = 'GDA94'
+        zone = 50
+        record_data = {
+            'What': 'Chubby Bat',
+            'When': '12/12/2017',
+            'Easting': easting,
+            'Northing': northing,
+            'Datum': datum,
+            'Zone': zone
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        qs = dataset.record_queryset
+        self.assertEquals(qs.count(), 1)
+        record = qs.first()
+        geom = record.geometry
+        # should be in WGS84 -> srid = 4326
+        self.assertEqual(geom.srid, 4326)
+        # convert it back to GAD / zone 50 -> srid = 28350
+        geom.transform(28350)
+        # compare with 2 decimal place precision
+        self.assertAlmostEquals(geom.x, easting, places=2)
+        self.assertAlmostEquals(geom.y, northing, places=2)
+
+    def test_update_happy_path(self):
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_easting_northing()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        self.assertIsNotNone(dataset.schema.datum_field)
+        self.assertIsNotNone(dataset.schema.zone_field)
+
+        # first create record with wrong zone
+        easting = 405542.537
+        northing = 6459127.469
+        datum = 'GDA94'
+        zone = 58
+        record_data = {
+            'What': 'Chubby Bat',
+            'When': '12/12/2017',
+            'Easting': easting,
+            'Northing': northing,
+            'Datum': datum,
+            'Zone': zone
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        qs = dataset.record_queryset
+        self.assertEquals(qs.count(), 1)
+        record = qs.first()
+        geom = record.geometry
+        # should be in WGS84 -> srid = 4326
+        self.assertEqual(geom.srid, 4326)
+        # convert it back to GAD / zone 50 -> srid = 28350
+        geom.transform(28350)
+        # compare with 2 decimal place precision. Should be different that of expectes
+        self.assertNotAlmostEquals(geom.x, easting, places=2)
+        self.assertNotAlmostEquals(geom.y, northing, places=2)
+
+        # send path to update the zone
+        record_data = {
+            'What': 'Chubby Bat',
+            'When': '12/12/2017',
+            'Easting': easting,
+            'Northing': northing,
+            'Datum': datum,
+            'Zone': 50
+        }
+        payload = {
+            'data': record_data
+        }
+        url = reverse('api:record-detail', kwargs={'pk': record.pk})
+        resp = client.patch(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        record.refresh_from_db()
+        geom = record.geometry
+        # should be in WGS84 -> srid = 4326
+        self.assertEqual(geom.srid, 4326)
+        # convert it back to GAD / zone 50 -> srid = 28350
+        geom.transform(28350)
+        self.assertAlmostEquals(geom.x, easting, places=2)
+        self.assertAlmostEquals(geom.y, northing, places=2)
+
+
 class TestGeometryFromSite(helpers.BaseUserTestCase):
     """
      Use case: the observation dataset doesn't contain any geometry columns/fields
