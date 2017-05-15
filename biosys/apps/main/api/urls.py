@@ -16,7 +16,7 @@ url_patterns = [
     url(r'projects?/(?P<pk>\d+)/sites/?', main_views.ProjectSitesView.as_view(), name='project-sites'),  # bulk sites
     url(r'projects?/(?P<pk>\d+)/upload-sites/?', main_views.ProjectSitesUploadView.as_view()
         , name='upload-sites'),  # file upload for sites
-    url(r'datasets?/(?P<pk>\d+)/data/?', main_views.DatasetDataView.as_view(), name='dataset-data'),
+    url(r'datasets?/(?P<pk>\d+)/records/?', main_views.DatasetRecordsView.as_view(), name='dataset-records'),
     # upload data files
     url(r'datasets?/(?P<pk>\d+)/upload-records/?', main_views.DatasetUploadRecordsView.as_view(),
         name='dataset-upload'),
