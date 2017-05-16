@@ -116,8 +116,11 @@ class ObservationValidator(GenericRecordValidator):
         if self.site_col and self.site_col in result.warnings:
             result.add_column_error(self.site_col, result.warnings[self.site_col])
             del result.warnings[self.site_col]
-        result = result.merge(self.validate_date(data))
-        result = result.merge(self.validate_geometry(data))
+
+        # validate the date and the geometry values. To be done only if there's no schema error
+        if not result.has_errors:
+            result = result.merge(self.validate_date(data))
+            result = result.merge(self.validate_geometry(data))
         return result
 
     def validate_date(self, data):
@@ -164,7 +167,10 @@ class SpeciesObservationValidator(ObservationValidator):
         if self.species_name_id_col and self.species_name_id_col in result.warnings:
             result.add_column_error(self.species_name_id_col, result.warnings[self.species_name_id_col])
             del result.warnings[self.species_name_id_col]
-        result = result.merge(self.validate_species(data))
+
+        # validate the species. To be done only if there's no schema error
+        if not result.has_errors:
+            result = result.merge(self.validate_species(data))
         return result
 
     def validate_species(self, data):
