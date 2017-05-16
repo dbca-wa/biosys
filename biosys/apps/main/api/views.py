@@ -167,6 +167,23 @@ class SiteViewSet(viewsets.ModelViewSet):
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_fields = ('id', 'name', 'code')
 
+    def perform_update(self, serializer):
+        """
+        Use case: A site has its geometry updated, all records related to the site having the same geometry
+        should be updated accordingly.
+        :param serializer:
+        :return:
+        """
+        instance = self.get_object()
+        if instance.geometry is not None:
+            records = Record.objects.filter(site=instance, geometry=instance.geometry)
+        else:
+            records = Record.objects.none()
+        serializer.save()
+        instance.refresh_from_db()
+        if instance.geometry is not None:
+            records.update(geometry=instance.geometry)
+
 
 class DatasetViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
@@ -276,6 +293,7 @@ class DatasetRecordsView(generics.ListCreateAPIView, generics.DestroyAPIView, Sp
             return Response("A list of record ids must be provided", status=status.HTTP_400_BAD_REQUEST)
         Record.objects.filter(dataset=self.dataset, id__in=record_ids).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
     permission_classes = (IsAuthenticated, DRYPermissions)
