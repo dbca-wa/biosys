@@ -12,7 +12,7 @@ from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
 from main.models import Site, Dataset
 from main.utils_misc import get_value
-from main.utils_species import HerbieFacade
+from main.utils_species import HerbieFacade, get_key_for_value
 
 
 def xlsx_to_csv(file):
@@ -57,6 +57,8 @@ class FileReader(object):
             raise Exception(msg)
 
         self.file = file
+        if hasattr(file, 'name'):
+            self.file_name = file.name
         extension = path.splitext(file.name)[1].lower() if file.name else ''
         # On windows a .csv file can be send with an excel mime type.
         if file.content_type in self.XLSX_TYPES and extension != '.csv':
@@ -141,7 +143,8 @@ class SiteUploader(FileReader):
 
 
 class RecordCreator:
-    def __init__(self, dataset, data_generator, commit=True, create_site=False, validator=None):
+    def __init__(self, dataset, data_generator,
+                 commit=True, create_site=False, validator=None, species_facade_class=HerbieFacade):
         self.dataset = dataset
         self.generator = data_generator
         self.create_site = create_site
@@ -152,16 +155,19 @@ class RecordCreator:
         # if species. First load species list from herbie. Should raise an exception if problem.
         self.species_id_by_name = {}
         if dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
-            self.species_id_by_name = HerbieFacade().name_id_by_species_name()
+            self.species_id_by_name = species_facade_class().name_id_by_species_name()
         # Schema foreign key for site.
         self.site_fk = self.schema.get_fk_for_model('Site')
         self.commit = commit
+        self.file_name = self.generator.file_name if hasattr(self.generator, 'file_name') else None
 
     def __iter__(self):
+        counter = 0
         for data in self.generator:
-            yield self._create_record(data)
+            counter += 1
+            yield self._create_record(data, counter)
 
-    def _create_record(self, row):
+    def _create_record(self, row, counter):
         """
         :param row:
         :return: record, RecordValidatorResult
@@ -174,6 +180,10 @@ class RecordCreator:
                 site=site,
                 dataset=self.dataset,
                 data=row,
+                source_info={
+                    'file_name': self.file_name,
+                    'row': counter + 1  # add one to match excel/csv row id
+                }
             )
             # specific fields
             if self.dataset.type == Dataset.TYPE_OBSERVATION or self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
@@ -187,9 +197,20 @@ class RecordCreator:
                 geometry = self.schema.cast_geometry(row, default_srid=MODEL_SRID)
                 record.geometry = geometry
                 if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
-                    # species stuff. Lookup for species match in herbie
+                    # species stuff. Lookup for species match in herbie.
+                    # either a species name or a nameId
                     species_name = self.schema.cast_species_name(row)
-                    name_id = int(self.species_id_by_name.get(species_name, -1))
+                    name_id = self.schema.cast_species_name_id(row)
+                    # name id takes precedence
+                    if name_id:
+                        species_name = get_key_for_value(self.species_id_by_name, int(name_id), None)
+                        if not species_name:
+                            column_name = self.schema.species_name_id_field.name
+                            message = "Cannot find a species with nameId={}".format(name_id)
+                            validator_result.add_column_error(column_name, message)
+                            return record, validator_result
+                    elif species_name:
+                        name_id = int(self.species_id_by_name.get(species_name, -1))
                     record.species_name = species_name
                     record.name_id = name_id
             if self.commit:

@@ -206,7 +206,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
         return queryset.distinct()
 
 
-class DatasetDataPermission(BasePermission):
+class DatasetRecordsPermission(BasePermission):
     def has_permission(self, request, view):
         user = request.user
         return \
@@ -215,32 +215,32 @@ class DatasetDataPermission(BasePermission):
             or (hasattr(view, 'dataset') and view.dataset and view.dataset.is_custodian(user))
 
 
-class SpeciesMixin:
+class SpeciesMixin(object):
     species_facade_class = HerbieFacade
 
 
-class DatasetDataView(generics.ListCreateAPIView, SpeciesMixin):
-    permission_classes = (IsAuthenticated, DatasetDataPermission)
+class DatasetRecordsView(generics.ListCreateAPIView, generics.DestroyAPIView, SpeciesMixin):
+    permission_classes = (IsAuthenticated, DatasetRecordsPermission)
 
     def __init__(self, **kwargs):
-        super(DatasetDataView, self).__init__(**kwargs)
+        super(DatasetRecordsView, self).__init__(**kwargs)
         self.dataset = None
 
     def dispatch(self, request, *args, **kwargs):
         """
         Intercept any request to set the dataset.
-        This is necessary for the DatasetDataPermission
+        This is necessary for the DatasetRecordsPermission
         :param request:
         """
         self.dataset = get_object_or_404(models.Dataset, pk=kwargs.get('pk'))
-        return super(DatasetDataView, self).dispatch(request, *args, **kwargs)
+        return super(DatasetRecordsView, self).dispatch(request, *args, **kwargs)
 
     def get_serializer_class(self):
         return serializers.RecordSerializer
 
     def get_serializer(self, *args, **kwargs):
         kwargs["many"] = True
-        ser = super(DatasetDataView, self).get_serializer(*args, **kwargs)
+        ser = super(DatasetRecordsView, self).get_serializer(*args, **kwargs)
         # TODO: find a better way to initialize the dataset field of the serializer
         if hasattr(ser, 'initial_data'):
             for r in ser.initial_data:
@@ -248,7 +248,7 @@ class DatasetDataView(generics.ListCreateAPIView, SpeciesMixin):
         return ser
 
     def get_serializer_context(self):
-        ctx = super(DatasetDataView, self).get_serializer_context()
+        ctx = super(DatasetRecordsView, self).get_serializer_context()
         if self.dataset:
             ctx['dataset'] = self.dataset
             if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION and 'species_mapping' not in ctx:
@@ -268,8 +268,14 @@ class DatasetDataView(generics.ListCreateAPIView, SpeciesMixin):
         """
         if not self.dataset:
             self.dataset = get_object_or_404(models.Dataset, pk=kwargs.get('pk'))
-        return super(DatasetDataView, self).list(request, *args, **kwargs)
+        return super(DatasetRecordsView, self).list(request, *args, **kwargs)
 
+    def destroy(self, request, *args, **kwargs):
+        record_ids = request.data
+        if not record_ids and not isinstance(record_ids, list):
+            return Response("A list of record ids must be provided", status=status.HTTP_400_BAD_REQUEST)
+        Record.objects.filter(dataset=self.dataset, id__in=record_ids).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
     permission_classes = (IsAuthenticated, DRYPermissions)
@@ -339,6 +345,11 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
             queryset = queryset.filter(datetime__lte=datetime_end)
         return queryset
 
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.dataset = instance.dataset
+        return super(RecordViewSet, self).update(request, *args, **kwargs)
+
 
 class StatisticsView(APIView):
     permission_classes = (IsAuthenticated,)
@@ -396,17 +407,17 @@ class WhoamiView(APIView):
         return Response(data)
 
 
-class DatasetUploadRecordsView(APIView):
+class DatasetUploadRecordsView(APIView, SpeciesMixin):
     """
     Upload file for records (xlsx, csv)
     """
-    permission_classes = (IsAuthenticated, DatasetDataPermission)
+    permission_classes = (IsAuthenticated, DatasetRecordsPermission)
     parser_classes = (FormParser, MultiPartParser)
 
     def dispatch(self, request, *args, **kwargs):
         """
         Intercept any request to set the dataset from the pk.
-        This is necessary for the DatasetDataPermission.
+        This is necessary for the DatasetRecordsPermission.
         :param request:
         """
         self.dataset = get_object_or_404(models.Dataset, pk=kwargs.get('pk'))
@@ -427,10 +438,12 @@ class DatasetUploadRecordsView(APIView):
         generator = FileReader(file_obj)
         validator = get_record_validator_for_dataset(self.dataset)
         validator.schema_error_as_warning = not strict
-        creator = RecordCreator(self.dataset, generator, validator=validator, create_site=create_site, commit=True)
+        creator = RecordCreator(self.dataset, generator,
+                                validator=validator, create_site=create_site, commit=True,
+                                species_facade_class=self.species_facade_class)
         data = []
         has_error = False
-        row = 0
+        row = 1  # starts at 1 to match excel row id
         for record, validator_result in creator:
             row += 1
             result = {

@@ -13,7 +13,7 @@ from django.views.generic import TemplateView, FormView
 
 from main.forms import UploadDatasetForm
 from main.models import Dataset, DatasetFile, Site, MODEL_SRID
-from main.utils_species import HerbieFacade
+from main.utils_species import HerbieFacade, get_key_for_value
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -21,7 +21,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
 
 class UploadDataSetView(LoginRequiredMixin, FormView):
-    # TODO: use API for this view
+    # TODO: this view is obsolete. Should use the API view.
     template_name = 'main/data_upload.html'
     form_class = UploadDatasetForm
     success_url = reverse_lazy('admin:main_dataset_changelist')
@@ -105,15 +105,27 @@ class UploadDataSetView(LoginRequiredMixin, FormView):
                             geometry = schema.cast_geometry(row, default_srid=MODEL_SRID)
                             record.geometry = geometry
                             if dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
-                                # species stuff. Lookup for species match in herbie
+                                # species stuff. Lookup for species match in herbie.
+                                # either a species name or a nameId
                                 species_name = schema.cast_species_name(row)
-                                name_id = int(species_id_by_name.get(species_name, -1))
+                                name_id = schema.cast_species_name_id(row)
+                                # name id takes precedence
+                                if name_id:
+                                    species_name = get_key_for_value(species_id_by_name, int(name_id), None)
+                                    if not species_name:
+                                        raise Exception("Cannot find a species with nameId={}".format(name_id))
+                                elif species_name:
+                                    name_id = int(species_id_by_name.get(species_name, -1))
+                                else:
+                                    raise Exception('Missing Species Name or Species NameId')
                                 record.species_name = species_name
                                 record.name_id = name_id
 
                     except Exception as e:
-                        msg = "> Row #{}: problem while extracting the Observation data: {}. [{}]".format(row_number, e,
-                                                                                                          row)
+                        msg = "> Row #{}: problem while extracting the Observation data: {}. [{}]".format(
+                            row_number,
+                            e,
+                            row)
                         errors.append(msg)
                     records.append(record)
             if not errors:

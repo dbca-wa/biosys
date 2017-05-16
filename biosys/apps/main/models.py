@@ -101,6 +101,18 @@ class Project(models.Model):
     def centroid(self):
         return self.geometry.centroid if self.geometry else None
 
+    @property
+    def dataset_count(self):
+        return self.projects.count()
+
+    @property
+    def site_count(self):
+        return self.site_set.count()
+
+    @property
+    def record_count(self):
+        return Record.objects.filter(dataset__project=self).count()
+
     class Meta:
         ordering = ['title']
 
@@ -233,6 +245,10 @@ class Dataset(models.Model):
     @property
     def record_queryset(self):
         return self.record_model.objects.filter(dataset=self)
+
+    @property
+    def record_count(self):
+        return self.record_model.objects.filter(dataset=self).count()
 
     @property
     def schema_class(self):
@@ -388,6 +404,10 @@ class Record(models.Model):
                                     verbose_name="Species Name", help_text="Species Name (as imported)")
     name_id = models.IntegerField(default=-1,
                                   verbose_name="Name ID", help_text="The unique ID from the species database")
+    # to store information about the source of the record, like excel filename, row number in file etc...
+    source_info = JSONField(null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return "{0}: {1}".format(self.dataset.name, Truncator(self.data).chars(100))
