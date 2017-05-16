@@ -1,7 +1,6 @@
 import datetime
 import re
 from os import path
-from unittest import skip
 
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
@@ -1425,7 +1424,6 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             self.assertEqual(r.site, site_1)
             self.assertEqual(r.geometry, site_1_geometry)
 
-    @skip('Wait for the implementation')
     def test_site_geometry_updated(self):
         """
         Use case:
@@ -1475,9 +1473,12 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             previous_geometry = site_1_geometry
             new_geometry = Point(previous_geometry.x + 2, previous_geometry.y + 2)
             self.assertNotEqual(previous_geometry, new_geometry)
-            site_1.geometry = new_geometry
-            site_1.save()
-
+            url = reverse('api:site-detail', kwargs={'pk': site_1.pk})
+            payload = {
+                "geometry": new_geometry.wkt
+            }
+            resp = client.patch(url, data=payload, format='json')
+            self.assertEqual(resp.status_code, 200)
             # check that the record has been updated
             record_1.refresh_from_db()
             self.assertEqual(record_1.geometry, new_geometry)

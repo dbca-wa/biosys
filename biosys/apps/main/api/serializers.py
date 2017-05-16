@@ -74,7 +74,7 @@ class DatasetSerializer(serializers.ModelSerializer):
             if different_type or different_data_package:
                 message = "This dataset already contains records. " \
                           "You cannot change this field. " \
-                          "Please delete the dataset, recreate it and re-import the records."
+                          "In order to change this dataset you first need to delete all its records."
                 response = {}
                 if different_type:
                     response['type'] = message
