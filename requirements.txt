@@ -5,15 +5,19 @@ django-bootstrap3==6.2.2
 django-auth-ldap==1.2.8
 openpyxl==2.4.2
 django-reversion==1.10
-jsontableschema==0.6.5
-# force a version of dependency of jsontableschema to avoid warning
-tabulator==0.5.0
-datapackage==0.8.1
 pytz>=2016.6.1
 django-timezone-field==2.0
 requests==2.11
 Unipath==1.1
 six==1.10
+python-dateutil==2.6.0
+
+# frictionless tableschema and datapackage
+# TODO: update to 1.0.0 when released. Problem: it breaks a lot of things.
+jsontableschema==0.6.5
+# force a version of tabulator (dependency of jsontableschema) to avoid error when upgrading
+tabulator==0.5.0
+datapackage==0.8.1
 
 # rest API
 djangorestframework==3.5.3

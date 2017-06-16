@@ -1,12 +1,8 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
-import io
 import json
 import re
-from os import listdir
-from os.path import join
 
-import jsontableschema
 from dateutil.parser import parse as date_parse
 from django.contrib.gis.geos import Point
 from django.utils import six
@@ -120,6 +116,8 @@ class BiosysSchema:
     OBSERVATION_DATE_TYPE_NAME = 'observationDate'
     LATITUDE_TYPE_NAME = 'latitude'
     LONGITUDE_TYPE_NAME = 'longitude'
+    EASTING_TYPE_NAME = 'easting'
+    NORTHING_TYPE_NAME = 'northing'
     DATUM_TYPE_NAME = 'datum'
     ZONE_TYPE_NAME = 'zone'
     SPECIES_NAME_TYPE_NAME = 'speciesName'
@@ -154,6 +152,12 @@ class BiosysSchema:
 
     def is_longitude(self):
         return self.type == self.LONGITUDE_TYPE_NAME
+
+    def is_easting(self):
+        return self.type == self.EASTING_TYPE_NAME
+
+    def is_northing(self):
+        return self.type == self.NORTHING_TYPE_NAME
 
     def is_datum(self):
         return self.type == self.DATUM_TYPE_NAME
@@ -921,6 +925,35 @@ class SpeciesObservationSchema(ObservationSchema):
         return field.cast(record.get(field.name)) if field is not None else None
 
 
+class GeometryParser(object):
+    TYPE_LAT_LONG = "Lat/Long"
+    TYPE_EAST_NORTH = "Easting/Northing"
+    TYPE_BOTH = TYPE_LAT_LONG + " and " + TYPE_EAST_NORTH
+    TYPE_UNKNOWN = "Unknown"
+
+    def __init__(self, schema):
+        if not isinstance(schema, GenericSchema):
+            schema = GenericSchema(schema)
+        self.schema = schema
+        self.errors = []
+
+    def is_valid(self):
+        return not self.errors
+
+    def to_geometry(self, row):
+        pass
+
+    def to_data(self, row, geometry):
+        pass
+
+    def _parse_schema(self):
+        return self.TYPE_UNKNOWN
+
+    def parse_lat_long_fields(self):
+        return [], []
+
+
+
 class Exporter:
     def __init__(self, dataset, records=None):
         self.ds = dataset
@@ -965,18 +998,3 @@ class Exporter:
         ws = wb.create_sheet()
         self._to_worksheet(ws)
         return wb
-
-
-def infer_csv(csv_file, outfile, row_limit=0):
-    with io.open(outfile, 'w') as fp:
-        with io.open(csv_file) as stream:
-            headers = stream.readline().rstrip('\n').split(',')
-            values = jsontableschema.compat.csv_reader(stream)
-            schema = jsontableschema.infer(headers, values, row_limit=row_limit)
-            fp.write(six.u(json.dumps(schema, indent=2, ensure_ascii=False)))
-
-
-def infer_csvs(path, row_limit=0):
-    for filename in listdir(path):
-        if filename.endswith('.csv'):
-            infer_csv(join(path, filename), join(path, filename) + '.json', row_limit)
