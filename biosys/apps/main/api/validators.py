@@ -1,3 +1,4 @@
+from main.constants import MODEL_SRID
 from main.models import Dataset
 
 
@@ -61,6 +62,7 @@ class GenericRecordValidator(object):
     def __init__(self, dataset, schema_error_as_warning=True, **kwargs):
         self.schema = dataset.schema
         self.schema_error_as_warning = schema_error_as_warning
+        self.default_srid = dataset.project.datum or MODEL_SRID
 
     def validate(self, data):
         return self.validate_schema(data)
@@ -136,7 +138,7 @@ class ObservationValidator(GenericRecordValidator):
     def validate_geometry(self, data):
         result = RecordValidatorResult()
         try:
-            self.schema.cast_geometry(data)
+            self.schema.cast_geometry(data, default_srid=self.default_srid or MODEL_SRID)
         except Exception as e:
             msg = str(e)
             # the fields involved in the geometry error depends of the schema fields.

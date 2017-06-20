@@ -122,6 +122,7 @@ class BiosysSchema:
     ZONE_TYPE_NAME = 'zone'
     SPECIES_NAME_TYPE_NAME = 'speciesName'
     SPECIES_NAME_ID_TYPE_NAME = 'speciesNameId'
+    SITE_CODE_TYPE_NAME = 'siteCode'
 
     BIOSYS_TYPE_MAP = {
         OBSERVATION_DATE_TYPE_NAME: DayFirstDateType,
@@ -508,8 +509,11 @@ class ObservationSchema(GenericSchema):
     OBSERVATION_DATE_FIELD_NAME = 'Observation Date'
     LATITUDE_FIELD_NAME = 'Latitude'
     LONGITUDE_FIELD_NAME = 'Longitude'
+    EASTING_FIELD_NAME = 'Easting'
+    NORTHING_FIELD_NAME = 'Northing'
     DATUM_FIELD_NAME = 'Datum'
     ZONE_FIELD_NAME = 'Zone'
+    SITE_CODE_FIELD_NAME = 'Site Code'
     SITE_CODE_FOREIGN_KEY_EXAMPLE = """
         "foreignKeys": [
             {
@@ -525,25 +529,12 @@ class ObservationSchema(GenericSchema):
     def __init__(self, schema):
         super(ObservationSchema, self).__init__(schema)
         self.observation_date_field = self.find_observation_date_field_or_throw(self)
-        site_code_fk = self.get_fk_for_model_field('Site', 'code')
-        self.site_code_field = self.get_field_by_mame(site_code_fk.data_field) if site_code_fk else None
-        if self.site_code_field is None:
-            self.latitude_field = self.find_latitude_field_or_throw(self)
-            self.longitude_field = self.find_longitude_field_or_throw(self)
-        else:
-            # we have a site code foreign key but we also can have lat/long field to overwrite the geometry
-            try:
-                self.latitude_field = self.find_latitude_field_or_throw(self, enforce_required=False)
-            except ObservationSchemaError:
-                self.latitude_field = None
-            try:
-                self.longitude_field = self.find_longitude_field_or_throw(self, enforce_required=False)
-            except ObservationSchemaError:
-                self.longitude_field = None
-        self.datum_field = self.find_datum_field_or_none(self)
-        self.zone_field = self.find_zone_field_or_none(self)
+        self.geometry_parser = GeometryParser(self)
+        if self.geometry_parser.errors:
+            msg = "\n".join(self.geometry_parser.errors)
+            raise ObservationSchemaError(msg)
 
-    # The following methods are static for testing purposes.
+    # The following method is static for testing purposes.
     @staticmethod
     def find_observation_date_field_or_throw(schema):
         """
@@ -600,145 +591,33 @@ class ObservationSchema(GenericSchema):
                 format(ObservationSchema.OBSERVATION_DATE_FIELD_NAME, BiosysSchema.OBSERVATION_DATE_TYPE_NAME)
             raise ObservationSchemaError(msg)
 
-    @staticmethod
-    def find_latitude_field_or_throw(schema, enforce_required=True):
-        """
-        Precedence Rules:
-        2- Look for biosys.type = 'latitude'
-        3- Look for a field with name 'Latitude' case insensitive
-        :param enforce_required: if True the field must have a required constraints
-        :param schema: a dict descriptor or a Schema instance
-        :return: The SchemaField or raise an exception if none or more than one
-        """
-        if not isinstance(schema, GenericSchema):
-            schema = GenericSchema(schema)
-        fields = [f for f in schema.fields if f.biosys.is_latitude()]
-        if len(fields) > 1:
-            msg = "More than one Biosys latitude field found!. {}".format(fields)
-            raise ObservationSchemaError(msg)
-        if len(fields) == 1:
-            field = fields[0]
-            if enforce_required and not field.required:
-                msg = "The Biosys latitude field must be set as 'required'. {}".format(field)
-                raise ObservationSchemaError(msg)
-            else:
-                return field
-        # no Biosys latitude field found
-        fields = [f for f in schema.fields if f.name.lower() == ObservationSchema.LATITUDE_FIELD_NAME.lower()]
-        if len(fields) > 1:
-            msg = "More than one Latitude field found!. {}".format(fields)
-            raise ObservationSchemaError(msg)
-        if len(fields) == 1:
-            field = fields[0]
-            if enforce_required and not field.required:
-                msg = "The Latitude field must be set as 'required'. {}".format(field)
-                raise ObservationSchemaError(msg)
-            else:
-                return field
-        msg = "The schema doesn't include a required latitude field. " \
-              "It must have a field named {} or tagged with biosys type {}. " \
-              "Alternatively you can add a foreign key the site code to extract the geometry from it. " \
-              "To create site code foreign key, add the following to you schema:{}". \
-            format(ObservationSchema.LATITUDE_FIELD_NAME,
-                   BiosysSchema.LATITUDE_TYPE_NAME,
-                   ObservationSchema.SITE_CODE_FOREIGN_KEY_EXAMPLE)
-        raise ObservationSchemaError(msg)
+    @property
+    def latitude_field(self):
+        return self.geometry_parser.latitude_field
 
-    @staticmethod
-    def find_longitude_field_or_throw(schema, enforce_required=True):
-        """
-        Precedence Rules:
-        1- Look for biosys.type = 'longitude'
-        2- Look for a field with name 'Longitude' case insensitive
-        :param schema: a dict descriptor or a Schema instance
-        :param enforce_required: if True the field must have a required constraints
-        :return: The SchemaField or raise an exception if none or more than one
-        """
-        if not isinstance(schema, GenericSchema):
-            schema = GenericSchema(schema)
-        fields = [f for f in schema.fields if f.biosys.is_longitude()]
-        if len(fields) > 1:
-            msg = "More than one Biosys longitude field found!. {}".format(fields)
-            raise ObservationSchemaError(msg)
-        if len(fields) == 1:
-            field = fields[0]
-            if enforce_required and not field.required:
-                msg = "The Biosys longitude field must be set as 'required'. {}".format(field)
-                raise ObservationSchemaError(msg)
-            else:
-                return field
-        # no Biosys longitude field found look for column name
-        fields = [f for f in schema.fields if f.name.lower() == ObservationSchema.LONGITUDE_FIELD_NAME.lower()]
-        if len(fields) > 1:
-            msg = "More than one Longitude field found!. {}".format(fields)
-            raise ObservationSchemaError(msg)
-        if len(fields) == 1:
-            field = fields[0]
-            if enforce_required and not field.required:
-                msg = "The Longitude field must be set as 'required'. {}".format(field)
-                raise ObservationSchemaError(msg)
-            else:
-                return field
-        msg = "The schema doesn't include a required longitude field. " \
-              "It must have a field named {} or tagged with biosys type {}" \
-              "Alternatively you can add a foreign key the site code to extract the geometry from it. " \
-              "To create site code foreign key, add the following to you schema:{}". \
-            format(ObservationSchema.LONGITUDE_FIELD_NAME,
-                   BiosysSchema.LONGITUDE_TYPE_NAME,
-                   ObservationSchema.SITE_CODE_FOREIGN_KEY_EXAMPLE)
-        raise ObservationSchemaError(msg)
+    @property
+    def longitude_field(self):
+        return self.geometry_parser.longitude_field
 
-    @staticmethod
-    def find_datum_field_or_none(schema):
-        """
-        Precedence Rules:
-        1- Look for biosys.type = 'datum'
-        2- Look for a field with name 'Datum' case insensitive
-        :param schema: a dict descriptor or a Schema instance
-        :return: None if not found
-        """
-        if not isinstance(schema, GenericSchema):
-            schema = GenericSchema(schema)
-        fields = [f for f in schema.fields if f.biosys.is_datum()]
-        if len(fields) > 1:
-            msg = "More than one Biosys datum field found!. {}".format(fields)
-            raise ObservationSchemaError(msg)
-        if len(fields) == 1:
-            return fields[0]
-        # no Biosys datum field found look for column name
-        fields = [f for f in schema.fields if f.name.lower() == ObservationSchema.DATUM_FIELD_NAME.lower()]
-        if len(fields) > 1:
-            msg = "More than one Datum field found!. {}".format(fields)
-            raise ObservationSchemaError(msg)
-        if len(fields) == 1:
-            return fields[0]
-        return None
+    @property
+    def easting_field(self):
+        return self.geometry_parser.easting_field
 
-    @staticmethod
-    def find_zone_field_or_none(schema):
-        """
-        Precedence Rules:
-        1- Look for biosys.type = 'zone'
-        2- Look for a field with name 'Zone' case insensitive
-        :param schema: a dict descriptor or a Schema instance
-        :return: None if not found
-        """
-        if not isinstance(schema, GenericSchema):
-            schema = GenericSchema(schema)
-        fields = [f for f in schema.fields if f.biosys.is_zone()]
-        if len(fields) > 1:
-            msg = "More than one Biosys zone type field found!. {}".format(fields)
-            raise ObservationSchemaError(msg)
-        if len(fields) == 1:
-            return fields[0]
-        # no Biosys zone type field found look for column name
-        fields = [f for f in schema.fields if f.name.lower() == ObservationSchema.ZONE_FIELD_NAME.lower()]
-        if len(fields) > 1:
-            msg = "More than one Zone field found!. {}".format(fields)
-            raise ObservationSchemaError(msg)
-        if len(fields) == 1:
-            return fields[0]
-        return None
+    @property
+    def northing_field(self):
+        return self.geometry_parser.northing_field
+
+    @property
+    def datum_field(self):
+        return self.geometry_parser.datum_field
+
+    @property
+    def zone_field(self):
+        return self.geometry_parser.zone_field
+
+    @property
+    def site_code_field(self):
+        return self.geometry_parser.site_code_field
 
     def find_site_code_foreign(self):
         return self.get_fk_for_model_field('Site', 'code')
@@ -751,61 +630,10 @@ class ObservationSchema(GenericSchema):
         return field.cast(record.get(field.name))
 
     def cast_srid(self, record, default_srid=MODEL_SRID):
-        """
-        Two cases:
-        Datum only or datum + zone
-        :param record:
-        :param default_srid:
-        :return:
-        """
-        result = default_srid
-        if self.datum_field:
-            datum_val = record.get(self.datum_field.name)
-            if self.zone_field:
-                zone_val = record.get(self.zone_field.name)
-                try:
-                    int(zone_val)
-                except:
-                    msg = "Invalid Zone '{}'. Should be an integer.".format(zone_val)
-                    raise InvalidDatumError(msg)
-                try:
-                    result = get_australian_zone_srid(datum_val, zone_val)
-                except Exception as e:
-                    raise InvalidDatumError(e)
-            else:
-                if not is_supported_datum(datum_val):
-                    msg = "Invalid Datum '{}'. Should be one of: {}".format(datum_val, SUPPORTED_DATUMS)
-                    raise InvalidDatumError(msg)
-                else:
-                    result = get_datum_srid(datum_val)
-        return result
+        return self.geometry_parser.cast_srid(record, default_srid=default_srid)
 
     def cast_geometry(self, record, default_srid=MODEL_SRID):
-        """
-        Two cases: either a lat/lon or a site code foreign key.
-        The lat/lon values take precedence over the site.
-        :param record:
-        :param default_srid:
-        :return:
-        """
-        lat_val = record.get(self.latitude_field.name) if self.latitude_field is not None else None
-        lon_val = record.get(self.longitude_field.name) if self.longitude_field is not None else None
-        if lat_val and lon_val:
-            lat = self.latitude_field.cast(lat_val)
-            lon = self.longitude_field.cast(lon_val)
-            srid = self.cast_srid(record, default_srid=default_srid)
-            return Point(x=float(lon), y=float(lat), srid=srid)
-        elif self.site_code_field:
-            from main.models import Site  # import here to avoid cyclic import problem
-            site_code = record.get(self.site_code_field.name)
-            site = Site.objects.filter(code=site_code, geometry__isnull=False).first()
-            if site is None:
-                raise Exception('The site {} does not exist or has no geometry'.format(site_code))
-            else:
-                return site.geometry
-        else:
-            # problem.
-            raise Exception('No lat/long or site code found!')
+        return self.geometry_parser.cast_geometry(record, default_srid=default_srid)
 
 
 class SpeciesObservationSchema(ObservationSchema):
@@ -925,11 +753,13 @@ class SpeciesObservationSchema(ObservationSchema):
         return field.cast(record.get(field.name)) if field is not None else None
 
 
+def format_required_message(field):
+    return "The field named '{field_name}' must have the 'required' constraint set to true.".format(
+        field_name=field.name
+    )
+
+
 class GeometryParser(object):
-    TYPE_LAT_LONG = "Lat/Long"
-    TYPE_EAST_NORTH = "Easting/Northing"
-    TYPE_BOTH = TYPE_LAT_LONG + " and " + TYPE_EAST_NORTH
-    TYPE_UNKNOWN = "Unknown"
 
     def __init__(self, schema):
         if not isinstance(schema, GenericSchema):
@@ -937,21 +767,246 @@ class GeometryParser(object):
         self.schema = schema
         self.errors = []
 
+        # Site Code
+        self.site_code_field, errors = self._find_site_code_field()
+        if errors:
+            self.errors += errors
+
+        # Datum
+        self.datum_field, errors = self._find_unique_field(
+            BiosysSchema.DATUM_TYPE_NAME,
+            ObservationSchema.DATUM_FIELD_NAME
+        )
+        if errors:
+            self.errors += errors
+
+        # Zone
+        self.zone_field, errors = self._find_unique_field(
+            BiosysSchema.ZONE_TYPE_NAME,
+            ObservationSchema.ZONE_FIELD_NAME
+        )
+        if errors:
+            self.errors += errors
+
+        # Latitude
+        self.latitude_field, errors = self._find_unique_field(
+            BiosysSchema.LATITUDE_TYPE_NAME,
+            ObservationSchema.LATITUDE_FIELD_NAME
+        )
+        if errors:
+            self.errors += errors
+
+        # Longitude
+        self.longitude_field, errors = self._find_unique_field(
+            BiosysSchema.LONGITUDE_TYPE_NAME,
+            ObservationSchema.LONGITUDE_FIELD_NAME)
+        if errors:
+            self.errors += errors
+
+        # Easting
+        self.easting_field, errors = self._find_unique_field(
+            BiosysSchema.EASTING_TYPE_NAME,
+            ObservationSchema.EASTING_FIELD_NAME
+        )
+        if errors:
+            self.errors += errors
+
+        # Northing
+        self.northing_field, errors = self._find_unique_field(
+            BiosysSchema.NORTHING_TYPE_NAME,
+            ObservationSchema.NORTHING_FIELD_NAME
+        )
+        if errors:
+            self.errors += errors
+
+        # some post validations.
+        # we need at least one method to get the geometry.
+        if all([
+            not self.site_code_field,
+            not self.latitude_field,
+            not self.longitude_field,
+            not self.easting_field,
+            not self.northing_field
+        ]):
+            msg = "The schema must contain some geometry fields: latitude/longitude or easting/northing or " \
+                  "alternatively a reference to the Site Code."
+            self.errors.append(msg)
+        # if we have a latitude we must have a longitude and vice-versa
+        if not self.errors:
+            if self.latitude_field and not self.longitude_field:
+                self.errors.append("Missing Longitude field")
+            if self.longitude_field and not self.latitude_field:
+                self.errors.append("Missing Latitude field")
+                # same for easting and northing
+            if self.easting_field and not self.northing_field:
+                self.errors.append("Missing Northing field")
+            if self.northing_field and not self.easting_field:
+                self.errors.append("Missing Easting field")
+
+        # verify 'required' constraints: required constraints must be set if we are in 'single' mode.
+        # e.g lat/long without site code or easting/northing
+        if self.is_site_code_only and not self.site_code_field.required:
+            self.errors.append(format_required_message(self.site_code_field))
+        if self.is_lat_long_only:
+            if not self.latitude_field.required:
+                self.errors.append(format_required_message(self.latitude_field))
+            if not self.longitude_field.required:
+                self.errors.append(format_required_message(self.longitude_field))
+        if self.is_easting_northing_only:
+            if not self.easting_field.required:
+                self.errors.append(format_required_message(self.easting_field))
+            if not self.northing_field.required:
+                self.errors.append(format_required_message(self.northing_field))
+
     def is_valid(self):
         return not self.errors
 
-    def to_geometry(self, row):
-        pass
+    @property
+    def is_easting_northing(self):
+        return self.easting_field is not None and self.northing_field is not None
 
-    def to_data(self, row, geometry):
-        pass
+    @property
+    def is_easting_northing_only(self):
+        return all([
+            self.is_easting_northing,
+            not self.is_site_code,
+            not self.is_lat_long
+        ])
 
-    def _parse_schema(self):
-        return self.TYPE_UNKNOWN
+    @property
+    def is_lat_long(self):
+        return self.latitude_field is not None and self.longitude_field is not None
 
-    def parse_lat_long_fields(self):
-        return [], []
+    @property
+    def is_lat_long_only(self):
+        return all([
+            self.is_lat_long,
+            not self.is_easting_northing,
+            not self.is_site_code,
+        ])
 
+    @property
+    def is_site_code(self):
+        return self.site_code_field is not None
+
+    @property
+    def is_site_code_only(self):
+        return all([
+            self.is_site_code,
+            not self.is_easting_northing,
+            not self.is_lat_long
+        ])
+
+    def cast_srid(self, record, default_srid=MODEL_SRID):
+        """
+        Two cases:
+        Datum only or datum + zone
+        :param record:
+        :param default_srid:
+        :return:
+        """
+        result = default_srid
+        if self.datum_field:
+            datum_val = record.get(self.datum_field.name)
+            if not datum_val:
+                return default_srid
+            if self.zone_field:
+                zone_val = record.get(self.zone_field.name)
+                if not zone_val:
+                    return default_srid
+                try:
+                    int(zone_val)
+                except:
+                    msg = "Invalid Zone '{}'. Should be an integer.".format(zone_val)
+                    raise InvalidDatumError(msg)
+                try:
+                    result = get_australian_zone_srid(datum_val, zone_val)
+                except Exception as e:
+                    raise InvalidDatumError(e)
+            else:
+                if not is_supported_datum(datum_val):
+                    msg = "Invalid Datum '{}'. Should be one of: {}".format(datum_val, SUPPORTED_DATUMS)
+                    raise InvalidDatumError(msg)
+                else:
+                    result = get_datum_srid(datum_val)
+        return result
+
+    def cast_geometry(self, record, default_srid=MODEL_SRID):
+        """
+        Precedences rules:
+        easting/northing > lat/long > site geometry
+        :param record:
+        :param default_srid:
+        :return: Will throw an exception if anything went wrong
+        """
+        x, y = (None, None)  # x = longitude or easting, y = latitude or northing.
+        geometry = None
+
+        if self.is_easting_northing:
+            x = record.get(self.easting_field.name)
+            y = record.get(self.northing_field.name)
+        if (not x or not y) and self.is_lat_long:
+            x = record.get(self.longitude_field.name)
+            y = record.get(self.latitude_field.name)
+        if x and y:
+            srid = self.cast_srid(record, default_srid=default_srid)
+            geometry = Point(x=float(x), y=float(y), srid=srid)
+        if geometry is None and self.site_code_field is not None:
+            # extract geometry from site
+            from main.models import Site  # import here to avoid cyclic import problem
+            site_code = record.get(self.site_code_field.name)
+            site = Site.objects.filter(code=site_code, geometry__isnull=False).first()
+            geometry = site.geometry if site is not None else None
+            if geometry is None and self.is_site_code_only:
+                raise Exception('The site {} does not exist or has no geometry'.format(site_code))
+        if geometry is not None:
+            return geometry
+        else:
+            # problem
+            raise Exception('No lat/long eating/northing or site code found!')
+
+    def from_record_to_geometry(self, record, default_srid=MODEL_SRID):
+        return self.cast_geometry(record, default_srid=default_srid)
+
+    def from_geometry_to_record(self, geometry, record, default_srid=MODEL_SRID):
+        raise NotImplementedError("Not implemented")
+
+    def _find_site_code_field(self):
+        """
+        The site code can be declared with a column named 'Site Code' or biosys type 'siteCode'
+         but also with a foreign key (legacy)
+        :return:
+        """
+        site_code_field, errors = self._find_unique_field(BiosysSchema.SITE_CODE_TYPE_NAME,
+                                                          ObservationSchema.SITE_CODE_FIELD_NAME)
+        if errors:
+            return site_code_field, errors
+        if site_code_field is None:
+            site_code_fk = self.schema.get_fk_for_model_field('Site', 'code')
+            site_code_field = self.schema.get_field_by_mame(site_code_fk.data_field) if site_code_fk else None
+        return site_code_field, None
+
+    def _find_unique_field(self, biosys_type, column_name):
+        """
+        Precedence Rules:
+        1- Look for field with biosys.type = biosys_type
+        2- Look for a field with name column_name case insensitive
+        :return: (field, errors). field = None if not found. The only error is if the field is not unique.
+        """
+        fields = [f for f in self.schema.fields if f.biosys.type == biosys_type]
+        if len(fields) > 1:
+            msg = "More than one Biosys type {} field found: {}".format(biosys_type, [f.name for f in fields])
+            return None, [msg]
+        if len(fields) == 1:
+            return fields[0], None
+        # no Biosys type field found. Search for column name
+        fields = [f for f in self.schema.fields if f.name.lower() == column_name.lower()]
+        if len(fields) > 1:
+            msg = "More than one field named {} found.".format(column_name)
+            return None, [msg]
+        if len(fields) == 1:
+            return fields[0], None
+        return None, None
 
 
 class Exporter:

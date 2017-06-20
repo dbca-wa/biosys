@@ -155,7 +155,8 @@ class RecordSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_geometry(dataset, data):
-        return dataset.schema.cast_geometry(data, default_srid=MODEL_SRID)
+        default_srid = dataset.project.datum or MODEL_SRID
+        return dataset.schema.cast_geometry(data, default_srid=default_srid)
 
     @staticmethod
     def set_date(instance, validated_data, commit=True):
@@ -214,12 +215,15 @@ class RecordSerializer(serializers.ModelSerializer):
         return instance
 
     def set_fields_from_data(self, instance, validated_data):
-        instance = self.set_site(instance, validated_data)
-        if self.dataset and self.dataset.type in [Dataset.TYPE_OBSERVATION, Dataset.TYPE_SPECIES_OBSERVATION]:
-            instance = self.set_date_and_geometry(instance, validated_data)
-            if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
-                instance = self.set_species_name_and_id(instance, validated_data)
-        return instance
+        try:
+            instance = self.set_site(instance, validated_data)
+            if self.dataset and self.dataset.type in [Dataset.TYPE_OBSERVATION, Dataset.TYPE_SPECIES_OBSERVATION]:
+                instance = self.set_date_and_geometry(instance, validated_data)
+                if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
+                    instance = self.set_species_name_and_id(instance, validated_data)
+            return instance
+        except Exception as e:
+            raise serializers.ValidationError(e)
 
     def create(self, validated_data):
         """

@@ -12,6 +12,7 @@ from openpyxl import load_workbook
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from main import constants
 from main.models import Project, Site, Dataset, Record
 from main.tests.api import helpers
 from main.tests.test_data_package import clone
@@ -791,7 +792,7 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
                 "type": "number",
                 "constraints": helpers.REQUIRED_CONSTRAINTS,
                 "biosys": {
-                    "type": "latitude"
+                    "type": "northing"
                 }
             },
             {
@@ -799,7 +800,7 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
                 "type": "number",
                 "constraints": helpers.REQUIRED_CONSTRAINTS,
                 "biosys": {
-                    "type": "longitude"
+                    "type": "easting"
                 }
             },
             {
@@ -932,6 +933,94 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         geom.transform(28350)
         self.assertAlmostEquals(geom.x, easting, places=2)
         self.assertAlmostEquals(geom.y, northing, places=2)
+
+    def test_default_datum(self):
+        """
+        If only easting and northing are provided the project's datum/zone should be used
+        """
+        project = self.project_1
+        srid = constants.get_datum_srid('GDA94 / MGA zone 50')
+        self.assertEqual(srid, 28350)
+        project.datum = srid
+        project.save()
+        client = self.custodian_1_client
+        # schema with datum and zone not required
+        schema_fields = [
+            {
+                "name": "What",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Northing",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": "northing"
+                }
+            },
+            {
+                "name": "Easting",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": "easting"
+                }
+            },
+            {
+                "name": "Datum",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Zone",
+                "type": "integer",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            }
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        self.assertIsNotNone(dataset.schema.datum_field)
+        self.assertIsNotNone(dataset.schema.zone_field)
+
+        easting = 405542.537
+        northing = 6459127.469
+        record_data = {
+            'What': 'Chubby Bat',
+            'When': '12/12/2017',
+            'Easting': easting,
+            'Northing': northing,
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list') + '?strict=true'
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        qs = dataset.record_queryset
+        self.assertEquals(qs.count(), 1)
+        record = qs.first()
+        geom = record.geometry
+        # should be in WGS84 -> srid = 4326
+        self.assertEqual(geom.srid, 4326)
+        self.assertIsInstance(geom, Point)
+        self.assertAlmostEqual(geom.x, 116, places=2)
+        self.assertAlmostEqual(geom.y, -32, places=2)
+        # convert it back to GAD / zone 50 -> srid = 28350
+        geom.transform(srid)
+        # compare with 2 decimal place precision
+        self.assertAlmostEqual(geom.x, easting, places=2)
+        self.assertAlmostEqual(geom.y, northing, places=2)
 
 
 class TestGeometryFromSite(helpers.BaseUserTestCase):
