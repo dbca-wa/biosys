@@ -906,7 +906,7 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         self.assertEqual(geom.srid, 4326)
         # convert it back to GAD / zone 50 -> srid = 28350
         geom.transform(28350)
-        # compare with 2 decimal place precision. Should be different that of expectes
+        # compare with 2 decimal place precision. Should be different that of expected
         self.assertNotAlmostEquals(geom.x, easting, places=2)
         self.assertNotAlmostEquals(geom.y, northing, places=2)
 
@@ -1591,6 +1591,305 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             record_1.refresh_from_db()
             self.assertEqual(record_1.geometry, new_record_geometry)
             self.assertNotEqual(record_1.geometry, record_1.site.geometry)
+
+
+class TestMultipleGeometrySource(helpers.BaseUserTestCase):
+    @staticmethod
+    def schema_with_with_all_possible_geometry_field():
+        schema_fields = [
+            {
+                "name": "What",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": 'latitude'
+                }
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": 'longitude'
+                }
+            },
+            {
+                "name": "Site Code",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": "siteCode"
+                }
+            },
+            {
+                "name": "Easting",
+                "type": "number",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": 'easting'
+                }
+            },
+            {
+                "name": "Northing",
+                "type": "number",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": 'northing'
+                }
+            },
+            {
+                "name": "Datum",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": 'datum'
+                }
+            },
+            {
+                "name": "Zone",
+                "type": "integer",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": 'zone'
+                }
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        return schema
+
+    def _create_dataset_with_schema(self, project, client, schema):
+        resp = client.post(
+            reverse('api:dataset-list'),
+            data={
+                "name": "Test site code geometry",
+                "type": Dataset.TYPE_OBSERVATION,
+                "project": project.pk,
+                'data_package': helpers.create_data_package_from_schema(schema)
+            },
+            format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(dataset)
+        return dataset
+
+    def test_geometry_easting_northing_precedence(self):
+        """
+        If all fields are provided easting and northing have precedence over lat/long and site code.
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_with_all_possible_geometry_field()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        self.assertIsNotNone(dataset.schema.datum_field)
+        self.assertIsNotNone(dataset.schema.zone_field)
+
+        # site geometry
+        site_code = 'Cottesloe'
+        site_geometry = Point(115.76, -32.0)
+        # create the site
+        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+
+        # easting/northing: nearly (116.0, -32.0)
+        easting = 405542.537
+        northing = 6459127.469
+        east_north_datum = 'GDA94'
+        zone = 50
+        east_north_srid = 28350
+
+        # lat/long
+        longitude = 117.0
+        latitude = -33.0
+        lat_long_datum = 'WGS84'
+        lat_long_srid = 4326
+
+        record_data = {
+            'What': 'A record with all geometry fields populated',
+            'When': '12/12/2017',
+            'Site Code': site_code,
+            'Easting': easting,
+            'Northing': northing,
+            'Datum': east_north_datum,
+            'Zone': zone,
+            'Latitude': latitude,
+            'Longitude': longitude
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        geometry = record.geometry
+        self.assertIsNotNone(geometry)
+        self.assertIsInstance(geometry, Point)
+        # it should be the easting/northing geometry
+        geometry.transform(east_north_srid)
+        self.assertAlmostEqual(geometry.x, easting, places=2)
+        self.assertAlmostEqual(geometry.y, northing, places=2)
+
+    def test_geometry_lat_long_precedence(self):
+        """
+        Lat/long takes precedence over site code
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_with_all_possible_geometry_field()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        self.assertIsNotNone(dataset.schema.datum_field)
+        self.assertIsNotNone(dataset.schema.zone_field)
+
+        # site geometry
+        site_code = 'Cottesloe'
+        site_geometry = Point(115.76, -32.0)
+        # create the site
+        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+
+        # lat/long
+        longitude = 117.0
+        latitude = -33.0
+        lat_long_datum = 'WGS84'
+        lat_long_srid = 4326
+
+        record_data = {
+            'What': 'A record with all geometry fields populated',
+            'When': '12/12/2017',
+            'Site Code': site_code,
+            'Easting': None,
+            'Northing': None,
+            'Datum': lat_long_datum,
+            'Zone': None,
+            'Latitude': latitude,
+            'Longitude': longitude
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        geometry = record.geometry
+        self.assertIsNotNone(geometry)
+        self.assertIsInstance(geometry, Point)
+        # it should be the lat/long geometry
+        geometry.transform(lat_long_srid)
+        self.assertAlmostEqual(geometry.x, longitude, places=4)
+        self.assertAlmostEqual(geometry.y, latitude, places=4)
+        # and not the site
+        self.assertNotAlmostEqual(geometry.x, site_geometry.x, places=4)
+        self.assertNotAlmostEqual(geometry.y, site_geometry.y, places=4)
+
+    def test_easting_northing_and_site(self):
+        """
+        Easting/Northing > site_code
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_with_all_possible_geometry_field()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        self.assertIsNotNone(dataset.schema.datum_field)
+        self.assertIsNotNone(dataset.schema.zone_field)
+
+        # site geometry
+        site_code = 'Cottesloe'
+        site_geometry = Point(115.76, -32.0)
+        # create the site
+        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+
+        # easting/northing: nearly (116.0, -32.0)
+        easting = 405542.537
+        northing = 6459127.469
+        east_north_datum = 'GDA94'
+        zone = 50
+        east_north_srid = 28350
+
+        record_data = {
+            'What': 'A record with all geometry fields populated',
+            'When': '12/12/2017',
+            'Site Code': site_code,
+            'Easting': easting,
+            'Northing': northing,
+            'Datum': east_north_datum,
+            'Zone': zone,
+            'Latitude': None,
+            'Longitude': None
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        geometry = record.geometry
+        self.assertIsNotNone(geometry)
+        self.assertIsInstance(geometry, Point)
+        # it should be the easting/northing geometry
+        geometry.transform(east_north_srid)
+        self.assertAlmostEqual(geometry.x, easting, places=2)
+        self.assertAlmostEqual(geometry.y, northing, places=2)
+
+    def test_site_only(self):
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_with_all_possible_geometry_field()
+        dataset = self._create_dataset_with_schema(project, client, schema)
+        self.assertIsNotNone(dataset.schema.datum_field)
+        self.assertIsNotNone(dataset.schema.zone_field)
+
+        # site geometry
+        site_code = 'Cottesloe'
+        site_geometry = Point(115.76, -32.0)
+        # create the site
+        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+
+        record_data = {
+            'What': 'A record with all geometry fields populated',
+            'When': '12/12/2017',
+            'Site Code': site_code,
+            'Easting': None,
+            'Northing': None,
+            'Datum': None,
+            'Zone': None,
+            'Latitude': None,
+            'Longitude': None
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        geometry = record.geometry
+        self.assertIsNotNone(geometry)
+        self.assertIsInstance(geometry, Point)
+        # it should be the easting/northing geometry
+        self.assertAlmostEqual(geometry.x, site_geometry.x, places=4)
+        self.assertAlmostEqual(geometry.y, site_geometry.y, places=4)
 
 
 class TestSerialization(TestCase):
