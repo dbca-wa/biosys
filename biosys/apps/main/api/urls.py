@@ -24,6 +24,15 @@ url_patterns = [
     url(r'whoami/?', main_views.WhoamiView.as_view(), name="whoami"),
     url(r'species/?', main_views.SpeciesView.as_view(), name="species"),
     url(r'logout/?', main_views.LogoutView.as_view(), name="logout"),
+    # utils
+    url(r'utils/geometry-to-data/record/(?P<pk>\d+)/?',
+        main_views.GeoConvert.as_view(output='data'),
+        name="geometry-to-data"
+        ),
+    url(r'utils/data-to-geometry/record/(?P<pk>\d+)/?',
+        main_views.GeoConvert.as_view(output='geometry'),
+        name="data-to-geometry"
+        )
 ]
 
 urls = router.urls + url_patterns

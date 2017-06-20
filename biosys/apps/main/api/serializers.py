@@ -241,3 +241,11 @@ class RecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = Record
         fields = '__all__'
+
+
+class GeometrySerializer(serializers.Serializer):
+    geometry = serializers_gis.GeometryField(required=False)
+
+
+class GeoConvertSerializer(GeometrySerializer):
+    data = serializers.JSONField(required=False)

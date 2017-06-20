@@ -14,7 +14,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.writer.write_only import WriteOnlyCell
 
-from main.constants import MODEL_SRID, SUPPORTED_DATUMS, get_datum_srid, is_supported_datum, get_australian_zone_srid
+from main.constants import MODEL_SRID, SUPPORTED_DATUMS, get_datum_srid, is_supported_datum, get_australian_zone_srid, \
+    is_projected_srid
 
 COLUMN_HEADER_FONT = Font(bold=True)
 YYYY_MM_DD_REGEX = re.compile(r'^\d{4}-\d{2}-\d{2}')
@@ -969,7 +970,31 @@ class GeometryParser(object):
         return self.cast_geometry(record, default_srid=default_srid)
 
     def from_geometry_to_record(self, geometry, record, default_srid=MODEL_SRID):
-        raise NotImplementedError("Not implemented")
+        if not geometry:
+            return record
+        # we can only deal with point. Getting the centroid should cover polygons
+        point = geometry.centroid
+        # convert the geometry in the record srid (if any)
+        srid = self.cast_srid(record, default_srid=default_srid)
+        if srid:
+            point.transform(srid)
+        # update record field
+        record = record or {}
+        if self.is_easting_northing and is_projected_srid(srid):
+            if self.easting_field:
+                record[self.easting_field.name] = point.x
+            if self.northing_field:
+                record[self.northing_field.name] = point.y
+        elif self.is_lat_long and not is_projected_srid(srid):
+            if self.longitude_field:
+                record[self.longitude_field.name] = point.x
+            if self.latitude_field:
+                record[self.latitude_field.name] = point.y
+        else:
+            # what is going on here?
+            # schema and datum/zone divergence?
+            pass
+        return record
 
     def _find_site_code_field(self):
         """
