@@ -633,8 +633,7 @@ class TestExport(helpers.BaseUserTestCase):
             "integer": 456,
             "date": "21/06/2017",
             "datetime": "13/04/2017 15:55",
-            "boolean": 'yes',
-            "any": None
+            "boolean": 'yes'
         }
         payload = {
             'dataset': dataset.pk,
