@@ -530,7 +530,7 @@ class GeoConvertView(generics.GenericAPIView):
             geom_parser = schema.geometry_parser
             geometry = geom_parser.from_record_to_geometry(record_data, default_srid=default_srid)
             # we output in WGS84
-            geometry.transform(4326)
+            geometry.transform(constants.MODEL_SRID)
             serializer = self.serializer_class({
                 'geometry': geometry,
                 'data': record_data
@@ -570,7 +570,7 @@ class GeoConvertView(generics.GenericAPIView):
                     return Response("geometry is required.",
                                     status=status.HTTP_400_BAD_REQUEST)
                 if not geometry.srid:
-                    geometry.srid = 4326
+                    geometry.srid = constants.MODEL_SRID
                 return self.to_data(dataset, geometry, record_data)
             else:
                 return Response("Output format not valid {}. Should be one of:{}"
