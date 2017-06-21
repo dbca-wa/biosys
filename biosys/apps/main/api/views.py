@@ -515,7 +515,7 @@ class LogoutView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class GeoConvert(generics.GenericAPIView):
+class GeoConvertView(generics.GenericAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = serializers.GeoConvertSerializer
     OUTPUT_GEOMETRY = "geometry"
