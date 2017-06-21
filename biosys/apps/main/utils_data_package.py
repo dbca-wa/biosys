@@ -997,8 +997,8 @@ class GeometryParser(object):
             # what is going on here?
             # schema and datum/zone divergence?
             logger.warning("Ambiguous schema and coordinate system. "
-                           "Cannot extract lat/long from a spherical coordinate system "
-                           "or easting/northing from a projected one. "
+                           "Cannot extract easting/northing from a spherical coordinate system "
+                           "or lat/long from a projected one. "
                            "Schema: {}, srid: {}, record: {}".format(self.schema, srid, record))
         return record
 
