@@ -526,9 +526,11 @@ class GeoConvertView(generics.GenericAPIView):
     def to_geometry(self, dataset, record_data):
         try:
             schema = dataset.schema
-            default_srid = dataset.project.datum or constants.MODEL_SRID
             geom_parser = schema.geometry_parser
-            geometry = geom_parser.from_record_to_geometry(record_data, default_srid=default_srid)
+            geometry = geom_parser.from_record_to_geometry(
+                record_data,
+                default_srid=dataset.project.datum or constants.MODEL_SRID
+            )
             # we output in WGS84
             geometry.transform(constants.MODEL_SRID)
             serializer = self.serializer_class({

@@ -194,8 +194,7 @@ class RecordCreator:
                 tz = self.dataset.project.timezone or timezone.get_current_timezone()
                 record.datetime = timezone.make_aware(observation_date, tz)
                 # geometry
-                default_srid = self.dataset.project.datum or MODEL_SRID
-                geometry = self.schema.cast_geometry(row, default_srid=default_srid)
+                geometry = self.schema.cast_geometry(row, default_srid=self.dataset.project.datum or MODEL_SRID)
                 record.geometry = geometry
                 if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
                     # species stuff. Lookup for species match in herbie.
