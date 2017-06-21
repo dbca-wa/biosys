@@ -930,22 +930,27 @@ class Exporter:
         self.errors = []
         self.records = records if records else []
 
-    def row_it(self):
+    def row_it(self, cast=True):
         for record in self.records:
             row = []
-            for field in self.schema.field_names:
-                value = record.data.get(field, '')
+            for field in self.schema.fields:
+                value = record.data.get(field.name, '')
+                if cast:
+                    # Cast to native python type
+                    try:
+                        value = field.cast(value)
+                    except:
+                        pass
                 # TODO: remove that when running in Python3
                 if isinstance(value, six.string_types) and not isinstance(value, six.text_type):
                     value = six.u(value)
                 row.append(value)
             yield row
 
-    def to_csv(self):
-        rows = list()
-        rows.append(self.headers)
-        rows += list(self.row_it())
-        return rows
+    def csv_it(self):
+        yield self.headers
+        for row in self.row_it(cast=False):
+            yield row
 
     def _to_worksheet(self, ws):
         ws.title = self.ds.name
