@@ -1,6 +1,7 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
 import json
+import logging
 import re
 
 from dateutil.parser import parse as date_parse
@@ -19,6 +20,8 @@ from main.constants import MODEL_SRID, SUPPORTED_DATUMS, get_datum_srid, is_supp
 
 COLUMN_HEADER_FONT = Font(bold=True)
 YYYY_MM_DD_REGEX = re.compile(r'^\d{4}-\d{2}-\d{2}')
+
+logger = logging.getLogger(__name__)
 
 
 def is_blank_value(value):
@@ -822,12 +825,12 @@ class GeometryParser(object):
 
         # some post validations.
         # we need at least one method to get the geometry.
-        if all([
-            not self.site_code_field,
-            not self.latitude_field,
-            not self.longitude_field,
-            not self.easting_field,
-            not self.northing_field
+        if not any([
+            self.site_code_field,
+            self.latitude_field,
+            self.longitude_field,
+            self.easting_field,
+            self.northing_field
         ]):
             msg = "The schema must contain some geometry fields: latitude/longitude or easting/northing or " \
                   "alternatively a reference to the Site Code."
@@ -993,7 +996,10 @@ class GeometryParser(object):
         else:
             # what is going on here?
             # schema and datum/zone divergence?
-            pass
+            logger.warning("Ambiguous schema and coordinate system. "
+                           "Cannot extract lat/long from a spherical coordinate system "
+                           "or easting/northing from a projected one. "
+                           "Schema: {}, srid: {}, record: {}".format(self.schema, srid, record))
         return record
 
     def _find_site_code_field(self):
