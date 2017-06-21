@@ -1,11 +1,12 @@
 import re
 from os import path
-from openpyxl import load_workbook
 
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
 from django.utils import six
+from openpyxl import load_workbook
+from openpyxl.cell import Cell
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -501,6 +502,21 @@ class TestExport(helpers.BaseUserTestCase):
         self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
         self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
 
+    def _create_dataset_with_schema(self, project, client, schema):
+        resp = client.post(
+            reverse('api:dataset-list'),
+            data={
+                "name": "Test site code geometry",
+                "type": Dataset.TYPE_GENERIC,
+                "project": project.pk,
+                'data_package': helpers.create_data_package_from_schema(schema)
+            },
+            format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(dataset)
+        return dataset
+
     def test_happy_path_no_filter(self):
         client = self.custodian_1_client
         dataset = self.ds_1
@@ -571,3 +587,84 @@ class TestExport(helpers.BaseUserTestCase):
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
         self.assertEquals(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_excel_type(self):
+        schema_fields = [
+            {
+                "name": "string",
+                "type": "string",
+                "format": "any"
+            },
+            {
+                "name": "number",
+                "type": "number",
+                "format": "any"
+            },
+            {
+                "name": "integer",
+                "type": "integer",
+                "format": "any"
+            },
+            {
+                "name": "date",
+                "type": "date",
+                "format": "any"
+            },
+            {
+                "name": "datetime",
+                "type": "datetime",
+                "format": "any"
+            },
+            {
+                "name": "boolean",
+                "type": "boolean",
+                "format": "any"
+            }
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        project = self.project_1
+        client = self.custodian_1_client
+        dataset = self._create_dataset_with_schema(project, client, schema)
+
+        # create one record
+        record_data = {
+            "string": "string",
+            "number": 12.3,
+            "integer": 456,
+            "date": "21/06/2017",
+            "datetime": "13/04/2017 15:55",
+            "boolean": 'yes'
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        url = reverse('api:record-list')
+        query = {
+            'dataset__id': dataset.pk,
+            'output': 'xlsx'
+        }
+        try:
+            resp = client.get(url, query)
+        except Exception as e:
+            self.fail("Export should not raise an exception: {}".format(e))
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        # load workbook
+        wb = load_workbook(six.BytesIO(resp.content))
+        ws = wb.get_sheet_by_name(dataset.name)
+        rows = list(ws.rows)
+        self.assertEqual(len(rows), 2)
+        cells = rows[1]
+        string, number, integer, date, datetime, boolean = cells
+        # excel type are string, number or boolean
+        self.assertEqual(string.data_type, Cell.TYPE_STRING)
+        self.assertEqual(number.data_type, Cell.TYPE_NUMERIC)
+        self.assertEqual(integer.data_type, Cell.TYPE_NUMERIC)
+        self.assertEqual(date.data_type, Cell.TYPE_NUMERIC)
+        self.assertEqual(datetime.data_type, Cell.TYPE_NUMERIC)
+        self.assertEqual(boolean.data_type, Cell.TYPE_BOOL)
