@@ -83,8 +83,7 @@ class SiteUploader(FileReader):
     COLUMN_MAP = {
         'code': ['code', 'site code'],
         'name': ['name', 'site name'],
-        'description': ['description'],
-        'parent_site': ['parent site', 'parent']
+        'description': ['description']
     }
 
     def __init__(self, file, project):
@@ -114,10 +113,6 @@ class SiteUploader(FileReader):
             except:
                 # not an error (warning?)
                 pass
-            # parent site
-            parent_site_code = get_value(self.COLUMN_MAP.get('parent_site'), row)
-            if parent_site_code:
-                kwargs['parent_site'] = self._get_or_create_parent_site(parent_site_code)
             try:
                 site, _ = Site.objects.update_or_create(code=code, project=self.project, defaults=kwargs)
             except Exception as e:
@@ -135,11 +130,6 @@ class SiteUploader(FileReader):
             if k.lower() not in non_attributes_keys:
                 attributes[k] = v
         return attributes
-
-    @staticmethod
-    def _get_or_create_parent_site(parent_code):
-        site, _ = Site.objects.get_or_create(code=parent_code)
-        return site
 
 
 class RecordCreator:

@@ -29,9 +29,9 @@ class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
 @admin.register(Site)
 class SiteAdmin(MainAppAdmin, GeoModelAdmin):
     change_form_template = 'main/site_change_form.html'
-    fields = ('project', 'parent_site',  'code', 'name', 'geometry', 'description', 'attributes')
-    list_display = ['code', 'project', 'name', 'parent_site']
-    list_filter = ['project', 'parent_site']
+    fields = ('project', 'code', 'name', 'geometry', 'description', 'attributes')
+    list_display = ['code', 'project', 'name']
+    list_filter = ['project']
     form = forms.SiteForm
     default_lon = 125.0
     default_lat = -18.0

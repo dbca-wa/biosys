@@ -22,20 +22,8 @@
 						type: 'get',
 						data: siteParams,
 						dataType: 'json'
-					}).done(function (data) {
+					}).done(function () {
 						$('#id_sites_to').find('option').remove();
-
-						var id_parent_site = $('#id_parent_site');
-						id_parent_site.find('option[value!=""]').remove();
-
-						// derive site's pk from URL
-						current_site_pk = parseInt(window.location.href.split('/').slice(-2)[0]);
-
-						$.each(data.objects, function(index, site) {
-							if (site.id !== current_site_pk) {
-								id_parent_site.append($('<option>').attr({value: site.id}).text(site.site_code));
-							}
-						});
 					});
 
 					var projectParams = {

@@ -117,7 +117,7 @@ class TestStatistics(TestCase):
         # create some sites
         count = 3
         for i in range(0, count):
-            G(Site, project=project, parent_site=None)  # if parent_site None to avoid other sites/projects creation
+            G(Site, project=project)
         expected['sites']['total'] = count
         resp = client.get(self.url)
         self.assertEqual(

@@ -91,24 +91,6 @@ class SiteForm(forms.ModelForm):
         model = Site
         exclude = []
 
-    def __init__(self, *args, **kwargs):
-        super(SiteForm, self).__init__(*args, **kwargs)
-        if self.instance.pk and self.instance.project:
-            self.fields['parent_site'].queryset = Site.objects.filter(project=self.instance.project).exclude(
-                pk=self.instance.pk)
-        else:
-            self.fields['parent_site'].queryset = Site.objects.all()
-
-        # override clean method of form field for parent site so that it doesn't force parent site to be in existing
-        # queryset - instead do this check in clean
-        def parent_site_clean(value):
-            if value is not None and value != '':
-                return Site.objects.get(pk=value)
-            else:
-                return None
-
-        self.fields['parent_site'].clean = parent_site_clean
-
     def clean_latitude(self):
         latitude = self.cleaned_data['latitude']
         bounds = DATUM_BOUNDS[self.cleaned_data['datum']]
@@ -128,14 +110,6 @@ class SiteForm(forms.ModelForm):
                 raise forms.ValidationError('Longitude must be between %.1f and %.1f' % (bounds[0], bounds[2]))
 
         return longitude
-
-    def clean(self):
-        if 'project' in self.cleaned_data and 'parent_site' in self.cleaned_data:
-            project = self.cleaned_data.get('project')
-            parent_site = self.cleaned_data.get('parent_site')
-            if parent_site is not None and parent_site.project != project:
-                raise forms.ValidationError('Please Choose only parent site that belongs to project {}'.format(project))
-        return self.cleaned_data
 
 
 class UploadDatasetForm(forms.Form):

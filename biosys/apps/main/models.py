@@ -124,12 +124,6 @@ class Project(models.Model):
 class Site(models.Model):
     project = models.ForeignKey('Project', null=False, blank=False,
                                 verbose_name="Project", help_text="Select the project this site is part of (required)")
-    parent_site = models.ForeignKey('self', null=True, blank=True,
-                                    verbose_name="Parent Site",
-                                    help_text="Sites can be grouped together. "
-                                              "If you have a subregion within the project that contains a number "
-                                              "of sites, create that region as a parent site first, "
-                                              "then select that parent when you're creating this site.")
     name = models.CharField(max_length=150, blank=True,
                             verbose_name="Name",
                             help_text="Enter a more descriptive name for this site, if one exists.")
