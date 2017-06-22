@@ -3,8 +3,8 @@
 BioSys is a biological survey database system for Science and
 Conservation Division within the Department of Parks and Wildlife.
 
-Confluence URL:
-[BioSys](https://confluence.dpaw.wa.gov.au/display/KM/BioSys+-+Biological+Survey+Database+System)
+GitHub:
+[BioSys](https://github.com/parksandwildlife/biosys)
 
 ## Getting Started
 
@@ -20,6 +20,7 @@ libraries to be installed without possible collisions with other versions of the
 
 - PostgreSQL (>=9.3)
 - PostGIS extension (>=2.1)
+- GDAL (>=1.10)
 
 ### Python Libraries
 
