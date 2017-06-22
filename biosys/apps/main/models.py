@@ -139,7 +139,7 @@ class Site(models.Model):
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Location", help_text="")
     description = models.TextField(null=True, blank=True,
-                                   verbose_name="description", help_text="")
+                                   verbose_name="Description", help_text="")
     attributes = JSONField(null=True, blank=True)
 
     def is_custodian(self, user):
