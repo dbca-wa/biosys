@@ -709,7 +709,7 @@ class TestObservationSchemaCast(TestCase):
         # create a db record with geometry = east/north and check geometry conversion
         # create dataset
         project = Project.objects.create(
-            title="Test"
+            name="Test"
         )
         ds = Dataset.objects.create(
             project=project,
@@ -762,7 +762,7 @@ class TestObservationSchemaCast(TestCase):
         # create a db record with geometry = east/north and check geometry conversion
         # create dataset
         project = Project.objects.create(
-            title="Test"
+            name="Test"
         )
         ds = Dataset.objects.create(
             project=project,

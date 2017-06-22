@@ -44,7 +44,7 @@ class TestPermissions(TestCase):
         self.custodian_1_user.save()
         self.custodian_1_client = APIClient()
         self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(title="Project1").first()
+        self.project_1 = Project.objects.filter(name="Project1").first()
         self.site_1 = Site.objects.filter(code="Site1").first()
         self.assertTrue(self.site_1.is_custodian(self.custodian_1_user))
 
@@ -54,7 +54,7 @@ class TestPermissions(TestCase):
         self.custodian_2_user.save()
         self.custodian_2_client = APIClient()
         self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(title="Project2").first()
+        self.project_2 = Project.objects.filter(name="Project2").first()
         self.site_2 = Site.objects.filter(code="Site2").first()
         self.assertTrue(self.site_2.is_custodian(self.custodian_2_user))
         self.assertFalse(self.site_1.is_custodian(self.custodian_2_user))
@@ -314,7 +314,7 @@ class TestSiteUpload(TestCase):
         self.custodian_1_user.save()
         self.custodian_1_client = APIClient()
         self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(title="Project1").first()
+        self.project_1 = Project.objects.filter(name="Project1").first()
 
         self.custodian_2_user = User.objects.filter(username="custodian2").first()
         self.assertIsNotNone(self.custodian_2_user)
@@ -322,7 +322,7 @@ class TestSiteUpload(TestCase):
         self.custodian_2_user.save()
         self.custodian_2_client = APIClient()
         self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(title="Project2").first()
+        self.project_2 = Project.objects.filter(name="Project2").first()
 
         self.readonly_user = User.objects.filter(username="readonly").first()
         self.assertIsNotNone(self.custodian_2_user)
@@ -370,9 +370,9 @@ class TestSiteUpload(TestCase):
 
     def test_upload_csv_happy_path(self):
         csv_data = [
-            ['Site Code', 'Site Name', 'Comments', 'Latitude', 'Longitude', 'Datum', 'Attribute1', 'Attribute2'],
-            ['C1', 'Site 1', 'Comments1', -32, 116, '', 'attr11', 'attr12'],
-            ['C2', 'Site 2', 'Comments2', -31, 117, '', 'attr21', 'attr22']
+            ['Site Code', 'Site Name', 'Description', 'Latitude', 'Longitude', 'Datum', 'Attribute1', 'Attribute2'],
+            ['C1', 'Site 1', 'Description1', -32, 116, '', 'attr11', 'attr12'],
+            ['C2', 'Site 2', 'Description2', -31, 117, '', 'attr21', 'attr22']
         ]
         csv_file = helpers.to_csv_file(csv_data)
         project = self.project_1
@@ -389,7 +389,7 @@ class TestSiteUpload(TestCase):
             self.assertEquals(len(csv_data) - 1, qs.count())
             self.assertEquals(['C1', 'C2'], [s.code for s in qs.order_by('code')])
             self.assertEquals(['Site 1', 'Site 2'], [s.name for s in qs.order_by('name')])
-            self.assertEquals(['Comments1', 'Comments2'], [s.comments for s in qs.order_by('comments')])
+            self.assertEquals(['Description1', 'Description2'], [s.description for s in qs.order_by('description')])
 
             # test geom and attr
             s = qs.filter(code='C1').first()
@@ -407,9 +407,9 @@ class TestSiteUpload(TestCase):
 
     def test_upload_xlsx_happy_path(self):
         csv_data = [
-            ['Site Code', 'Site Name', 'Comments', 'Latitude', 'Longitude', 'Datum', 'Attribute1', 'Attribute2'],
-            ['C1', 'Site 1', 'Comments1', -32, 116, '', 'attr11', 'attr12'],
-            ['C2', 'Site 2', 'Comments2', -31, 117, '', 'attr21', 'attr22']
+            ['Site Code', 'Site Name', 'Description', 'Latitude', 'Longitude', 'Datum', 'Attribute1', 'Attribute2'],
+            ['C1', 'Site 1', 'Description1', -32, 116, '', 'attr11', 'attr12'],
+            ['C2', 'Site 2', 'Description2', -31, 117, '', 'attr21', 'attr22']
         ]
         xlsx_file = helpers.to_xlsx_file(csv_data)
         project = self.project_1
@@ -426,7 +426,7 @@ class TestSiteUpload(TestCase):
             self.assertEquals(len(csv_data) - 1, qs.count())
             self.assertEquals(['C1', 'C2'], [s.code for s in qs.order_by('code')])
             self.assertEquals(['Site 1', 'Site 2'], [s.name for s in qs.order_by('name')])
-            self.assertEquals(['Comments1', 'Comments2'], [s.comments for s in qs.order_by('comments')])
+            self.assertEquals(['Description1', 'Description2'], [s.description for s in qs.order_by('description')])
 
             # test geom and attr
             s = qs.filter(code='C1').first()

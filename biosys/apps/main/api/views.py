@@ -68,7 +68,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
-    filter_fields = ('id', 'title', 'custodians')
+    filter_fields = ('id', 'name', 'custodians')
 
 
 class ProjectPermission(BasePermission):
@@ -300,7 +300,7 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
     queryset = models.Record.objects.all()
     serializer_class = serializers.RecordSerializer
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
-    filter_fields = ('id', 'site', 'dataset__id', 'dataset__name', 'dataset__project__id', 'dataset__project__title',
+    filter_fields = ('id', 'site', 'dataset__id', 'dataset__name', 'dataset__project__id', 'dataset__project__name',
                      'datetime', 'species_name', 'name_id')
 
     def __init__(self, **kwargs):

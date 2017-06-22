@@ -40,7 +40,7 @@ class TestPermissions(TestCase):
         self.custodian_1_user.save()
         self.custodian_1_client = APIClient()
         self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(title="Project1").first()
+        self.project_1 = Project.objects.filter(name="Project1").first()
         self.assertTrue(self.project_1.is_custodian(self.custodian_1_user))
 
         self.custodian_2_user = User.objects.filter(username="custodian2").first()
@@ -49,7 +49,7 @@ class TestPermissions(TestCase):
         self.custodian_2_user.save()
         self.custodian_2_client = APIClient()
         self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(title="Project2").first()
+        self.project_2 = Project.objects.filter(name="Project2").first()
         self.assertTrue(self.project_2.is_custodian(self.custodian_2_user))
         self.assertFalse(self.project_1.is_custodian(self.custodian_2_user))
 

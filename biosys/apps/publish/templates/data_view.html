@@ -41,7 +41,7 @@
                             {% for project in projects %}
                                 <option value="{{ project.pk }}"
                                         data-target="/api/v2/dataset/?project__id={{ project.pk }}">
-                                    {{ project.title }}
+                                    {{ project.name }}
                                 </option>
                             {% endfor %}
                         </select>
