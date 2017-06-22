@@ -3,6 +3,10 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 import datetime
 from collections import OrderedDict
 
+from openpyxl import Workbook
+from openpyxl.styles import Font
+from openpyxl.writer.write_only import WriteOnlyCell
+
 from django.contrib.auth import get_user_model, logout
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
@@ -200,9 +204,9 @@ class DatasetViewSet(viewsets.ModelViewSet):
         if project is not None:
             queryset = queryset.filter(project=project)
 
-        type = self.request.query_params.get('type', None)
-        if type is not None:
-            queryset = queryset.filter(type=type)
+        type_ = self.request.query_params.get('type', None)
+        if type_ is not None:
+            queryset = queryset.filter(type=type_)
 
         datetime_start = self.request.query_params.get('record__datetime__start', None)
         if datetime_start is not None:
@@ -578,3 +582,39 @@ class GeoConvertView(generics.GenericAPIView):
                 return Response("Output format not valid {}. Should be one of:{}"
                                 .format(self.output, [self.OUTPUT_DATA, self.OUTPUT_GEOMETRY]),
                                 status=status.HTTP_400_BAD_REQUEST)
+
+
+class SiteTemplateView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    MODEL_LAT_LONG = "lat_long"
+    MODEL_EASTING_NORTHING = "easting_northing"
+    model = MODEL_LAT_LONG
+
+    COMMON_HEADERS = ['Name', 'Code', 'Description']
+    LAT_LONG_HEADERS = ['Latitude', 'Longitude', 'Datum']
+    EASTING_NORTHING_HEADERS = ['Easting', 'Northing', 'Datum', 'Zone']
+
+    HEADER_FONT = Font(bold=True)
+
+    def get(self, request, **kwargs):
+        if self.model == self.MODEL_LAT_LONG:
+            headers = self.COMMON_HEADERS + self.LAT_LONG_HEADERS
+        elif self.model == self.MODEL_EASTING_NORTHING:
+            headers = self.COMMON_HEADERS + self.EASTING_NORTHING_HEADERS
+        else:
+            return Response("Unknown site template model {}. Must be one of {}.".format(
+                self.model,
+                [self.MODEL_LAT_LONG, self.MODEL_EASTING_NORTHING]
+            ))
+        wb = Workbook(write_only=True)
+        ws = wb.create_sheet()
+        ws.title = 'Sites'
+        cells = []
+        for header in headers:
+            cell = WriteOnlyCell(ws, value=header)
+            cell.font = self.HEADER_FONT
+            cells.append(cell)
+        ws.append(cells)
+        file_name = 'Sites_template_' + self.model
+        return WorkbookResponse(wb, file_name=file_name)

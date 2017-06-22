@@ -14,8 +14,8 @@ router.register(r'records?', main_views.RecordViewSet, 'record')
 
 url_patterns = [
     url(r'projects?/(?P<pk>\d+)/sites/?', main_views.ProjectSitesView.as_view(), name='project-sites'),  # bulk sites
-    url(r'projects?/(?P<pk>\d+)/upload-sites/?', main_views.ProjectSitesUploadView.as_view()
-        , name='upload-sites'),  # file upload for sites
+    url(r'projects?/(?P<pk>\d+)/upload-sites/?', main_views.ProjectSitesUploadView.as_view(),
+        name='upload-sites'),  # file upload for sites
     url(r'datasets?/(?P<pk>\d+)/records/?', main_views.DatasetRecordsView.as_view(), name='dataset-records'),
     # upload data files
     url(r'datasets?/(?P<pk>\d+)/upload-records/?', main_views.DatasetUploadRecordsView.as_view(),
@@ -32,7 +32,15 @@ url_patterns = [
     url(r'utils/data-to-geometry/record/(?P<pk>\d+)/?',
         main_views.GeoConvertView.as_view(output='geometry'),
         name="data-to-geometry"
-        )
+        ),
+    url(r'utils/templates/site/lat-long/?',
+        main_views.SiteTemplateView.as_view(model='lat_long'),
+        name="site-template-lat-long"
+        ),
+    url(r'utils/templates/site/easting-northing/?',
+        main_views.SiteTemplateView.as_view(model='easting_northing'),
+        name="site-template-easting-northing"
+        ),
 ]
 
 urls = router.urls + url_patterns
