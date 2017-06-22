@@ -61,6 +61,10 @@ def is_supported_datum(datum):
     return get_datum_srid(datum) is not None
 
 
+def is_projected_srid(srid):
+    return srid > 20000
+
+
 def get_datum_srid(datum):
     # case insensitive search
     for srid, datum_name in DATUM_CHOICES:

@@ -12,7 +12,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
 from rest_framework.views import APIView, Response
 
-from main import models
+from main import models, constants
 from main.api import serializers
 from main.api.helpers import to_bool
 from main.api.uploaders import SiteUploader, FileReader, RecordCreator
@@ -513,3 +513,68 @@ class LogoutView(APIView):
         logout(request)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class GeoConvertView(generics.GenericAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = serializers.GeoConvertSerializer
+    OUTPUT_GEOMETRY = "geometry"
+    OUTPUT_DATA = "data"
+
+    output = OUTPUT_GEOMETRY  # set it the url
+
+    def to_geometry(self, dataset, record_data):
+        try:
+            schema = dataset.schema
+            geom_parser = schema.geometry_parser
+            geometry = geom_parser.from_record_to_geometry(
+                record_data,
+                default_srid=dataset.project.datum or constants.MODEL_SRID
+            )
+            # we output in WGS84
+            geometry.transform(constants.MODEL_SRID)
+            serializer = self.serializer_class({
+                'geometry': geometry,
+                'data': record_data
+            })
+            return Response(serializer.data)
+        except Exception as e:
+            return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
+
+    def to_data(self, dataset, geometry, record_data):
+        try:
+            schema = dataset.schema
+            default_srid = dataset.project.datum or constants.MODEL_SRID
+            geom_parser = schema.geometry_parser
+            record_data = geom_parser.from_geometry_to_record(geometry, record_data, default_srid=default_srid)
+            serializer = self.serializer_class({
+                'data': record_data,
+                'geometry': geometry
+            })
+            return Response(serializer.data)
+        except Exception as e:
+            return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
+
+    def post(self, request, **kwargs):
+        record = get_object_or_404(Record, pk=kwargs.get('pk'))
+        dataset = record.dataset
+        if dataset.type == Dataset.TYPE_GENERIC:
+            return Response("Conversion not available for records from generic dataset",
+                            status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            record_data = serializer.validated_data.get('data', record.data)
+            if self.output == self.OUTPUT_GEOMETRY:
+                return self.to_geometry(dataset, record_data)
+            elif self.output == self.OUTPUT_DATA:
+                geometry = serializer.validated_data.get('geometry')
+                if geometry is None:
+                    return Response("geometry is required.",
+                                    status=status.HTTP_400_BAD_REQUEST)
+                if not geometry.srid:
+                    geometry.srid = constants.MODEL_SRID
+                return self.to_data(dataset, geometry, record_data)
+            else:
+                return Response("Output format not valid {}. Should be one of:{}"
+                                .format(self.output, [self.OUTPUT_DATA, self.OUTPUT_GEOMETRY]),
+                                status=status.HTTP_400_BAD_REQUEST)
