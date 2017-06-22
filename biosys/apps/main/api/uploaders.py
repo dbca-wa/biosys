@@ -83,7 +83,7 @@ class SiteUploader(FileReader):
     COLUMN_MAP = {
         'code': ['code', 'site code'],
         'name': ['name', 'site name'],
-        'comments': ['comments'],
+        'description': ['description'],
         'parent_site': ['parent site', 'parent']
     }
 
@@ -104,7 +104,7 @@ class SiteUploader(FileReader):
         else:
             kwargs = {
                 'name': get_value(self.COLUMN_MAP.get('name'), row, ''),
-                'comments': get_value(self.COLUMN_MAP.get('comments'), row, ''),
+                'description': get_value(self.COLUMN_MAP.get('description'), row, ''),
                 'attributes': self._get_attributes(row)
             }
             # geometry
