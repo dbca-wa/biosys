@@ -7,7 +7,6 @@ from django.conf import settings
 from django.utils import six, timezone
 from openpyxl import load_workbook
 
-from main.api.utils_geom import PointParser
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
 from main.models import Site, Dataset
@@ -107,6 +106,10 @@ class SiteUploader(FileReader):
                 "type": "number",
                 "biosys": {
                     "type": "latitude"
+                },
+                "constraints": {
+                    "minimum": -90.0,
+                    "maximum": 90.0,
                 }
             },
             {
@@ -114,6 +117,10 @@ class SiteUploader(FileReader):
                 "type": "number",
                 "biosys": {
                     "type": "longitude"
+                },
+                "constraints": {
+                    "minimum": -180.0,
+                    "maximum": 180.0,
                 }
             },
             {
