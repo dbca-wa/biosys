@@ -25,11 +25,11 @@ url_patterns = [
     url(r'species/?', api_views.SpeciesView.as_view(), name="species"),
     url(r'logout/?', api_views.LogoutView.as_view(), name="logout"),
     # utils
-    url(r'utils/geometry-to-data/record/(?P<pk>\d+)/?',
+    url(r'utils/geometry-to-data/dataset/(?P<pk>\d+)/?',
         api_views.GeoConvertView.as_view(output='data'),
         name="geometry-to-data"
         ),
-    url(r'utils/data-to-geometry/record/(?P<pk>\d+)/?',
+    url(r'utils/data-to-geometry/dataset/(?P<pk>\d+)/?',
         api_views.GeoConvertView.as_view(output='geometry'),
         name="data-to-geometry"
         )
