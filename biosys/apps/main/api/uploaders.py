@@ -7,12 +7,12 @@ from django.conf import settings
 from django.utils import six, timezone
 from openpyxl import load_workbook
 
-from main.api.utils_geom import PointParser
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
 from main.models import Site, Dataset
 from main.utils_misc import get_value
 from main.utils_species import HerbieFacade, get_key_for_value
+from main.utils_data_package import GeometryParser
 
 
 def xlsx_to_csv(file):
@@ -85,10 +85,59 @@ class SiteUploader(FileReader):
         'name': ['name', 'site name'],
         'description': ['description']
     }
+    GEO_PARSER_SCHEMA = {
+        "fields": [
+            {
+                "name": "Northing",
+                "type": "number",
+                "biosys": {
+                    "type": "northing"
+                }
+            },
+            {
+                "name": "Easting",
+                "type": "number",
+                "biosys": {
+                    "type": "easting"
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "biosys": {
+                    "type": "latitude"
+                },
+                "constraints": {
+                    "minimum": -90.0,
+                    "maximum": 90.0,
+                }
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "biosys": {
+                    "type": "longitude"
+                },
+                "constraints": {
+                    "minimum": -180.0,
+                    "maximum": 180.0,
+                }
+            },
+            {
+                "type": "string",
+                "name": "Datum",
+            },
+            {
+                "type": "integer",
+                "name": "Zone",
+            }
+        ]
+    }
 
     def __init__(self, file, project):
         super(SiteUploader, self).__init__(file)
         self.project = project
+        self.geo_parser = GeometryParser(self.GEO_PARSER_SCHEMA)
 
     def __iter__(self):
         for row in self.reader:
@@ -108,8 +157,7 @@ class SiteUploader(FileReader):
             }
             # geometry
             try:
-                geo_parser = PointParser(row, self.project.datum)
-                kwargs['geometry'] = geo_parser.to_geom()
+                kwargs['geometry'] = self.geo_parser.cast_geometry(row)
             except:
                 # not an error (warning?)
                 pass

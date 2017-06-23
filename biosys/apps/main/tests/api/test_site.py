@@ -448,6 +448,42 @@ class TestSiteUpload(TestCase):
 
             self.assertEqual(project.site_count, len(csv_data) - 1)
 
+    def test_easting_northing_geometry_extraction(self):
+        csv_data = [
+            ['Code', 'Name', 'Description', 'Easting', 'Northing', 'Datum', 'Zone', 'Attribute1', 'Attribute2'],
+            ['C1', 'Site 1', 'Description1', '405542.537', '6459127.469', 'GDA94', '50', 'attr11', 'attr12'],
+        ]
+        xlsx_file = helpers.to_xlsx_file(csv_data)
+        project = self.project_1
+        client = self.custodian_1_client
+        url = reverse('api:upload-sites', kwargs={'pk': project.pk})
+        self.assertEquals(0, Site.objects.filter(project=project).count())
+        with open(xlsx_file, 'rb') as fp:
+            data = {
+                'file': fp
+            }
+            resp = client.post(url, data=data, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            qs = Site.objects.filter(project=project)
+            self.assertEquals(qs.count(), 1)
+            site = qs.first()
+            self.assertEquals(site.code, 'C1')
+            self.assertEqual(site.name, 'Site 1')
+            self.assertEquals(site.description, 'Description1')
+
+            # test geom and attr
+            self.assertAlmostEqual(site.geometry.x, 116, places=4)
+            self.assertAlmostEqual(site.geometry.y, -32, places=4)
+            expected_attributes = {
+                'Easting': '405542.537',
+                'Northing': '6459127.469',
+                'Datum': 'GDA94',
+                'Zone': '50',
+                'Attribute1': 'attr11',
+                'Attribute2': 'attr12'}
+
+            self.assertEquals(expected_attributes, site.attributes)
+
 
 class TestSerialization(helpers.BaseUserTestCase):
     fixtures = [
