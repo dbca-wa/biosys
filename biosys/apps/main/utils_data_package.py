@@ -16,7 +16,7 @@ from openpyxl.styles import Font
 from openpyxl.writer.write_only import WriteOnlyCell
 
 from main.constants import MODEL_SRID, SUPPORTED_DATUMS, get_datum_srid, is_supported_datum, get_australian_zone_srid, \
-    is_projected_srid
+    is_projected_srid, get_datum_and_zone
 
 COLUMN_HEADER_FONT = Font(bold=True)
 YYYY_MM_DD_REGEX = re.compile(r'^\d{4}-\d{2}-\d{2}')
@@ -979,10 +979,18 @@ class GeometryParser(object):
         point = geometry.centroid
         # convert the geometry in the record srid (if any)
         srid = self.cast_srid(record, default_srid=default_srid)
+        datum, zone = (None, None)
         if srid:
             point.transform(srid)
+            datum, zone = get_datum_and_zone(srid)
         # update record field
         record = record or {}
+
+        if self.datum_field and datum:
+            record[self.datum_field.name] = datum
+        if self.zone_field and zone:
+            record[self.zone_field.name] = zone
+
         if self.is_easting_northing and is_projected_srid(srid):
             if self.easting_field:
                 record[self.easting_field.name] = point.x

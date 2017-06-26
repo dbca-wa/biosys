@@ -1,5 +1,9 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 MODEL_SRID = 4326
 DATUM_CHOICES = [
     (MODEL_SRID, 'WGS84'),
@@ -44,7 +48,8 @@ DATUM_CHOICES = [
     (20258, 'AGD66 / MGA zone 58'),
 
 ]
-SUPPORTED_DATUMS = dict(DATUM_CHOICES).values()
+DATUM_DICT = dict(DATUM_CHOICES)
+SUPPORTED_DATUMS = DATUM_DICT.values()
 
 """
 Given a datum and a zone number the srid can be calculated with the following offsets.
@@ -62,7 +67,8 @@ def is_supported_datum(datum):
 
 
 def is_projected_srid(srid):
-    return srid > 20000
+    datum, zone = get_datum_and_zone(srid)
+    return zone is not None
 
 
 def get_datum_srid(datum):
@@ -71,6 +77,22 @@ def get_datum_srid(datum):
         if datum_name.lower() == datum.lower():
             return srid
     return None
+
+
+def get_datum_and_zone(srid):
+    datum, zone = (None, None)
+    full_datum = DATUM_DICT.get(srid)
+    if full_datum is not None:
+        splits = full_datum.split()
+        datum = splits[0]
+        if len(splits) > 1:
+            # projected with a zone (last element = zone number)
+            try:
+                zone = int(splits[-1])
+            except ValueError as e:
+                # should not happen
+                logger.exception(e)
+    return datum, zone
 
 
 def get_australian_zone_srid(datum, zone):

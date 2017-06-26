@@ -556,14 +556,13 @@ class GeoConvertView(generics.GenericAPIView):
             return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
 
     def post(self, request, **kwargs):
-        record = get_object_or_404(Record, pk=kwargs.get('pk'))
-        dataset = record.dataset
+        dataset = get_object_or_404(Dataset, pk=kwargs.get('pk'))
         if dataset.type == Dataset.TYPE_GENERIC:
             return Response("Conversion not available for records from generic dataset",
                             status=status.HTTP_400_BAD_REQUEST)
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid(raise_exception=True):
-            record_data = serializer.validated_data.get('data', record.data)
+            record_data = serializer.validated_data.get('data', {})
             if self.output == self.OUTPUT_GEOMETRY:
                 return self.to_geometry(dataset, record_data)
             elif self.output == self.OUTPUT_DATA:
