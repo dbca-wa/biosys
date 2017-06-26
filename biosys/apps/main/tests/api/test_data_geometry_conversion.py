@@ -322,34 +322,7 @@ class EastingNorthingSchema(helpers.BaseUserTestCase):
         schema = self.schema_with_easting_northing()
         dataset = self._create_dataset_with_schema(project, client, schema)
 
-        # create record
-        # easting / northing: nearly(116.0, -32.0)
-        easting = 405542.537
-        northing = 6459127.469
-        east_north_datum = 'GDA94'
-        zone = 50
-        # create record
-        record_data = {
-            'What': 'Somewhere',
-            'When': '20/06/2017',
-            'Easting': easting,
-            'Northing': northing,
-            'Datum': east_north_datum,
-            'Zone': zone
-        }
-        payload = {
-            'dataset': dataset.pk,
-            'data': record_data
-        }
-        url = reverse('api:record-list')
-        resp = client.post(url, data=payload, format='json')
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        record = Record.objects.filter(id=resp.json().get('id')).first()
-        previous_record_geometry = record.geometry
-        previous_record_data = record.data
-        previous_record_dt = record.datetime
-
-        url = reverse('api:geometry-to-data', kwargs={'pk': record.pk})
+        url = reverse('api:geometry-to-data', kwargs={'pk': dataset.pk})
         # the geometry is required
         payload = {
         }
@@ -357,12 +330,22 @@ class EastingNorthingSchema(helpers.BaseUserTestCase):
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
         # send a geometry
-        new_geometry = {
+        geometry = {
             'type': 'Point',
             'coordinates': [118, -34.0]
         }
+        # with data
+        sent_data = {
+            'What': 'Somewhere',
+            'When': '20/06/2017',
+            'Easting': None,
+            'Northing': None,
+            'Datum': 'GDA94',
+            'Zone': 50
+        }
         payload = {
-            'geometry': new_geometry
+            'geometry': geometry,
+            'data': sent_data
         }
         resp = client.post(url, data=payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
@@ -371,59 +354,13 @@ class EastingNorthingSchema(helpers.BaseUserTestCase):
         self.assertTrue('geometry' in data)
         self.assertTrue('data' in data)
         expected_data = {
-            'What': record_data['What'],
-            'When': record_data['When'],
+            'What': sent_data['What'],
+            'When': sent_data['When'],
             'Northing': 6237393.340227433,
             'Easting': 592349.6033431825,
-            'Datum': record_data['Datum'],
-            'Zone': record_data['Zone']
+            'Datum': sent_data['Datum'],
+            'Zone': sent_data['Zone']
         }
         self.assertEqual(data['data'], expected_data)
-        expected_geometry = new_geometry
+        expected_geometry = geometry
         self.assertEqual(data['geometry'], expected_geometry)
-        # record should be unchanged
-        record.refresh_from_db()
-        self.assertEqual(record.data, previous_record_data)
-        self.assertEqual(record.geometry, previous_record_geometry)
-        self.assertEqual(record.datetime, previous_record_dt)
-
-        # send geometry and data
-        # send a geometry
-        new_geometry = {
-            'type': 'Point',
-            'coordinates': [118, -34.0]
-        }
-        new_data = {
-            'What': 'Updated What',
-            'When': '01/01/2010',
-            'Northing': 0,
-            'Easting': 0,
-            'Datum': record_data['Datum'],
-            'Zone': record_data['Zone']
-        }
-        payload = {
-            'geometry': new_geometry,
-            'data': new_data
-        }
-        resp = client.post(url, data=payload, format='json')
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual(resp.get('content-type'), 'application/json')
-        data = resp.json()
-        self.assertTrue('geometry' in data)
-        self.assertTrue('data' in data)
-        expected_data = {
-            'What': new_data['What'],
-            'When': new_data['When'],
-            'Northing': 6237393.340227433,
-            'Easting': 592349.6033431825,
-            'Datum': new_data['Datum'],
-            'Zone': new_data['Zone']
-        }
-        self.assertEqual(data['data'], expected_data)
-        expected_geometry = new_geometry
-        self.assertEqual(data['geometry'], expected_geometry)
-        # record should be unchanged
-        record.refresh_from_db()
-        self.assertEqual(record.data, previous_record_data)
-        self.assertEqual(record.geometry, previous_record_geometry)
-        self.assertEqual(record.datetime, previous_record_dt)
