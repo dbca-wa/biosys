@@ -43,7 +43,7 @@ class TestPermissions(TestCase):
         self.custodian_1_user.save()
         self.custodian_1_client = APIClient()
         self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(title="Project1").first()
+        self.project_1 = Project.objects.filter(name="Project1").first()
         self.assertTrue(self.project_1.is_custodian(self.custodian_1_user))
 
         self.custodian_2_user = User.objects.filter(username="custodian2").first()
@@ -52,7 +52,7 @@ class TestPermissions(TestCase):
         self.custodian_2_user.save()
         self.custodian_2_client = APIClient()
         self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(title="Project2").first()
+        self.project_2 = Project.objects.filter(name="Project2").first()
         self.assertTrue(self.project_2.is_custodian(self.custodian_2_user))
         self.assertFalse(self.project_1.is_custodian(self.custodian_2_user))
 
@@ -97,7 +97,7 @@ class TestPermissions(TestCase):
         """
         urls = [reverse('api:project-list')]
         data = {
-            "title": "A new project for Unit test",
+            "name": "A new project for Unit test",
             "code": "T1234",
             "timezone": "Australia/Perth",
             "custodians": [self.custodian_1_user.pk]
@@ -115,8 +115,8 @@ class TestPermissions(TestCase):
 
         for client in access['allowed']:
             for url in urls:
-                # Title must me unique
-                data['title'] += '1'
+                # Name must me unique
+                data['name'] += '1'
                 self.assertEqual(
                     client.post(url, data, format='json').status_code,
                     status.HTTP_201_CREATED
@@ -130,12 +130,12 @@ class TestPermissions(TestCase):
         urls = [reverse('api:project-list')]
         data = [
             {
-                "title": "Project1 for Unit test",
+                "name": "Project1 for Unit test",
                 "code": "T1234",
                 "timezone": "Australia/Perth"
             },
             {
-                "title": "Project2 for Unit test",
+                "name": "Project2 for Unit test",
                 "code": "T1234",
                 "timezone": "Australia/Perth"
             },
@@ -326,7 +326,7 @@ class TestProjectSiteBulk(TestCase):
         self.custodian_1_user.save()
         self.custodian_1_client = APIClient()
         self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(title="Project1").first()
+        self.project_1 = Project.objects.filter(name="Project1").first()
         self.site_1 = Site.objects.filter(code="Site1").first()
         self.assertTrue(self.site_1.is_custodian(self.custodian_1_user))
 
@@ -336,7 +336,7 @@ class TestProjectSiteBulk(TestCase):
         self.custodian_2_user.save()
         self.custodian_2_client = APIClient()
         self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(title="Project2").first()
+        self.project_2 = Project.objects.filter(name="Project2").first()
         self.site_2 = Site.objects.filter(code="Site2").first()
         self.assertTrue(self.site_2.is_custodian(self.custodian_2_user))
         self.assertFalse(self.site_1.is_custodian(self.custodian_2_user))
@@ -489,7 +489,7 @@ class TestProjectSiteBulk(TestCase):
         site_1 = {
             "code": "AAAA",
             "name": "Site A",
-            "comments": "comments A",
+            "description": "description A",
             "attributes": {
                 "color": "blue",
                 "area": 12
@@ -498,7 +498,7 @@ class TestProjectSiteBulk(TestCase):
         site_2 = {
             "code": "BBBB",
             "name": "Site B",
-            "comments": "comments B",
+            "description": "description B",
             "attributes": {
                 "color": "red",
                 "area": 100
@@ -519,13 +519,13 @@ class TestProjectSiteBulk(TestCase):
         sdb_1 = Site.objects.filter(project=project, code=site_1['code']).first()
         self.assertIsNotNone(sdb_1)
         self.assertEqual(sdb_1.name, site_1['name'])
-        self.assertEqual(sdb_1.comments, site_1['comments'])
+        self.assertEqual(sdb_1.description, site_1['description'])
         self.assertEqual(sdb_1.attributes, site_1['attributes'])
 
         sdb_2 = Site.objects.filter(project=project, code=site_2['code']).first()
         self.assertIsNotNone(sdb_2)
         self.assertEqual(sdb_2.name, site_2['name'])
-        self.assertEqual(sdb_2.comments, site_2['comments'])
+        self.assertEqual(sdb_2.description, site_2['description'])
         self.assertEqual(sdb_2.attributes, site_2['attributes'])
 
     def test_bulk_delete_happy_path(self):
@@ -566,7 +566,7 @@ class TestProjectCustodians(TestCase):
         self.custodian_1_user.save()
         self.custodian_1_client = APIClient()
         self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(title="Project1").first()
+        self.project_1 = Project.objects.filter(name="Project1").first()
         self.assertTrue(self.project_1.is_custodian(self.custodian_1_user))
 
         self.custodian_2_user = User.objects.filter(username="custodian2").first()
@@ -575,7 +575,7 @@ class TestProjectCustodians(TestCase):
         self.custodian_2_user.save()
         self.custodian_2_client = APIClient()
         self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(title="Project2").first()
+        self.project_2 = Project.objects.filter(name="Project2").first()
         self.assertTrue(self.project_2.is_custodian(self.custodian_2_user))
         self.assertFalse(self.project_1.is_custodian(self.custodian_2_user))
 

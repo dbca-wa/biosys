@@ -16,12 +16,12 @@ class MainAppAdmin(admin.ModelAdmin):
 
 @admin.register(Project)
 class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
-    fields = ('title', 'code', 'datum', 'timezone', 'custodians', 'attributes',
-              'comments', 'site_data_package', 'geometry')
+    fields = ('name', 'code', 'datum', 'timezone', 'custodians', 'attributes',
+              'description', 'site_data_package', 'geometry')
     filter_horizontal = ('custodians',)  # TODO: why it's not working?
-    list_display = ('title', 'id', 'code')
+    list_display = ('name', 'id', 'code')
     readonly_fields = ['id']
-    search_fields = ['title', 'code']
+    search_fields = ['name', 'code']
     openlayers_url = '//static.dpaw.wa.gov.au/static/libs/openlayers/2.13.1/OpenLayers.js'
     form = forms.ProjectForm
 
@@ -29,9 +29,9 @@ class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
 @admin.register(Site)
 class SiteAdmin(MainAppAdmin, GeoModelAdmin):
     change_form_template = 'main/site_change_form.html'
-    fields = ('project', 'parent_site',  'code', 'name', 'geometry', 'comments', 'attributes')
-    list_display = ['code', 'project', 'name', 'parent_site']
-    list_filter = ['project', 'parent_site']
+    fields = ('project', 'code', 'name', 'geometry', 'description', 'attributes')
+    list_display = ['code', 'project', 'name']
+    list_filter = ['project']
     form = forms.SiteForm
     default_lon = 125.0
     default_lat = -18.0
@@ -46,7 +46,7 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
 @admin.register(Dataset)
 class DatasetAdmin(MainAppAdmin):
     change_form_template = 'main/dataset_change_form.html'
-    list_display = ['name', 'project', 'type']
+    list_display = ['name', 'project', 'type', 'description']
     list_filter = ['project']
     form = forms.DataSetForm
 

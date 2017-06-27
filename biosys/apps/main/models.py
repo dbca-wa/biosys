@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 class Project(models.Model):
     DEFAULT_TIMEZONE = settings.TIME_ZONE
 
-    title = models.CharField(max_length=300, null=False, blank=False, unique=True,
-                             verbose_name="Title", help_text="Enter a name for the project (required).")
+    name = models.CharField(max_length=300, null=False, blank=False, unique=True,
+                            verbose_name="Name", help_text="Enter a name for the project (required).")
     code = models.CharField(max_length=30, null=True, blank=True,
                             verbose_name="Code",
                             help_text="Provide a brief code or acronym for this project. "
@@ -41,8 +41,8 @@ class Project(models.Model):
     attributes = JSONField(null=True, blank=True,
                            help_text="Define here all specific attributes of your project in the form of json "
                                      "'attribute name': 'attribute value")
-    comments = models.TextField(null=True, blank=True,
-                                verbose_name="Comments", help_text="")
+    description = models.TextField(null=True, blank=True,
+                                   verbose_name="Description", help_text="")
 
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Extent",
@@ -114,22 +114,16 @@ class Project(models.Model):
         return Record.objects.filter(dataset__project=self).count()
 
     class Meta:
-        ordering = ['title']
+        ordering = ['name']
 
     def __str__(self):
-        return self.title
+        return self.name
 
 
 @python_2_unicode_compatible
 class Site(models.Model):
     project = models.ForeignKey('Project', null=False, blank=False,
                                 verbose_name="Project", help_text="Select the project this site is part of (required)")
-    parent_site = models.ForeignKey('self', null=True, blank=True,
-                                    verbose_name="Parent Site",
-                                    help_text="Sites can be grouped together. "
-                                              "If you have a subregion within the project that contains a number "
-                                              "of sites, create that region as a parent site first, "
-                                              "then select that parent when you're creating this site.")
     name = models.CharField(max_length=150, blank=True,
                             verbose_name="Name",
                             help_text="Enter a more descriptive name for this site, if one exists.")
@@ -138,8 +132,8 @@ class Site(models.Model):
                             help_text="Local site code must be unique to this project. e.g. LCI123 (required)")
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True, editable=True,
                                     verbose_name="Location", help_text="")
-    comments = models.TextField(null=True, blank=True,
-                                verbose_name="Comments", help_text="")
+    description = models.TextField(null=True, blank=True,
+                                   verbose_name="Description", help_text="")
     attributes = JSONField(null=True, blank=True)
 
     def is_custodian(self, user):
@@ -229,6 +223,8 @@ class Dataset(models.Model):
     #  http://dataprotocols.org/json-table-schema/
     # IMPORTANT! The data_package should contain only one resources
     data_package = JSONField()
+    description = models.TextField(null=True, blank=True,
+                                   verbose_name="Description", help_text="")
 
     def __str__(self):
         return '{}'.format(self.name)

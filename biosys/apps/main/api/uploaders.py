@@ -7,12 +7,12 @@ from django.conf import settings
 from django.utils import six, timezone
 from openpyxl import load_workbook
 
-from main.api.utils_geom import PointParser
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
 from main.models import Site, Dataset
 from main.utils_misc import get_value
 from main.utils_species import HerbieFacade, get_key_for_value
+from main.utils_data_package import GeometryParser
 
 
 def xlsx_to_csv(file):
@@ -83,13 +83,61 @@ class SiteUploader(FileReader):
     COLUMN_MAP = {
         'code': ['code', 'site code'],
         'name': ['name', 'site name'],
-        'comments': ['comments'],
-        'parent_site': ['parent site', 'parent']
+        'description': ['description']
+    }
+    GEO_PARSER_SCHEMA = {
+        "fields": [
+            {
+                "name": "Northing",
+                "type": "number",
+                "biosys": {
+                    "type": "northing"
+                }
+            },
+            {
+                "name": "Easting",
+                "type": "number",
+                "biosys": {
+                    "type": "easting"
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "biosys": {
+                    "type": "latitude"
+                },
+                "constraints": {
+                    "minimum": -90.0,
+                    "maximum": 90.0,
+                }
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "biosys": {
+                    "type": "longitude"
+                },
+                "constraints": {
+                    "minimum": -180.0,
+                    "maximum": 180.0,
+                }
+            },
+            {
+                "type": "string",
+                "name": "Datum",
+            },
+            {
+                "type": "integer",
+                "name": "Zone",
+            }
+        ]
     }
 
     def __init__(self, file, project):
         super(SiteUploader, self).__init__(file)
         self.project = project
+        self.geo_parser = GeometryParser(self.GEO_PARSER_SCHEMA)
 
     def __iter__(self):
         for row in self.reader:
@@ -104,20 +152,15 @@ class SiteUploader(FileReader):
         else:
             kwargs = {
                 'name': get_value(self.COLUMN_MAP.get('name'), row, ''),
-                'comments': get_value(self.COLUMN_MAP.get('comments'), row, ''),
+                'description': get_value(self.COLUMN_MAP.get('description'), row, ''),
                 'attributes': self._get_attributes(row)
             }
             # geometry
             try:
-                geo_parser = PointParser(row, self.project.datum)
-                kwargs['geometry'] = geo_parser.to_geom()
+                kwargs['geometry'] = self.geo_parser.cast_geometry(row)
             except:
                 # not an error (warning?)
                 pass
-            # parent site
-            parent_site_code = get_value(self.COLUMN_MAP.get('parent_site'), row)
-            if parent_site_code:
-                kwargs['parent_site'] = self._get_or_create_parent_site(parent_site_code)
             try:
                 site, _ = Site.objects.update_or_create(code=code, project=self.project, defaults=kwargs)
             except Exception as e:
@@ -135,11 +178,6 @@ class SiteUploader(FileReader):
             if k.lower() not in non_attributes_keys:
                 attributes[k] = v
         return attributes
-
-    @staticmethod
-    def _get_or_create_parent_site(parent_code):
-        site, _ = Site.objects.get_or_create(code=parent_code)
-        return site
 
 
 class RecordCreator:
@@ -194,7 +232,7 @@ class RecordCreator:
                 tz = self.dataset.project.timezone or timezone.get_current_timezone()
                 record.datetime = timezone.make_aware(observation_date, tz)
                 # geometry
-                geometry = self.schema.cast_geometry(row, default_srid=MODEL_SRID)
+                geometry = self.schema.cast_geometry(row, default_srid=self.dataset.project.datum or MODEL_SRID)
                 record.geometry = geometry
                 if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
                     # species stuff. Lookup for species match in herbie.
