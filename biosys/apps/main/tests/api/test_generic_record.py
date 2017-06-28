@@ -586,7 +586,7 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEquals(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_excel_type(self):
         schema_fields = [
