@@ -236,7 +236,7 @@ class SpeciesMixin(object):
     species_facade_class = HerbieFacade
 
 
-class DatasetRecordsView(generics.ListCreateAPIView, generics.DestroyAPIView, SpeciesMixin):
+class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesMixin):
     permission_classes = (IsAuthenticated, DatasetRecordsPermission)
 
     def __init__(self, **kwargs):
@@ -289,9 +289,13 @@ class DatasetRecordsView(generics.ListCreateAPIView, generics.DestroyAPIView, Sp
 
     def destroy(self, request, *args, **kwargs):
         record_ids = request.data
-        if not record_ids and not isinstance(record_ids, list):
-            return Response("A list of record ids must be provided", status=status.HTTP_400_BAD_REQUEST)
-        Record.objects.filter(dataset=self.dataset, id__in=record_ids).delete()
+        if isinstance(record_ids, list):
+            qs = Record.objects.filter(dataset=self.dataset, id__in=record_ids)
+        elif record_ids == 'all':
+            qs = Record.objects.filter(dataset=self.dataset)
+        else:
+            return Response("A list of record ids must be provided or 'all'", status=status.HTTP_400_BAD_REQUEST)
+        qs.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
