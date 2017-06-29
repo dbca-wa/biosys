@@ -72,6 +72,10 @@ class FileReader(object):
 
     def __iter__(self):
         for row in self.reader:
+            # remove 'blank' column
+            for column in list(row.keys()):
+                if not column.strip():
+                    del row[column]
             yield row
         self.close()
 
