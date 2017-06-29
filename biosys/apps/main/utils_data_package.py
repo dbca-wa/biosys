@@ -67,6 +67,31 @@ def parse_datetime_day_first(value):
     return date_parse(value, dayfirst=dayfirst)
 
 
+def find_unique_field(schema, biosys_type, column_name):
+    """
+    Precedence Rules:
+    1- Look for field with biosys.type = biosys_type
+    2- Look for a field with name column_name case insensitive
+    :return: (field, errors). field = None if not found. The only error is if the field is not unique.
+    """
+    if not isinstance(schema, GenericSchema):
+        schema = GenericSchema(schema)
+    fields = [f for f in schema.fields if f.biosys.type == biosys_type]
+    if len(fields) > 1:
+        msg = "More than one Biosys type {} field found: {}".format(biosys_type, [f.name for f in fields])
+        return None, [msg]
+    if len(fields) == 1:
+        return fields[0], None
+    # no Biosys type field found. Search for column name
+    fields = [f for f in schema.fields if f.name.lower() == column_name.lower()]
+    if len(fields) > 1:
+        msg = "More than one field named {} found.".format(column_name)
+        return None, [msg]
+    if len(fields) == 1:
+        return fields[0], None
+    return None, None
+
+
 class DayFirstDateType(types.DateType):
     """
     Extend the jsontableschema DateType which use the mm/dd/yyyy date model for the 'any' format
@@ -195,6 +220,8 @@ class SchemaField:
     BIOSYS_TYPE_MAP = {
     }
 
+    DATETIME_TYPES = [types.DateType, types.DateTimeType]
+
     def __init__(self, data):
         self.data = data
         self.name = self.data.get('name')
@@ -230,6 +257,13 @@ class SchemaField:
     @property
     def aliases(self):
         return self.data['aliases'] if 'aliases' in self.data else []
+
+    @property
+    def is_datetime_type(self):
+        for dt_type in self.DATETIME_TYPES:
+            if isinstance(self.type, dt_type):
+                return True
+        return False
 
     def has_alias(self, name, icase=False):
         for alias in self.aliases:
@@ -532,68 +566,23 @@ class ObservationSchema(GenericSchema):
 
     def __init__(self, schema):
         super(ObservationSchema, self).__init__(schema)
-        self.observation_date_field = self.find_observation_date_field_or_throw(self)
+        self.errors = []
+
+        # date parser
+        self.date_parser = ObservationDateParser(self)
+        self.errors += self.date_parser.errors
+
+        # geometry parser
         self.geometry_parser = GeometryParser(self)
-        if self.geometry_parser.errors:
-            msg = "\n".join(self.geometry_parser.errors)
+        self.errors += self.geometry_parser.errors
+
+        if self.errors:
+            msg = "\n".join(self.errors)
             raise ObservationSchemaError(msg)
 
-    # The following method is static for testing purposes.
-    @staticmethod
-    def find_observation_date_field_or_throw(schema):
-        """
-        Precedence Rules:
-        1- Look for a single date field with required = true
-        2- Look for biosys.type = 'observationDate'
-        3- Look for a field with name 'Observation Date' case insensitive
-        4- If there's only one field of type date it's this one.
-        5- Throw exception if not found
-        :param schema: a dict descriptor or a Schema instance
-        :return: The SchemaField or raise an exception if none or more than one
-        """
-        if not isinstance(schema, GenericSchema):
-            schema = GenericSchema(schema)
-        # edge case: a biosys observationDate set as not required
-        if len([field for field in schema.fields
-                if field.biosys.is_observation_date() and not field.required]) > 0:
-            msg = "A biosys observationDate with required=false detected. It must be set required=true"
-            raise ObservationSchemaError(msg)
-        # normal cases
-        required_date_fields = [field for field in schema.fields
-                                if
-                                (isinstance(field.type, types.DateType) or isinstance(field.type,
-                                                                                      types.DateTimeType)) and
-                                field.required
-                                ]
-        dates_count = len(required_date_fields)
-        if dates_count == 0:
-            msg = "One field must be of type 'date' with 'required': true to be a valid Observation schema."
-            raise ObservationSchemaError(msg)
-        if dates_count == 1:
-            return required_date_fields[0]
-        else:
-            # more than one date fields. Look the the biosys type
-            fields = [field for field in required_date_fields if field.biosys.is_observation_date()]
-            count = len(fields)
-            if count == 1:
-                return fields[0]
-            if count > 1:
-                msg = "The schema contains more than one field tagged as a biosys type=observationDate"
-                raise ObservationSchemaError(msg)
-            # no biosys observation date. Look for field name
-            fields = [field for field in required_date_fields if
-                      field.name == ObservationSchema.OBSERVATION_DATE_FIELD_NAME]
-            count = len(fields)
-            if count == 1:
-                return fields[0]
-            if count > 1:
-                msg = "The schema contains more than one field named Observation Date. " \
-                      "One should be tagged as a biosys type=observationDate "
-                raise ObservationSchemaError(msg)
-            msg = "The schema doesn't include a required Observation Date field. " \
-                  "It must have a field named {} or tagged with biosys type {}". \
-                format(ObservationSchema.OBSERVATION_DATE_FIELD_NAME, BiosysSchema.OBSERVATION_DATE_TYPE_NAME)
-            raise ObservationSchemaError(msg)
+    @property
+    def observation_date_field(self):
+        return self.date_parser.observation_date_field
 
     @property
     def latitude_field(self):
@@ -626,12 +615,8 @@ class ObservationSchema(GenericSchema):
     def find_site_code_foreign(self):
         return self.get_fk_for_model_field('Site', 'code')
 
-    def get_record_observation_date_value(self, record):
-        return record.get(self.observation_date_field.name)
-
     def cast_record_observation_date(self, record):
-        field = self.observation_date_field
-        return field.cast(record.get(field.name))
+        return self.date_parser.cast_date(record)
 
     def cast_srid(self, record, default_srid=MODEL_SRID):
         return self.geometry_parser.cast_srid(record, default_srid=default_srid)
@@ -763,7 +748,63 @@ def format_required_message(field):
     )
 
 
+class ObservationDateParser(object):
+    """
+    A utility class to extract the observation date from data given a schema.
+    Rules to find the observation date:
+    1- Look for a biosys type 'observationDate'
+    2- Look for an 'Observation Date' column
+    3- Look for a single field of type date or datetime
+    It will store errors if there are any ambiguity (typical two fields with same name) or if the field is not of a
+    date/time type.
+    """
+    def __init__(self, schema):
+        if not isinstance(schema, GenericSchema):
+            schema = GenericSchema(schema)
+        self.schema = schema
+        self.errors = []
+        self.observation_date_field, errors = find_unique_field(
+            self.schema,
+            BiosysSchema.OBSERVATION_DATE_TYPE_NAME,
+            ObservationSchema.OBSERVATION_DATE_FIELD_NAME
+        )
+        if errors:
+            self.errors += errors
+        # verify type
+        if self.observation_date_field and not self.observation_date_field.is_datetime_type:
+            msg = "Wrong type for the observation date field: '{field}' should be one of: {types}".format(
+                field=self.observation_date_field.name,
+                types=[dt_type.name for dt_type in SchemaField.DATETIME_TYPES]
+            )
+            self.errors += msg
+            self.observation_date_field = None
+
+        if not self.observation_date_field:
+            # fall back. Look for a single date/time type field
+            dt_fields = [f for f in self.schema.fields if f.is_datetime_type]
+            if len(dt_fields) == 1:
+                self.observation_date_field = dt_fields[0]
+
+    def is_valid(self):
+        return not self.errors
+
+    def cast_date(self, record):
+        """
+        Extract geometry from a record data
+        :param record: a column -> value dictionary
+        :return: a date or datetime or None
+        """
+        if self.observation_date_field:
+            value = record.get(self.observation_date_field.name)
+            if value:
+                return self.observation_date_field.cast(value)
+        return None
+
+
 class GeometryParser(object):
+    """
+    A utility class to extract the geometry from data given a schema.
+    """
 
     def __init__(self, schema):
         if not isinstance(schema, GenericSchema):
@@ -777,7 +818,8 @@ class GeometryParser(object):
             self.errors += errors
 
         # Datum
-        self.datum_field, errors = self._find_unique_field(
+        self.datum_field, errors = find_unique_field(
+            self.schema,
             BiosysSchema.DATUM_TYPE_NAME,
             ObservationSchema.DATUM_FIELD_NAME
         )
@@ -785,7 +827,8 @@ class GeometryParser(object):
             self.errors += errors
 
         # Zone
-        self.zone_field, errors = self._find_unique_field(
+        self.zone_field, errors = find_unique_field(
+            self.schema,
             BiosysSchema.ZONE_TYPE_NAME,
             ObservationSchema.ZONE_FIELD_NAME
         )
@@ -793,7 +836,8 @@ class GeometryParser(object):
             self.errors += errors
 
         # Latitude
-        self.latitude_field, errors = self._find_unique_field(
+        self.latitude_field, errors = find_unique_field(
+            self.schema,
             BiosysSchema.LATITUDE_TYPE_NAME,
             ObservationSchema.LATITUDE_FIELD_NAME
         )
@@ -801,14 +845,16 @@ class GeometryParser(object):
             self.errors += errors
 
         # Longitude
-        self.longitude_field, errors = self._find_unique_field(
+        self.longitude_field, errors = find_unique_field(
+            self.schema,
             BiosysSchema.LONGITUDE_TYPE_NAME,
             ObservationSchema.LONGITUDE_FIELD_NAME)
         if errors:
             self.errors += errors
 
         # Easting
-        self.easting_field, errors = self._find_unique_field(
+        self.easting_field, errors = find_unique_field(
+            self.schema,
             BiosysSchema.EASTING_TYPE_NAME,
             ObservationSchema.EASTING_FIELD_NAME
         )
@@ -816,7 +862,8 @@ class GeometryParser(object):
             self.errors += errors
 
         # Northing
-        self.northing_field, errors = self._find_unique_field(
+        self.northing_field, errors = find_unique_field(
+            self.schema,
             BiosysSchema.NORTHING_TYPE_NAME,
             ObservationSchema.NORTHING_FIELD_NAME
         )
@@ -905,7 +952,7 @@ class GeometryParser(object):
         """
         Two cases:
         Datum only or datum + zone
-        :param record:
+        :param record: a column -> value dictionary
         :param default_srid:
         :return:
         """
@@ -939,7 +986,7 @@ class GeometryParser(object):
         """
         Precedences rules:
         easting/northing > lat/long > site geometry
-        :param record:
+        :param record: a column -> value dictionary
         :param default_srid:
         :return: Will throw an exception if anything went wrong
         """
@@ -1016,36 +1063,16 @@ class GeometryParser(object):
          but also with a foreign key (legacy)
         :return:
         """
-        site_code_field, errors = self._find_unique_field(BiosysSchema.SITE_CODE_TYPE_NAME,
-                                                          ObservationSchema.SITE_CODE_FIELD_NAME)
+        site_code_field, errors = find_unique_field(
+            self.schema,
+            BiosysSchema.SITE_CODE_TYPE_NAME,
+            ObservationSchema.SITE_CODE_FIELD_NAME)
         if errors:
             return site_code_field, errors
         if site_code_field is None:
             site_code_fk = self.schema.get_fk_for_model_field('Site', 'code')
             site_code_field = self.schema.get_field_by_mame(site_code_fk.data_field) if site_code_fk else None
         return site_code_field, None
-
-    def _find_unique_field(self, biosys_type, column_name):
-        """
-        Precedence Rules:
-        1- Look for field with biosys.type = biosys_type
-        2- Look for a field with name column_name case insensitive
-        :return: (field, errors). field = None if not found. The only error is if the field is not unique.
-        """
-        fields = [f for f in self.schema.fields if f.biosys.type == biosys_type]
-        if len(fields) > 1:
-            msg = "More than one Biosys type {} field found: {}".format(biosys_type, [f.name for f in fields])
-            return None, [msg]
-        if len(fields) == 1:
-            return fields[0], None
-        # no Biosys type field found. Search for column name
-        fields = [f for f in self.schema.fields if f.name.lower() == column_name.lower()]
-        if len(fields) > 1:
-            msg = "More than one field named {} found.".format(column_name)
-            return None, [msg]
-        if len(fields) == 1:
-            return fields[0], None
-        return None, None
 
 
 class Exporter:
