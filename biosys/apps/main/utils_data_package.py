@@ -948,6 +948,9 @@ class GeometryParser(object):
             not self.is_lat_long
         ])
 
+    def get_site_code(self, record):
+        return record.get(self.site_code_field.name) if self.site_code_field else None
+
     def cast_srid(self, record, default_srid=MODEL_SRID):
         """
         Two cases:
@@ -1005,7 +1008,7 @@ class GeometryParser(object):
         if geometry is None and self.site_code_field is not None:
             # extract geometry from site
             from main.models import Site  # import here to avoid cyclic import problem
-            site_code = record.get(self.site_code_field.name)
+            site_code = self.get_site_code(record)
             site = Site.objects.filter(code=site_code, geometry__isnull=False).first()
             geometry = site.geometry if site is not None else None
             if geometry is None and self.is_site_code_only:

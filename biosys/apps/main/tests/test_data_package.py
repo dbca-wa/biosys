@@ -4,7 +4,6 @@ import datetime
 from django.contrib.gis.geos import GEOSGeometry
 from django.test import TestCase
 from django.utils import timezone
-from jsontableschema.exceptions import *
 
 from main.models import Dataset, Project, Record
 from main.utils_data_package import *
@@ -345,6 +344,16 @@ class TestSchemaFieldCast(TestCase):
         field = SchemaField(descriptor)
         value = '30 Nov 14'
         self.assertEqual(field.cast(value), datetime.date(2014, 11, 30))
+
+        format_ = 'fmt:%Y_%m_%d'
+        descriptor = {
+            'name': 'Date with fmt',
+            'type': 'date',
+            'format': format_
+        }
+        field = SchemaField(descriptor)
+        value = '2012_03_05'
+        self.assertEqual(field.cast(value), datetime.date(2012, 3, 5))
 
     def test_string(self):
         # test that a blank string '' is not accepted when the field is required

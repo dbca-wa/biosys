@@ -202,6 +202,8 @@ class RecordCreator:
         self.site_fk = self.schema.get_fk_for_model('Site')
         self.commit = commit
         self.file_name = self.generator.file_name if hasattr(self.generator, 'file_name') else None
+        # Trick: use GeometryParser to get the site code
+        self.geo_parser = GeometryParser(self.schema)
 
     def __iter__(self):
         counter = 0
@@ -230,11 +232,13 @@ class RecordCreator:
             # specific fields
             if self.dataset.type == Dataset.TYPE_OBSERVATION or self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
                 observation_date = self.schema.cast_record_observation_date(row)
-                # convert to datetime with timezone awareness
-                if isinstance(observation_date, datetime.date):
-                    observation_date = datetime.datetime.combine(observation_date, datetime.time.min)
-                tz = self.dataset.project.timezone or timezone.get_current_timezone()
-                record.datetime = timezone.make_aware(observation_date, tz)
+                if observation_date:
+                    # convert to datetime with timezone awareness
+                    if isinstance(observation_date, datetime.date):
+                        observation_date = datetime.datetime.combine(observation_date, datetime.time.min)
+                    tz = self.dataset.project.timezone or timezone.get_current_timezone()
+                    record.datetime = timezone.make_aware(observation_date, tz)
+
                 # geometry
                 geometry = self.schema.cast_geometry(row, default_srid=self.dataset.project.datum or MODEL_SRID)
                 record.geometry = geometry
@@ -261,13 +265,11 @@ class RecordCreator:
 
     def _get_or_create_site(self, row):
         site = None
-        # Only if the schema has a foreign key for site
-        if self.site_fk:
-            model_field = self.site_fk.model_field
-            data = row.get(self.site_fk.data_field)
+        if self.geo_parser.is_valid() and self.geo_parser.is_site_code:
+            site_code = self.geo_parser.get_site_code(row)
             kwargs = {
                 "project": self.dataset.project,
-                model_field: data
+                "code": site_code
             }
             site = Site.objects.filter(**kwargs).first()
             if site is None and self.create_site:
