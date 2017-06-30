@@ -468,3 +468,132 @@ class TestDataPackageValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
+
+
+class TestRecordsView(helpers.BaseUserTestCase):
+    """
+    Test API access to records from dataset
+    """
+    schema_fields = [
+        {
+            "name": "What",
+            "type": "string",
+            "constraints": helpers.REQUIRED_CONSTRAINTS
+        },
+        {
+            "name": "When",
+            "type": "date",
+            "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+            "format": "any",
+            "biosys": {
+                'type': 'observationDate'
+            }
+        },
+        {
+            "name": "Where",
+            "type": "string",
+            "constraints": helpers.REQUIRED_CONSTRAINTS
+        },
+        {
+            "name": "Who",
+            "type": "string",
+            "constraints": helpers.REQUIRED_CONSTRAINTS
+        },
+    ]
+
+    def _more_setup(self):
+        self.project = self.project_1
+        self.client = self.custodian_1_client
+        self.dataset = self._create_dataset_with_schema(self.project, self.client, self.schema_fields)
+        self.url = reverse('api:dataset-records', kwargs={'pk': self.dataset.pk})
+
+    def test_permissions_get(self):
+        access = {
+            "forbidden": [self.anonymous_client],
+            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+        }
+        for client in access['forbidden']:
+            self.assertIn(
+                client.get(self.url).status_code,
+                [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+            )
+        # authenticated
+        for client in access['allowed']:
+            self.assertEqual(
+                client.get(self.url).status_code,
+                status.HTTP_200_OK
+            )
+
+    def test_permissions_delete(self):
+        access = {
+            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
+            "allowed": [self.custodian_1_client, self.admin_client]
+        }
+        for client in access['forbidden']:
+            self.assertIn(
+                client.delete(self.url, data=[], format='json').status_code,
+                [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+            )
+        # authenticated
+        for client in access['allowed']:
+            self.assertEqual(
+                client.delete(self.url, data=[], format='json').status_code,
+                status.HTTP_204_NO_CONTENT
+            )
+
+    def test_not_allowed_methods(self):
+        not_allowed = ['post', 'put', 'patch']
+        for method in not_allowed:
+            func = getattr(self.client, method)
+            if callable(func):
+                self.assertEqual(
+                    func(self.url, data=None, format='json').status_code,
+                    status.HTTP_405_METHOD_NOT_ALLOWED
+                )
+
+    def test_bulk_delete_list(self):
+        # create some records
+        record_pks = []
+        for i in range(1, 4):
+            record_data = {
+                'What': str(i)
+            }
+            record_pks.append(self._create_record(self.client, self.dataset, record_data).pk)
+        # verify list
+        resp = self.client.get(self.url, data=None, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.json()), len(record_pks))
+
+        # delete the first 2
+        deleted_pks = record_pks[:2]
+        expected_remaining_pks = record_pks[2:]
+        resp = self.client.delete(self.url, data=deleted_pks, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
+        # ask the list again
+        resp = self.client.get(self.url, data=None, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        existing_pks = [r['id'] for r in resp.json()]
+        self.assertEqual(sorted(existing_pks), sorted(expected_remaining_pks))
+
+    def test_bulk_delete_all(self):
+        # create some records
+        record_pks = []
+        for i in range(1, 4):
+            record_data = {
+                'What': str(i)
+            }
+            record_pks.append(self._create_record(self.client, self.dataset, record_data).pk)
+        # verify list
+        resp = self.client.get(self.url, data=None, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.json()), len(record_pks))
+
+        # delete them all
+        resp = self.client.delete(self.url, data='all', format='json')
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
+        # ask the list again
+        resp = self.client.get(self.url, data=None, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.json()), 0)
