@@ -1769,7 +1769,6 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         schema = helpers.create_schema_from_fields(schema_fields)
         return schema
 
-
     def test_geometry_easting_northing_precedence(self):
         """
         If all fields are provided easting and northing have precedence over lat/long and site code.
@@ -2130,3 +2129,90 @@ class TestExport(helpers.BaseUserTestCase):
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
         self.assertEquals(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestDateNotMandatory(helpers.BaseUserTestCase):
+    date_easting_northing_site_nothing_required_schema = [
+        {
+            "name": "What",
+            "type": "string",
+            "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+        },
+        {
+            "name": "When",
+            "type": "date",
+            "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+            "format": "any",
+            "biosys": {
+                'type': 'observationDate'
+            }
+        },
+        {
+            "name": 'Site',
+            "type": "string",
+            "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+            "biosys": {
+                'type': 'siteCode'
+            }
+        },
+        {
+            "name": "Northing",
+            "type": "number",
+            "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+            "biosys": {
+                "type": "northing"
+            }
+        },
+        {
+            "name": "Easting",
+            "type": "number",
+            "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+            "biosys": {
+                "type": "easting"
+            }
+        },
+        {
+            "name": "Datum",
+            "type": "string",
+            "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+        },
+        {
+            "name": "Zone",
+            "type": "integer",
+            "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+        }
+    ]
+
+    def test_record_without_date(self):
+        project = self.project_1
+        client = self.custodian_1_client
+        dataset = self._create_dataset_with_schema(
+            project,
+            client,
+            self.date_easting_northing_site_nothing_required_schema,
+            Dataset.TYPE_OBSERVATION
+        )
+
+        # easting/northing: nearly (116.0, -32.0)
+        easting = 405542.537
+        northing = 6459127.469
+        datum = 'GDA94'
+        zone = 50
+        east_north_srid = 28350
+
+        record_data = {
+            'What': 'Whaaat?',
+            'Easting': easting,
+            'Northing': northing,
+            'Datum': datum,
+            'Zone': zone
+        }
+        record = self._create_record(client, dataset, record_data)
+        self.assertIsNone(record.datetime)
+        geometry = record.geometry
+        self.assertIsNotNone(geometry)
+        self.assertIsInstance(geometry, Point)
+        geometry.transform(east_north_srid)
+        self.assertAlmostEqual(geometry.x, easting, places=2)
+        self.assertAlmostEqual(geometry.y, northing, places=2)
+
