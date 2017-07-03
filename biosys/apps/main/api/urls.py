@@ -2,6 +2,7 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 
 from django.conf.urls import url
 from rest_framework import routers
+from rest_framework.authtoken.views import obtain_auth_token
 
 from main.api import views as api_views
 
@@ -13,6 +14,7 @@ router.register(r'datasets?', api_views.DatasetViewSet, 'dataset')
 router.register(r'records?', api_views.RecordViewSet, 'record')
 
 url_patterns = [
+    url(r'auth-token/', obtain_auth_token, name="auth_token"),
     url(r'projects?/(?P<pk>\d+)/sites/?', api_views.ProjectSitesView.as_view(), name='project-sites'),  # bulk sites
     url(r'projects?/(?P<pk>\d+)/upload-sites/?', api_views.ProjectSitesUploadView.as_view(),
         name='upload-sites'),  # file upload for sites
