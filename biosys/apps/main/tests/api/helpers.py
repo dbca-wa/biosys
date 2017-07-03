@@ -5,10 +5,12 @@ import tempfile
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
+from django.shortcuts import reverse
 from openpyxl import Workbook
 from rest_framework.test import APIClient
+from rest_framework import status
 
-from main.models import Project
+from main.models import Project, Dataset, Record
 from main.utils_auth import is_admin
 from main.utils_species import SpeciesFacade
 
@@ -46,7 +48,8 @@ def to_csv_file(rows):
 
 class BaseUserTestCase(TestCase):
     """
-    A test case that provides some users and authenticated clients
+    A test case that provides some users and authenticated clients.
+    Also provide some high level API utility function
     """
     fixtures = [
         'test-users',
@@ -93,6 +96,36 @@ class BaseUserTestCase(TestCase):
 
         if hasattr(self, '_more_setup') and callable(self._more_setup):
             self._more_setup()
+
+    def _create_dataset_with_schema(self, project, client, schema, dataset_type=Dataset.TYPE_GENERIC):
+        if isinstance(schema, list):
+            # a list of fields instead of a schema?
+            schema = create_schema_from_fields(schema)
+        resp = client.post(
+            reverse('api:dataset-list'),
+            data={
+                "name": "Test site code geometry",
+                "type": dataset_type,
+                "project": project.pk,
+                'data_package': create_data_package_from_schema(schema)
+            },
+            format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(dataset)
+        return dataset
+
+    def _create_record(self, client, dataset, record_data):
+        payload = {
+            'dataset': dataset.pk,
+            'data': record_data
+        }
+        url = reverse('api:record-list')
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        record = Record.objects.filter(id=resp.json().get('id')).first()
+        self.assertIsNotNone(record)
+        return record
 
 
 class LightSpeciesFacade(SpeciesFacade):

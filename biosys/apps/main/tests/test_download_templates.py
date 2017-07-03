@@ -18,7 +18,7 @@ class TestDownloadSiteTemplates(TestCase):
         Important: Logging should not be necessary
         """
         client = Client()
-        url = reverse('main:site-template-lat-long')
+        url = reverse('download:site-template-lat-long')
         resp = client.get(url)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.get('content-type'),
@@ -52,7 +52,7 @@ class TestDownloadSiteTemplates(TestCase):
         Important: Logging should not be necessary
         """
         client = Client()
-        url = reverse('main:site-template-easting-northing')
+        url = reverse('download:site-template-easting-northing')
         resp = client.get(url)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.get('content-type'),
