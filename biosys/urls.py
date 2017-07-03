@@ -47,7 +47,7 @@ urlpatterns = \
         url(r'^about/', TemplateView.as_view(template_name='main/about.html'), name='about'),
 
         # api
-        url(r'^api/', include(api_urls, namespace='api')),
+        url(r'^sso-api|^api/', include(api_urls, namespace='api')),
 
         # legacy
         url(r'^grappelli/', include('grappelli.urls')),  # Grappelli URLS
