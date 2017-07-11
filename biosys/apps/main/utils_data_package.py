@@ -294,7 +294,7 @@ class SchemaField:
         # TODO: remove that when running in Python3
         if isinstance(value, six.string_types) and not isinstance(value, six.text_type):
             # the StringType accepts only unicode
-            value = six.u(value)
+            value = six.u(value).strip()
         return self.type.cast(value)
 
     def validation_error(self, value):
@@ -735,10 +735,7 @@ class SpeciesObservationSchema(ObservationSchema):
 
     def cast_species_name(self, record):
         field = self.species_name_field
-        value = field.cast(record.get(field.name)) if field is not None else None
-        if value and isinstance(value, six.string_types):
-            value = value.strip()
-        return value
+        return field.cast(record.get(field.name)) if field is not None else None
 
     def cast_species_name_id(self, record):
         field = self.species_name_id_field

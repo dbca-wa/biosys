@@ -1171,7 +1171,7 @@ class TestSpeciesObservationSchemaCast(TestCase):
 
     def test_blank(self):
         """
-        Blank should raise an exception
+        Blank string should raise an exception
         :return:
         """
         descriptor = clone(SPECIES_OBSERVATION_SCHEMA)
@@ -1179,7 +1179,7 @@ class TestSpeciesObservationSchemaCast(TestCase):
             'Observation Date': "18/08/2016",
             'Latitude': -32,
             'Longitude': 115,
-            'Species Name': ''
+            'Species Name': '   '
         }
         schema = SpeciesObservationSchema(descriptor)
         with self.assertRaises(Exception):
@@ -1187,7 +1187,7 @@ class TestSpeciesObservationSchemaCast(TestCase):
 
     def test_none(self):
         """
-        Blank should raise an exception
+        None should raise an exception
         :return:
         """
         descriptor = clone(SPECIES_OBSERVATION_SCHEMA)
@@ -1203,7 +1203,7 @@ class TestSpeciesObservationSchemaCast(TestCase):
 
     def test_number(self):
         """
-        Blank should raise an exception
+        Number should raise an exception
         :return:
         """
         descriptor = clone(SPECIES_OBSERVATION_SCHEMA)
