@@ -735,7 +735,10 @@ class SpeciesObservationSchema(ObservationSchema):
 
     def cast_species_name(self, record):
         field = self.species_name_field
-        return field.cast(record.get(field.name)) if field is not None else None
+        value = field.cast(record.get(field.name)) if field is not None else None
+        if value and isinstance(value, six.string_types):
+            value = value.strip()
+        return value
 
     def cast_species_name_id(self, record):
         field = self.species_name_id_field
