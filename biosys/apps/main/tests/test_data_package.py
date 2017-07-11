@@ -1153,3 +1153,66 @@ class TestSpeciesObservationSchemaCast(TestCase):
         }
         schema = SpeciesObservationSchema(descriptor)
         self.assertEqual(species_name, schema.cast_species_name(record))
+
+    def test_space_stripping(self):
+        """
+        The cast should strip leading and trailing spaces
+        """
+        descriptor = clone(SPECIES_OBSERVATION_SCHEMA)
+        species_name = 'Chubby Bat'
+        record = {
+            'Observation Date': "18/08/2016",
+            'Latitude': -32,
+            'Longitude': 115,
+            'Species Name': '  Chubby Bat  '
+        }
+        schema = SpeciesObservationSchema(descriptor)
+        self.assertEqual(species_name, schema.cast_species_name(record))
+
+    def test_blank(self):
+        """
+        Blank string should raise an exception
+        :return:
+        """
+        descriptor = clone(SPECIES_OBSERVATION_SCHEMA)
+        record = {
+            'Observation Date': "18/08/2016",
+            'Latitude': -32,
+            'Longitude': 115,
+            'Species Name': '   '
+        }
+        schema = SpeciesObservationSchema(descriptor)
+        with self.assertRaises(Exception):
+            schema.cast_species_name(record)
+
+    def test_none(self):
+        """
+        None should raise an exception
+        :return:
+        """
+        descriptor = clone(SPECIES_OBSERVATION_SCHEMA)
+        record = {
+            'Observation Date': "18/08/2016",
+            'Latitude': -32,
+            'Longitude': 115,
+            'Species Name': None
+        }
+        schema = SpeciesObservationSchema(descriptor)
+        with self.assertRaises(Exception):
+            schema.cast_species_name(record)
+
+    def test_number(self):
+        """
+        Number should raise an exception
+        :return:
+        """
+        descriptor = clone(SPECIES_OBSERVATION_SCHEMA)
+        record = {
+            'Observation Date': "18/08/2016",
+            'Latitude': -32,
+            'Longitude': 115,
+            'Species Name': 1234
+        }
+        schema = SpeciesObservationSchema(descriptor)
+        with self.assertRaises(Exception):
+            schema.cast_species_name(record)
