@@ -1201,7 +1201,7 @@ class TestSpeciesObservationSchemaCast(TestCase):
         with self.assertRaises(Exception):
             schema.cast_species_name(record)
 
-    def test_nimber(self):
+    def test_number(self):
         """
         Blank should raise an exception
         :return:
