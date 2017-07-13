@@ -27,10 +27,10 @@ if not DEBUG:
     ALLOWED_HOSTS = [
         'localhost',
         '127.0.0.1',
-        'biosys.dpaw.wa.gov.au',
-        'biosys.dpaw.wa.gov.au.',
-        'biosys-uat.dpaw.wa.gov.au',
-        'biosys-uat.dpaw.wa.gov.au.',
+        'biosys.dbca.wa.gov.au',
+        'biosys.dbca.wa.gov.au.',
+        'biosys-uat.dbca.wa.gov.au',
+        'biosys-uat.dbca.wa.gov.au.',
     ]
 
 # Application definition
@@ -208,8 +208,8 @@ STATICFILES_FINDERS = (
 )
 
 BOOTSTRAP3 = {
-    'jquery_url': '//static.dpaw.wa.gov.au/static/libs/jquery/2.2.1/jquery.min.js',
-    'base_url': '//static.dpaw.wa.gov.au/static/libs/twitter-bootstrap/3.3.6/',
+    'jquery_url': '//static.dbca.wa.gov.au/static/libs/jquery/2.2.1/jquery.min.js',
+    'base_url': '//static.dbca.wa.gov.au/static/libs/twitter-bootstrap/3.3.6/',
     'css_url': None,
     'theme_url': None,
     'javascript_url': None,
@@ -220,7 +220,7 @@ BOOTSTRAP3 = {
 }
 
 HERBIE_SPECIES_WFS_URL = env('HERBIE_SPECIES_WFS_URL',
-                             'https://kmi.dpaw.wa.gov.au/geoserver/ows?service=wfs&version=1.1.0&'
+                             'https://kmi.dbca.wa.gov.au/geoserver/ows?service=wfs&version=1.1.0&'
                              'request=GetFeature&typeNames=public:herbie_hbvspecies_public&outputFormat=application/json')
 
 # Logging settings
