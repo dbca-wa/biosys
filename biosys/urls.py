@@ -48,6 +48,7 @@ urlpatterns = \
 
         # api
         url(r'^api/', include(api_urls, namespace='api')),
+        url(r'^sso-api/', include(api_urls, namespace='sso-api')),
 
         # legacy
         url(r'^grappelli/', include('grappelli.urls')),  # Grappelli URLS
