@@ -291,10 +291,12 @@ class SchemaField:
         :param value:
         :return:
         """
-        # TODO: remove that when running in Python3
-        if isinstance(value, six.string_types) and not isinstance(value, six.text_type):
-            # the StringType accepts only unicode
-            value = six.u(value)
+        if isinstance(value, six.string_types):
+            value = value.strip()
+            # TODO: remove that when running in Python3
+            if not isinstance(value, six.text_type):
+                # the StringType accepts only unicode
+                value = six.u(value).strip()
         return self.type.cast(value)
 
     def validation_error(self, value):
