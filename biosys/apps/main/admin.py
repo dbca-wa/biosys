@@ -22,7 +22,7 @@ class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
     list_display = ('name', 'id', 'code')
     readonly_fields = ['id']
     search_fields = ['name', 'code']
-    openlayers_url = '//static.dpaw.wa.gov.au/static/libs/openlayers/2.13.1/OpenLayers.js'
+    openlayers_url = '//static.dbca.wa.gov.au/static/libs/openlayers/2.13.1/OpenLayers.js'
     form = forms.ProjectForm
 
 
@@ -37,7 +37,7 @@ class SiteAdmin(MainAppAdmin, GeoModelAdmin):
     default_lat = -18.0
     default_zoom = 6
 
-    openlayers_url = '//static.dpaw.wa.gov.au/static/libs/openlayers/2.13.1/OpenLayers.js'
+    openlayers_url = '//static.dbca.wa.gov.au/static/libs/openlayers/2.13.1/OpenLayers.js'
 
     class Media:
         css = {'all': ('css/site_admin.css',)}

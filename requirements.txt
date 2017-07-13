@@ -33,8 +33,8 @@ djangorestframework-gis==0.11
 
 
 
-# dpaw for SSO login
-https://static.dpaw.wa.gov.au/static/py/dpaw-utils/dist/dpaw-utils-0.3a9.tar.gz
+# dbca for SSO login
+https://static.dbca.wa.gov.au/static/py/dpaw-utils/dist/dpaw-utils-0.3a9.tar.gz
 
 # TODO: to get rid of
 django-grappelli==2.8.2

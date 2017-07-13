@@ -16,7 +16,7 @@
                 {
                   "reference": {
                     "resource": "Site",
-                    "datapackage": "https://biosys.dpaw.wa.gov.au/api/v1/",
+                    "datapackage": "https://biosys.dbca.wa.gov.au/api/v1/",
                     "fields": [
                       "code"
                     ]
@@ -208,7 +208,7 @@
                 {
                   "reference": {
                     "resource": "Site",
-                    "datapackage": "https://biosys.dpaw.wa.gov.au/api/v1/",
+                    "datapackage": "https://biosys.dbca.wa.gov.au/api/v1/",
                     "fields": [
                       "code"
                     ]
@@ -400,7 +400,7 @@
                 {
                   "reference": {
                     "resource": "Site",
-                    "datapackage": "https://biosys.dpaw.wa.gov.au/api/v1/",
+                    "datapackage": "https://biosys.dbca.wa.gov.au/api/v1/",
                     "fields": [
                       "code"
                     ]
@@ -592,7 +592,7 @@
                 {
                   "reference": {
                     "resource": "Site",
-                    "datapackage": "https://biosys.dpaw.wa.gov.au/api/v1/",
+                    "datapackage": "https://biosys.dbca.wa.gov.au/api/v1/",
                     "fields": [
                       "code"
                     ]
@@ -784,7 +784,7 @@
                 {
                   "reference": {
                     "resource": "Site",
-                    "datapackage": "https://biosys.dpaw.wa.gov.au/api/v1/",
+                    "datapackage": "https://biosys.dbca.wa.gov.au/api/v1/",
                     "fields": [
                       "code"
                     ]
@@ -976,7 +976,7 @@
                 {
                   "reference": {
                     "resource": "Site",
-                    "datapackage": "https://biosys.dpaw.wa.gov.au/api/v1/",
+                    "datapackage": "https://biosys.dbca.wa.gov.au/api/v1/",
                     "fields": [
                       "code"
                     ]
