@@ -16,6 +16,7 @@ from main.tests.test_data_package import clone
 from main.utils_auth import is_admin
 
 
+# TODO Use the helpers.BaseUserTestCase as base class for all tests and methods for generating schema (no fixtures)
 class TestPermissions(TestCase):
     """
     Test Permissions
@@ -593,17 +594,17 @@ class TestExport(helpers.BaseUserTestCase):
             {
                 "name": "string",
                 "type": "string",
-                "format": "any"
+                "format": "default"
             },
             {
                 "name": "number",
                 "type": "number",
-                "format": "any"
+                "format": "default"
             },
             {
                 "name": "integer",
                 "type": "integer",
-                "format": "any"
+                "format": "default"
             },
             {
                 "name": "date",
@@ -618,7 +619,7 @@ class TestExport(helpers.BaseUserTestCase):
             {
                 "name": "boolean",
                 "type": "boolean",
-                "format": "any"
+                "format": "default"
             }
         ]
         schema = helpers.create_schema_from_fields(schema_fields)

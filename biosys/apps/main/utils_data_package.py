@@ -3,14 +3,15 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 import json
 import logging
 import re
+import datetime
 
 from dateutil.parser import parse as date_parse
 from django.contrib.gis.geos import Point
 from django.utils import six
 from django.utils.encoding import python_2_unicode_compatible
 from future.utils import raise_with_traceback
-from jsontableschema.exceptions import InvalidDateType
-from jsontableschema.model import SchemaModel, types
+from tableschema import Schema as TableSchema
+from tableschema import Field as TableField
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.writer.write_only import WriteOnlyCell
@@ -30,6 +31,10 @@ def is_blank_value(value):
 
 def is_empty_string(value):
     return isinstance(value, six.string_types) and len(value.strip()) == 0
+
+
+class InvalidDateType(Exception):
+    pass
 
 
 class ObservationSchemaError(Exception):
@@ -67,6 +72,24 @@ def parse_datetime_day_first(value):
     return date_parse(value, dayfirst=dayfirst)
 
 
+def cast_date_any_format(value):
+    if isinstance(value, datetime.date):
+        return value
+    try:
+        return parse_datetime_day_first(value).date()
+    except (TypeError, ValueError) as e:
+        raise_with_traceback(InvalidDateType(e))
+
+
+def cast_datetime_any_format(value):
+    if isinstance(value, datetime.datetime):
+        return value
+    try:
+        return parse_datetime_day_first(value)
+    except (TypeError, ValueError) as e:
+        raise_with_traceback(InvalidDateType(e))
+
+
 def find_unique_field(schema, biosys_type, column_name):
     """
     Precedence Rules:
@@ -92,43 +115,6 @@ def find_unique_field(schema, biosys_type, column_name):
     return None, None
 
 
-class DayFirstDateType(types.DateType):
-    """
-    Extend the jsontableschema DateType which use the mm/dd/yyyy date model for the 'any' format
-    to use dd/mm/yyyy
-    """
-
-    def cast_any(self, value, fmt=None):
-        if isinstance(value, self.python_type):
-            return value
-        try:
-            return parse_datetime_day_first(value).date()
-        except (TypeError, ValueError) as e:
-            raise_with_traceback(InvalidDateType(e))
-
-
-class DayFirstDateTimeType(types.DateTimeType):
-    """
-    Extend the jsontableschema DateType which use the mm/dd/yyyy date model for the 'any' format
-    to use dd/mm/yyyy
-    """
-
-    def cast_any(self, value, fmt=None):
-        if isinstance(value, self.python_type):
-            return value
-        try:
-            return parse_datetime_day_first(value)
-        except (TypeError, ValueError) as e:
-            raise_with_traceback(InvalidDateType(e))
-
-
-class NotBlankStringType(types.StringType):
-    """
-    The default StringType accepts empty string when required = True
-    """
-    null_values = ['null', 'none', 'nil', 'nan', '-', '']
-
-
 @python_2_unicode_compatible
 class BiosysSchema:
     """
@@ -138,7 +124,7 @@ class BiosysSchema:
       name: "...."
       constraints: ....
       biosys: {
-                type: [observationDate]
+                type: observationDate|latitude|longitude|...
               }
     }
     """
@@ -153,26 +139,22 @@ class BiosysSchema:
     SPECIES_NAME_ID_TYPE_NAME = 'speciesNameId'
     SITE_CODE_TYPE_NAME = 'siteCode'
 
-    BIOSYS_TYPE_MAP = {
-        OBSERVATION_DATE_TYPE_NAME: DayFirstDateType,
-    }
-
-    def __init__(self, data):
-        self.data = data or {}
+    def __init__(self, descriptor):
+        self.descriptor = descriptor or {}
 
     # implement some dict like methods
     def __getitem__(self, item):
-        return self.data.__getitem__(item)
+        return self.descriptor.__getitem__(item)
 
     def __str__(self):
-        return "BiosysSchema: {}".format(self.data)
+        return "BiosysSchema: {}".format(self.descriptor)
 
     @property
     def type(self):
         return self.get('type')
 
     def get(self, k, d=None):
-        return self.data.get(k, d)
+        return self.descriptor.get(k, d)
 
     def is_observation_date(self):
         return self.type == self.OBSERVATION_DATE_TYPE_NAME
@@ -206,45 +188,39 @@ class BiosysSchema:
 class SchemaField:
     """
     Utility class for a field in a schema.
-    It uses the schema types of
-    https://github.com/frictionlessdata/jsontableschema-py#types
-    for validation.
+    Uses a tableschema.Field (https://github.com/frictionlessdata/tableschema-py/blob/master/tableschema/field.py)
+    for help. It doesn't extend this class but compose with it, mostly for the use of the cast_value method.
     """
-    # For most of the type we use the jsontableschema ones
-    BASE_TYPE_MAP = SchemaModel._type_map()
-    # except for the date we use our custom one.
-    BASE_TYPE_MAP['date'] = DayFirstDateType
-    BASE_TYPE_MAP['datetime'] = DayFirstDateTimeType
-    BASE_TYPE_MAP['string'] = NotBlankStringType
+    DATETIME_TYPES = ['date', 'datetime']
+    TRUE_VALUES = ['True', 'true', 'True', 'YES', 'yes', 'y', 'Y', 'Yes']
+    FALSE_VALUES = ['FALSE', 'false', 'False', 'NO', 'no', 'n', 'N', 'No']
 
-    BIOSYS_TYPE_MAP = {
-    }
-
-    DATETIME_TYPES = [types.DateType, types.DateTimeType]
-
-    def __init__(self, data):
-        self.data = data
-        self.name = self.data.get('name')
+    def __init__(self, descriptor):
+        self.descriptor = self.__curate_descriptor(descriptor)
+        self.name = self.descriptor.get('name')
         # We want to throw an exception if there is no name
         if not self.name:
-            raise FieldSchemaError("A field without a name: {}".format(json.dumps(data)))
+            raise FieldSchemaError("A field without a name: {}".format(json.dumps(descriptor)))
+        # the tableschema field.
+        self.tableschema_field = TableField(self.descriptor)
         # biosys specific
-        self.biosys = BiosysSchema(self.data.get('biosys'))
-        # set the type: biosys type as precedence
-        type_class = self.BIOSYS_TYPE_MAP.get(self.biosys.type) or self.BASE_TYPE_MAP.get(self.data.get('type'))
-        self.type = type_class(self.data)
-        self.constraints = SchemaConstraints(self.data.get('constraints', {}))
+        self.biosys = BiosysSchema(self.descriptor.get('biosys'))
+        self.constraints = SchemaConstraints(self.descriptor.get('constraints', {}))
 
     # implement some dict like methods
     def __getitem__(self, item):
-        return self.data.__getitem__(item)
+        return self.descriptor.__getitem__(item)
 
     def get(self, k, d=None):
-        return self.data.get(k, d)
+        return self.descriptor.get(k, d)
 
     @property
     def title(self):
-        return self.data.get('title')
+        return self.descriptor.get('title')
+
+    @property
+    def type(self):
+        return self.descriptor.get('type')
 
     @property
     def column_name(self):
@@ -256,14 +232,15 @@ class SchemaField:
 
     @property
     def aliases(self):
-        return self.data['aliases'] if 'aliases' in self.data else []
+        return self.descriptor['aliases'] if 'aliases' in self.descriptor else []
 
     @property
     def is_datetime_type(self):
-        for dt_type in self.DATETIME_TYPES:
-            if isinstance(self.type, dt_type):
-                return True
-        return False
+        return self.type in self.DATETIME_TYPES
+
+    @property
+    def format(self):
+        return self.descriptor['format']
 
     def has_alias(self, name, icase=False):
         for alias in self.aliases:
@@ -285,19 +262,25 @@ class SchemaField:
     def cast(self, value):
         """
         Returns o native Python object of the expected format. Will throw an exception
-        if the value doesn't complies with any constraints. See for details:
-        https://github.com/frictionlessdata/jsontableschema-py#types
-        This method is mainly a helper for the validation_error
+        if the value doesn't complies with any constraints.
+        This method delegates most of the cast to the tableschema.Field.cast_value. Except for
+        - date and dateTime with format='any'. This because the tableschema.Field.cast_value interprets an ambiguous
+        day/month/year date as month/day/year (american way)
         :param value:
         :return:
         """
+        # we want to strip strings
         if isinstance(value, six.string_types):
             value = value.strip()
             # TODO: remove that when running in Python3
             if not isinstance(value, six.text_type):
-                # the StringType accepts only unicode
+                # the ensure only unicode
                 value = six.u(value).strip()
-        return self.type.cast(value)
+        # date or datetime with format='any
+        if self.is_datetime_type and self.format == 'any':
+            return cast_date_any_format(value)
+        # delegates to tableschema.Field.cast_value
+        return self.tableschema_field.cast_value(value, constraints=True)
 
     def validation_error(self, value):
         """
@@ -309,7 +292,7 @@ class SchemaField:
         error = None
         # override the integer validation. The default message is a bit cryptic if there's an error casting a string
         # like '1.2' into an int.
-        if isinstance(self.type, types.IntegerType):
+        if self.type == 'integer':
             if not is_blank_value(value):
                 not_integer = False
                 try:
@@ -332,6 +315,21 @@ class SchemaField:
                 error = "The value must be one the following: {}".format(values)
         return error
 
+    def __curate_descriptor(self, descriptor):
+        """
+        Apply some changes to the descriptor:
+
+        - Change default values for boolean (adding 'yes' and 'no')
+        Since TableSchema V1.0 the default true values are [ "true", "True", "TRUE", "1" ]
+        We want to be sure that 'yes' and 'no' (and variations) are included by default.
+        The schema specifications allows to override the true and false values with 'trueValues' and 'falseValues'
+        (see https://frictionlessdata.io/specs/table-schema/)
+        """
+        if descriptor.get('type') == 'boolean':
+            descriptor['trueValues'] = descriptor.get('trueValues', self.TRUE_VALUES)
+            descriptor['falseValues'] = descriptor.get('falseValues', self.FALSE_VALUES)
+        return descriptor
+
     def __str__(self):
         return '{}'.format(self.name)
 
@@ -341,15 +339,15 @@ class SchemaConstraints:
     A helper class for a schema field constraints
     """
 
-    def __init__(self, data):
-        self.data = data or {}
+    def __init__(self, descriptor):
+        self.descriptor = descriptor or {}
 
     # implement some dict like methods
     def __getitem__(self, item):
-        return self.data.__getitem__(item)
+        return self.descriptor.__getitem__(item)
 
     def get(self, k, d=None):
-        return self.data.get(k, d)
+        return self.descriptor.get(k, d)
 
     @property
     def required(self):
@@ -366,18 +364,18 @@ class SchemaForeignKey:
     A utility class for foreign key in schema
     """
 
-    def __init__(self, data):
-        self.data = data
+    def __init__(self, descriptor):
+        self.descriptor = descriptor
 
     def __str__(self):
-        return 'Foreign Key {}'.format(self.data)
+        return 'Foreign Key {}'.format(self.descriptor)
 
     # implement some dict like methods
     def __getitem__(self, item):
-        return self.data.__getitem__(item)
+        return self.descriptor.__getitem__(item)
 
     def get(self, k, d=None):
-        return self.data.get(k, d)
+        return self.descriptor.get(k, d)
 
     @staticmethod
     def _as_list(value):
@@ -390,7 +388,7 @@ class SchemaForeignKey:
 
     @property
     def fields(self):
-        return self._as_list(self.data.get('fields', []))
+        return self._as_list(self.descriptor.get('fields', []))
 
     @property
     def data_field(self):
@@ -398,7 +396,7 @@ class SchemaForeignKey:
 
     @property
     def reference(self):
-        return self.data.get('reference', {})
+        return self.descriptor.get('reference', {})
 
     @property
     def reference_fields(self):
@@ -421,24 +419,24 @@ class SchemaForeignKey:
 class GenericSchema(object):
     """
     A utility class for schema.
-    It uses internally an instance SchemaModel of the frictionless jsontableschema for help.
-    https://github.com/frictionlessdata/jsontableschema-py#model
+    It uses internally an instance of the frictionless tableschema.Schema for help.
+    https://github.com/frictionlessdata/tableschema-py/blob/master/tableschema/schema.py
     Will throw an exception if the schema is not valid
     """
 
-    def __init__(self, schema):
-        self.data = schema
-        self.schema_model = SchemaModel(schema)
-        self.fields = [SchemaField(f) for f in self.schema_model.fields]
+    def __init__(self, descriptor):
+        self.descriptor = descriptor
+        self.schema_model = TableSchema(descriptor, strict=True)
+        self.fields = [SchemaField(f.descriptor) for f in self.schema_model.fields]
         self.foreign_keys = [SchemaForeignKey(fk) for fk in
-                             self.schema_model.foreignKeys] if self.schema_model.foreignKeys else []
+                             self.schema_model.foreign_keys] if self.schema_model.foreign_keys else []
 
     # implement some dict like methods
     def __getitem__(self, item):
-        return self.data.__getitem__(item)
+        return self.descriptor.__getitem__(item)
 
     def get(self, k, d=None):
-        return self.data.get(k, d)
+        return self.descriptor.get(k, d)
 
     @property
     def headers(self):
@@ -566,8 +564,8 @@ class ObservationSchema(GenericSchema):
         ]
      """
 
-    def __init__(self, schema):
-        super(ObservationSchema, self).__init__(schema)
+    def __init__(self, descriptor):
+        super(ObservationSchema, self).__init__(descriptor)
         self.errors = []
 
         # date parser
@@ -634,12 +632,12 @@ class SpeciesObservationSchema(ObservationSchema):
     SPECIES_NAME_FIELD_NAME = 'Species Name'
     SPECIES_NAME_ID_FIELD_NAMES_LOWER = ['name id', 'nameid', 'species nameid', 'species name id']
 
-    def __init__(self, schema):
+    def __init__(self, descriptor):
         """
         An ObservationSchema with a field for species name or species nameid
-        :param schema:
+        :param descriptor:
         """
-        super(SpeciesObservationSchema, self).__init__(schema)
+        super(SpeciesObservationSchema, self).__init__(descriptor)
         try:
             self.species_name_field = self.find_species_name_field_or_throws(self, enforce_required=False)
         except SpeciesObservationSchemaError:
@@ -672,6 +670,7 @@ class SpeciesObservationSchema(ObservationSchema):
         Precedence Rules:
         2- Look for biosys.type = 'speciesName'
         3- Look for a field with name 'Species Name' case insensitive
+        :param enforce_required:
         :param schema: a dict descriptor or a Schema instance
         :return: The SchemaField or raise an exception if none or more than one
         """
@@ -760,6 +759,7 @@ class ObservationDateParser(object):
     It will store errors if there are any ambiguity (typical two fields with same name) or if the field is not of a
     date/time type.
     """
+
     def __init__(self, schema):
         if not isinstance(schema, GenericSchema):
             schema = GenericSchema(schema)
@@ -776,7 +776,7 @@ class ObservationDateParser(object):
         if self.observation_date_field and not self.observation_date_field.is_datetime_type:
             msg = "Wrong type for the observation date field: '{field}' should be one of: {types}".format(
                 field=self.observation_date_field.name,
-                types=[dt_type.name for dt_type in SchemaField.DATETIME_TYPES]
+                types=[SchemaField.DATETIME_TYPES]
             )
             self.errors += msg
             self.observation_date_field = None
@@ -972,7 +972,7 @@ class GeometryParser(object):
                     return default_srid
                 try:
                     int(zone_val)
-                except:
+                except ValueError:
                     msg = "Invalid Zone '{}'. Should be an integer.".format(zone_val)
                     raise InvalidDatumError(msg)
                 try:
@@ -1098,7 +1098,7 @@ class Exporter:
                     # Cast to native python type
                     try:
                         value = field.cast(value)
-                    except:
+                    except Exception:
                         pass
                 # TODO: remove that when running in Python3
                 if isinstance(value, six.string_types) and not isinstance(value, six.text_type):
