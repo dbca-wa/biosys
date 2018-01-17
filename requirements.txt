@@ -11,13 +11,11 @@ requests==2.11
 Unipath==1.1
 six==1.10
 python-dateutil==2.6.0
+future==0.16.0
 
-# frictionless tableschema and datapackage
-# TODO: update to 1.0.0 when released. Problem: it breaks a lot of things.
-jsontableschema==0.6.5
-# force a version of tabulator (dependency of jsontableschema) to avoid error when upgrading
-tabulator==0.5.0
-datapackage==0.8.1
+# frictionless datapackage and tableschema
+datapackage>=1.0,<2.0
+tableschema>=1.0,<2.0
 
 # rest API
 djangorestframework==3.5.3

@@ -176,8 +176,8 @@ class TestSchemaConstraints(TestCase):
         """
         None or empty is accepted
         """
-        self.assertEquals({}, SchemaConstraints(None).data)
-        self.assertEquals({}, SchemaConstraints({}).data)
+        self.assertEquals({}, SchemaConstraints(None).descriptor)
+        self.assertEquals({}, SchemaConstraints({}).descriptor)
 
     def test_required_property(self):
         # no constraints -> require = False
@@ -278,14 +278,44 @@ class TestSchemaFieldCast(TestCase):
     def setUp(self):
         self.base_field_descriptor = clone(BASE_FIELD)
 
-    def test_boolean(self):
-        true_values = [True, 'True', 'true', 'YES', 'yes', 'y', 't', '1', 1]
-        false_values = [False, 'FALSE', 'false', 'NO', 'no', 'n', 'f', '0', 0]
-        wrong_values = [2, 3, 'FLSE', 'flse', 'NON', 'oui', 'maybe', 'not sure']
+    def test_boolean_default_values(self):
+        """
+        Test possible values for a boolean
+        Since TableSchema V1.0 the default true values are [ "true", "True", "TRUE", "1" ]
+        We want to be sure that 'yes' and 'no' (and variations) are included by default.
+        """
+        true_values = ['True', 'true', 'True', 'YES', 'yes', 'y', 'Y', 'Yes']
+        false_values = ['FALSE', 'false', 'False', 'NO', 'no', 'n', 'N', 'No']
+        wrong_values = [2, 3, 'FLSE', 'flse', 'NON', 'oui', 'maybe', 'not sure', 't', '1', 1, '0', 0]
         descriptor = self.base_field_descriptor
         descriptor['type'] = 'boolean'
         # only 'default' format
         descriptor['format'] = 'default'
+        f = SchemaField(descriptor)
+        for v in true_values:
+            self.assertTrue(f.cast(v))
+        for v in false_values:
+            self.assertFalse(f.cast(v))
+        for v in wrong_values:
+            with self.assertRaises(Exception):
+                f.cast(v)
+
+    def test_boolean_custom_values(self):
+        """
+        The schema specifications allows to override the true and false values with 'trueValues' and 'falseValues'
+        (see https://frictionlessdata.io/specs/table-schema/)
+        We want only 'yes' and 'no'
+        """
+        true_values = ['YES', 'yes', 'Yes']
+        false_values = ['NO', 'no', 'No']
+        wrong_values = ['true', 'false', 'True', 'False', 'y', 'n', 'Y', 'N', 't', '1', 1, '0', 0]
+        descriptor = self.base_field_descriptor
+        descriptor['type'] = 'boolean'
+        # only 'default' format
+        descriptor['format'] = 'default'
+        descriptor['trueValues'] = true_values
+        descriptor['falseValues'] = false_values
+
         f = SchemaField(descriptor)
         for v in true_values:
             self.assertTrue(f.cast(v))
@@ -335,7 +365,7 @@ class TestSchemaFieldCast(TestCase):
                 f.cast(v)
 
     def test_date_custom_format(self):
-        format_ = 'fmt:%d %b %y'  # ex 30 Nov 14
+        format_ = '%d %b %y'  # ex 30 Nov 14
         descriptor = {
             'name': 'Date with fmt',
             'type': 'date',
@@ -345,7 +375,7 @@ class TestSchemaFieldCast(TestCase):
         value = '30 Nov 14'
         self.assertEqual(field.cast(value), datetime.date(2014, 11, 30))
 
-        format_ = 'fmt:%Y_%m_%d'
+        format_ = '%Y_%m_%d'
         descriptor = {
             'name': 'Date with fmt',
             'type': 'date',
@@ -356,8 +386,8 @@ class TestSchemaFieldCast(TestCase):
         self.assertEqual(field.cast(value), datetime.date(2012, 3, 5))
 
     def test_string(self):
-        # test that a blank string '' is not accepted when the field is required
-        null_values = ['null', 'none', 'nil', 'nan', '-', '']
+        # test that a blank string '' or '  ' is not accepted when the field is required
+        null_values = ['', '   ']
         desc = clone(BASE_FIELD)
         desc['type'] = 'string'
         desc['constraints'] = clone(REQUIRED_CONSTRAINTS)
