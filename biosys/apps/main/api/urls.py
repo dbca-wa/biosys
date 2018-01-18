@@ -35,7 +35,7 @@ url_patterns = [
         api_views.GeoConvertView.as_view(output='geometry'),
         name="data-to-geometry"
         ),
-    url(r'utils/infer-dataset/?', api_views.InferDataset.as_view(), name='infer-dataset')
+    url(r'utils/infer-dataset/?', api_views.InferDatasetView.as_view(), name='infer-dataset')
 ]
 
 urls = router.urls + url_patterns

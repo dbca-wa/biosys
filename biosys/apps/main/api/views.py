@@ -585,7 +585,7 @@ class GeoConvertView(generics.GenericAPIView):
                                 status=status.HTTP_400_BAD_REQUEST)
 
 
-class InferDataset(APIView):
+class InferDatasetView(APIView):
     """
     Accept a xlsx or csv file and return a datapackage with schema inferred
     """
