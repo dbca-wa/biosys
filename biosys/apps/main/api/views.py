@@ -281,7 +281,7 @@ class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesM
         :param order_by: field to order by, prefixed with '-' for descending order
         :return: the queryset after search filters applied
         """
-        field_names = [field['name'] for field in self.dataset.data_package['resources'][0]['schema']['fields']]
+        field_names = self.dataset.schema.field_names
 
         where_clauses = []
         params = []
@@ -305,7 +305,7 @@ class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesM
         :param ordering_param: field to order by, prefixed with '-' for descending order
         :return: the queryset after ordering is applied if order_by param is within data
         """
-        field_names = [field['name'] for field in self.dataset.data_package['resources'][0]['schema']['fields']]
+        field_names = self.dataset.schema.field_names
 
         for field_name in field_names:
             if ordering_param == field_name or ordering_param == '-' + field_name:
