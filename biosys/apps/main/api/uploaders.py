@@ -3,16 +3,18 @@ import csv
 import datetime
 from os import path
 
+import datapackage
 from django.conf import settings
 from django.utils import six, timezone
 from openpyxl import load_workbook
+from slugify import slugify
 
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
 from main.models import Site, Dataset
+from main.utils_data_package import GeometryParser, ObservationSchema, SpeciesObservationSchema
 from main.utils_misc import get_value
 from main.utils_species import HerbieFacade, get_key_for_value
-from main.utils_data_package import GeometryParser
 
 
 def xlsx_to_csv(file):
@@ -275,3 +277,96 @@ class RecordCreator:
             if site is None and self.create_site:
                 site = Site.objects.create(**kwargs)
         return site
+
+
+class DataPackageBuilder:
+
+    @staticmethod
+    def infer_from_file(file_path, format_='xlsx', name=None):
+        dir_name = path.dirname(file_path)
+        builder = DataPackageBuilder(base_path=dir_name, title=name)
+        builder._add_resource_from_file(file_path, format_=format_, name=name)
+        return builder
+
+    def __init__(self, descriptor=None, title=None, **kwargs):
+        descriptor = descriptor or {}
+        if title:
+            descriptor['title'] = title
+            descriptor['name'] = slugify(title)
+        self.package = datapackage.Package(descriptor, **kwargs)
+        self.biosys_errors = []
+
+    def _add_resource_from_file(self, file_path, format_='xlsx', name=None):
+        try:
+            file_name = path.basename(file_path)
+            name = slugify(name or path.splitext(file_name)[0])
+            resource = self.package.add_resource({
+                'path': path.basename(file_path),
+                'name': name,
+                'format': format_
+            })
+            self.package.infer()
+            self._biosys_infer()
+            # biosys support only one resources by package
+            if len(self.resources) > 1:
+                self.biosys_errors.append(
+                    Exception('More than one resources. Biosys supports only one resources per data-package.')
+                )
+            return resource.descriptor
+        except Exception as e:
+            self.biosys_errors.append(e)
+            return None
+
+    def infer_biosys_type(self):
+        """
+        Use the schema models in utils to infer the type.
+        The constructor should throw an exception if something is not correc
+        :return:
+        """
+        # TODO: use a better control workflow than exception
+        try:
+            SpeciesObservationSchema(self.schema)
+            return Dataset.TYPE_SPECIES_OBSERVATION
+        except Exception:
+            try:
+                ObservationSchema(self.schema)
+                return Dataset.TYPE_OBSERVATION
+            except Exception:
+                return Dataset.TYPE_GENERIC
+
+    @property
+    def valid(self):
+        return self.package.valid and not bool(self.biosys_errors)
+
+    @property
+    def errors(self):
+        return self.package.errors + self.biosys_errors
+
+    @property
+    def descriptor(self):
+        return self.package.descriptor
+
+    @property
+    def title(self):
+        return self.descriptor.get('title')
+
+    @property
+    def resources(self):
+        return self.package.resources
+
+    @property
+    def schema(self):
+        return self.package.descriptor.get('resources')[0].get('schema') if len(self.resources) > 0 else None
+
+    @property
+    def fields(self):
+        return self.schema.get('fields') if self.schema else []
+
+    def _biosys_infer(self):
+        """
+        Rules:
+        - fields of type 'any' should be converted to type 'string'
+        """
+        for field in [f for f in self.fields if f.get('type') == 'any']:
+            field['type'] = 'string'
+        self.package.commit()

@@ -1105,7 +1105,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
             [25454, '01/01/2017', -32.0, 115.75],  # "Canis lupus"
             ['24204', '02/02/2017', -33.0, 116.0]  # "Vespadelus douglasorum"
         ]
-        file_ = helpers.to_xlsx_file(csv_data)
+        file_ = helpers.rows_to_xlsx_file(csv_data)
         self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
         url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
         with open(file_, 'rb') as fp:
@@ -1210,7 +1210,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
             [99934, '01/01/2017', -32.0, 115.75],  # wrong
             ['24204', '02/02/2017', -33.0, 116.0]  # "Vespadelus douglasorum"
         ]
-        file_ = helpers.to_xlsx_file(csv_data)
+        file_ = helpers.rows_to_xlsx_file(csv_data)
         self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
         url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
         with open(file_, 'rb') as fp:
@@ -1333,7 +1333,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
             [25454, 'Chubby Bat', '01/01/2017', -32.0, 115.75],  # "Canis lupus"
             ['24204', 'French Frog', '02/02/2017', -33.0, 116.0]  # "Vespadelus douglasorum"
         ]
-        file_ = helpers.to_xlsx_file(csv_data)
+        file_ = helpers.rows_to_xlsx_file(csv_data)
         self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
         url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
         with open(file_, 'rb') as fp:
@@ -1369,7 +1369,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
             ['', 'Canis lupus', '01/01/2017', -32.0, 115.75],  # "Canis lupus"
             ['', 'Vespadelus douglasorum', '02/02/2017', -33.0, 116.0]  # "Vespadelus douglasorum"
         ]
-        file_ = helpers.to_xlsx_file(csv_data)
+        file_ = helpers.rows_to_xlsx_file(csv_data)
         self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
         url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
         with open(file_, 'rb') as fp:

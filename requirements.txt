@@ -12,6 +12,7 @@ Unipath==1.1
 six==1.10
 python-dateutil==2.6.0
 future==0.16.0
+python-slugify==1.2.4
 
 # frictionless datapackage and tableschema
 datapackage>=1.0,<2.0
