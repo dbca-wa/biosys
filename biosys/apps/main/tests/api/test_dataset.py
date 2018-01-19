@@ -1,6 +1,10 @@
+import json
+
 from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
+from django.utils.encoding import force_text
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -597,3 +601,99 @@ class TestRecordsView(helpers.BaseUserTestCase):
         resp = self.client.get(self.url, data=None, format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(len(resp.json()), 0)
+
+class TestDatasetRecordsSearchAndOrdering(TestCase):
+    fixtures = [
+        'test-users',
+        'test-projects',
+        'test-sites',
+        'test-datasets',
+        'test-generic-records'
+    ]
+
+    def setUp(self):
+        password = 'password'
+        user_model = get_user_model()
+        self.admin_user = user_model.objects.filter(username="admin").first()
+        self.assertIsNotNone(self.admin_user)
+        self.assertTrue(is_admin(self.admin_user))
+        self.admin_user.set_password(password)
+        self.admin_user.save()
+        self.assertTrue(self.client.login(username=self.admin_user.username, password=password))
+
+    def test_server_side_search(self):
+        # this dataset has records in it
+        dataset = Dataset.objects.all()[2]
+
+        self.assertIsNotNone(dataset)
+
+        self.assertEqual(dataset.record_queryset.count(), 10)
+
+        url = reverse('api:dataset-records', kwargs={'pk': dataset.pk})
+
+        # test fetch all records for dataset
+        resp = self.client.get(url, format='json')
+
+        self.assertEqual(resp.status_code, 200)
+
+        json_response = json.loads(force_text(resp.content))
+
+        self.assertEqual(len(json_response), 10)
+
+        # test fetching records in dataset using specific search term specific term
+        resp = self.client.get(url + '?search=Chalino', format='json')
+
+        self.assertEqual(resp.status_code, 200)
+
+        json_response = json.loads(force_text(resp.content))
+
+        self.assertEqual(len(json_response), 2)
+
+    def test_server_side_ordering(self):
+        # this dataset has records in it
+        dataset = Dataset.objects.all()[2]
+
+        self.assertIsNotNone(dataset)
+
+        self.assertEqual(dataset.record_queryset.count(), 10)
+
+        url = reverse('api:dataset-records', kwargs={'pk': dataset.pk})
+
+        # check unordered request is not ordered by family
+        resp = self.client.get(url, format='json')
+
+        self.assertEqual(resp.status_code, 200)
+
+        json_response = json.loads(force_text(resp.content))
+
+        self.assertEqual(len(json_response), 10)
+
+        record_families = [record['data']['Family'] for record in json_response]
+
+        self.assertNotEqual(record_families, sorted(record_families))
+
+        # check is request ordered by family is ordered by family in alphabetical order
+        resp = self.client.get(url + '?ordering=Family', format='json')
+
+        self.assertEqual(resp.status_code, 200)
+
+        json_response = json.loads(force_text(resp.content))
+
+        self.assertEqual(len(json_response), 10)
+
+        record_families = [record['data']['Family'] for record in json_response]
+
+        self.assertEqual(record_families, sorted(record_families))
+
+        # check is request ordered by family in descending order is ordered by family in reverse alphabetical order
+        resp = self.client.get(url + '?ordering=-Family', format='json')
+
+        self.assertEqual(resp.status_code, 200)
+
+        json_response = json.loads(force_text(resp.content))
+
+        self.assertEqual(len(json_response), 10)
+
+        record_families = [record['data']['Family'] for record in json_response]
+
+        self.assertEqual(record_families, list(reversed(sorted(record_families))))

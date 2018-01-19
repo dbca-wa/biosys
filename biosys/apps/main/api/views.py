@@ -7,6 +7,7 @@ from os import path
 from django.contrib.auth import get_user_model, logout
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from django.db.models import Q
+from django.db.models.expressions import RawSQL
 from django.shortcuts import get_object_or_404
 from dry_rest_permissions.generics import DRYPermissions
 from rest_framework import viewsets, filters, generics, status
@@ -274,8 +275,64 @@ class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesM
                 ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
         return ctx
 
+    def search_data(self, qs, search_param, order_by=None):
+        """
+        Search does not support searching within JSONField.
+        :param qs: queryset
+        :param search_param: value to search
+        :param order_by: field to order by, prefixed with '-' for descending order
+        :return: the queryset after search filters applied
+        """
+        field_names = self.dataset.schema.field_names
+
+        where_clauses = []
+        params = []
+        for field_name in field_names:
+            where_clauses.append('data->>%s ILIKE %s')
+
+            params += [field_name, '%' + search_param + '%']
+
+            if order_by is not None and (order_by == field_name or order_by == '-' + field_name):
+                if order_by.startswith('-'):
+                    qs = qs.order_by(RawSQL('data->>%s', (order_by[1:],)).desc())
+                else:
+                    qs = qs.order_by(RawSQL('data->>%s', (order_by,)))
+
+        return qs.extra(where=['OR '.join(where_clauses)], params=params)
+
+    def order_by_data_field(self, qs, ordering_param):
+        """
+        Order by does not support ordering within JSONField.
+        :param qs: queryset
+        :param ordering_param: field to order by, prefixed with '-' for descending order
+        :return: the queryset after ordering is applied if order_by param is within data
+        """
+        field_names = self.dataset.schema.field_names
+
+        for field_name in field_names:
+            if ordering_param == field_name or ordering_param == '-' + field_name:
+                if ordering_param.startswith('-'):
+                    qs = qs.order_by(RawSQL('data->>%s', (ordering_param[1:],)).desc())
+                else:
+                    qs = qs.order_by(RawSQL('data->>%s', (ordering_param,)))
+
+        return qs
+
     def get_queryset(self):
-        return self.dataset.record_queryset if self.dataset else Dataset.objects.none()
+        if self.dataset:
+            queryset = self.dataset.record_queryset
+
+            search_param = self.request.query_params.get('search')
+            if search_param is not None:
+                queryset = self.search_data(queryset, search_param)
+
+            ordering_param = self.request.query_params.get('ordering')
+            if ordering_param is not None:
+                queryset = self.order_by_data_field(queryset, ordering_param)
+
+            return queryset
+        else:
+            return Dataset.objects.none()
 
     def get(self, request, *args, **kwargs):
         """
