@@ -12,7 +12,7 @@ from openpyxl import load_workbook
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
 from main.models import Site, Dataset
-from main.utils_data_package import GeometryParser, ObservationSchema, SpeciesObservationSchema
+from main.utils_data_package import GeometryParser, ObservationSchema, SpeciesObservationSchema, BiosysSchema
 from main.utils_misc import get_value
 from main.utils_species import HerbieFacade, get_key_for_value
 
@@ -298,6 +298,12 @@ class DataPackageBuilder:
         constraints['required'] = required
         field['constraints'] = constraints
 
+    @staticmethod
+    def set_biosys_type(field, type_):
+        biosys_tag = field.get(BiosysSchema.BIOSYS_KEY_NAME, {})
+        biosys_tag['type'] = type_
+        field[BiosysSchema.BIOSYS_KEY_NAME] = biosys_tag
+
     def __init__(self, descriptor=None, title=None, **kwargs):
         descriptor = descriptor or {}
         if title:
@@ -382,6 +388,7 @@ class DataPackageBuilder:
         - Fields of type 'date' or 'datetime' should have format = 'any' instead of default
           (the 'any' makes the date parser more flexible)
         - If it contains a latitude/longitude schema set the lat/long columns type='number' with constraint required
+          and they should be tagged with the correct biosys tag.
         """
         for field in self.fields:
             type_ = field.get('type')
@@ -405,6 +412,8 @@ class DataPackageBuilder:
                 self.set_type('number', lon_field)
                 self.set_required(lat_field)
                 self.set_required(lon_field)
+                self.set_biosys_type(lat_field, BiosysSchema.LATITUDE_TYPE_NAME)
+                self.set_biosys_type(lon_field, BiosysSchema.LONGITUDE_TYPE_NAME)
             else:
                 # more that one lat or long fields? Should not happen.
                 pass

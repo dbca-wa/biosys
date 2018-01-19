@@ -12,6 +12,7 @@ from django.core.exceptions import ValidationError
 from main.tests.api import helpers
 from main.models import Dataset
 from main import utils_data_package
+from main.utils_data_package import BiosysSchema
 
 
 class InferTestBase(helpers.BaseUserTestCase):
@@ -165,6 +166,7 @@ class TestGenericSchema(InferTestBase):
          Given that a column named latitude and longitude exists
          Then they should be of type 'number'
          And they should be set as required
+         And they should be tagged with the appropriate biosys tag
          And the dataset type should be observation
         """
         columns = ['What', 'Latitude', 'Longitude']
@@ -194,6 +196,9 @@ class TestGenericSchema(InferTestBase):
             self.assertEquals(lon_field.type, 'number')
             self.assertTrue(lat_field.required)
             self.assertTrue(lon_field.required)
+            # biosys types
+            self.assertTrue(BiosysSchema(lat_field.get(BiosysSchema.BIOSYS_KEY_NAME)).is_latitude())
+            self.assertTrue(BiosysSchema(lon_field.get(BiosysSchema.BIOSYS_KEY_NAME)).is_longitude())
 
             self.assertEquals(Dataset.TYPE_OBSERVATION, received.get('type'))
             # test biosys validity

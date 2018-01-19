@@ -128,6 +128,7 @@ class BiosysSchema:
               }
     }
     """
+    BIOSYS_KEY_NAME = 'biosys'
     OBSERVATION_DATE_TYPE_NAME = 'observationDate'
     LATITUDE_TYPE_NAME = 'latitude'
     LONGITUDE_TYPE_NAME = 'longitude'
@@ -204,7 +205,7 @@ class SchemaField:
         # the tableschema field.
         self.tableschema_field = TableField(self.descriptor)
         # biosys specific
-        self.biosys = BiosysSchema(self.descriptor.get('biosys'))
+        self.biosys = BiosysSchema(self.descriptor.get(BiosysSchema.BIOSYS_KEY_NAME))
         self.constraints = SchemaConstraints(self.descriptor.get('constraints', {}))
 
     # implement some dict like methods
