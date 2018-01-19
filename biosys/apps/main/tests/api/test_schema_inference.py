@@ -1,5 +1,8 @@
+import json
 from os import path
+import datetime as dt
 
+from dateutil.parser import parse as dt_parse
 from datapackage import Package
 from django.shortcuts import reverse
 from rest_framework import status
@@ -61,13 +64,13 @@ class TestGenericSchema(InferTestBase):
         Test that the infer detect numbers and integers type
         """
         columns = ['Name', 'Age', 'Weight', 'Comments']
-        csv_data = [
+        rows = [
             columns,
             ['Frederic', 56, 80.5, 'a comment'],
             ['Hilda', 24, 56, '']
         ]
         client = self.custodian_1_client
-        file_ = helpers.rows_to_xlsx_file(csv_data)
+        file_ = helpers.rows_to_xlsx_file(rows)
         with open(file_, 'rb') as fp:
             payload = {
                 'file': fp,
@@ -115,3 +118,83 @@ class TestGenericSchema(InferTestBase):
             self.assertEquals(field.type, 'string')
             self.assertFalse(field.required)
             self.assertEquals(field.format, 'default')
+
+    def test_generic_date_iso(self):
+        """
+        Scenario: date column with ISO string 'yyyy-mm-dd'
+        Given that a column is provided with strings of form 'yyyy-mm-dd'
+        Then the column type should be 'date'
+        And the format should be 'any'
+        """
+        columns = ['What', 'When']
+        rows = [
+            columns,
+            ['Something', '2018-01-19'],
+            ['Another thing', dt.date(2017, 12, 29).isoformat()],
+            ['Another thing', dt.date(2017, 8, 1).isoformat()]
+        ]
+        client = self.custodian_1_client
+        file_ = helpers.rows_to_xlsx_file(rows)
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp,
+            }
+            resp = client.post(self.url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            received = resp.json()
+            # data_package verification
+            self.assertIn('data_package', received)
+            self.verify_inferred_data(received)
+
+            # verify schema
+            schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
+            schema = utils_data_package.GenericSchema(schema_descriptor)
+            field = schema.get_field_by_mame('What')
+            self.assertEquals(field.type, 'string')
+            self.assertFalse(field.required)
+            self.assertEquals(field.format, 'default')
+
+            field = schema.get_field_by_mame('When')
+            self.assertEquals(field.type, 'date')
+            self.assertFalse(field.required)
+            self.assertEquals(field.format, 'any')
+
+    def test_observation_with_lat_long(self):
+        """
+        Scenario:
+         Given that a column named latitude and longitude exists
+         Then they should be of type 'number'
+         And they should be set as required
+         And the dataset type should be observation
+        """
+        columns = ['What', 'Latitude', 'Longitude']
+        rows = [
+            columns,
+            ['Observation1', -32, 117.75],
+            ['Observation with lat/long as string', '-32', '115.75']
+        ]
+        client = self.custodian_1_client
+        file_ = helpers.rows_to_xlsx_file(rows)
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp,
+            }
+            resp = client.post(self.url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            received = resp.json()
+            # data_package verification
+            self.assertIn('data_package', received)
+
+            # verify fields attributes
+            schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
+            schema = utils_data_package.GenericSchema(schema_descriptor)
+            lat_field = schema.get_field_by_mame('Latitude')
+            lon_field = schema.get_field_by_mame('Longitude')
+            self.assertEquals(lat_field.type, 'number')
+            self.assertEquals(lon_field.type, 'number')
+            self.assertTrue(lat_field.required)
+            self.assertTrue(lon_field.required)
+
+            self.assertEquals(Dataset.TYPE_OBSERVATION, received.get('type'))
+            # test biosys validity
+            self.verify_inferred_data(received)

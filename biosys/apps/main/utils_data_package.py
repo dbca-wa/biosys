@@ -912,7 +912,7 @@ class GeometryParser(object):
                 self.errors.append(format_required_message(self.northing_field))
 
     def is_valid(self):
-        return not self.errors
+        return not bool(self.errors)
 
     @property
     def is_easting_northing(self):

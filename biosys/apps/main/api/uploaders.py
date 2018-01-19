@@ -6,8 +6,8 @@ from os import path
 import datapackage
 from django.conf import settings
 from django.utils import six, timezone
+from django.utils.text import slugify
 from openpyxl import load_workbook
-from slugify import slugify
 
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
@@ -288,6 +288,16 @@ class DataPackageBuilder:
         builder._add_resource_from_file(file_path, format_=format_, name=name)
         return builder
 
+    @staticmethod
+    def set_type(type_, field):
+        field['type'] = type_
+
+    @staticmethod
+    def set_required(field, required=True):
+        constraints = field.get('constraints', {})
+        constraints['required'] = required
+        field['constraints'] = constraints
+
     def __init__(self, descriptor=None, title=None, **kwargs):
         descriptor = descriptor or {}
         if title:
@@ -362,11 +372,41 @@ class DataPackageBuilder:
     def fields(self):
         return self.schema.get('fields') if self.schema else []
 
+    def get_fields_by_name(self, name):
+        return [f for f in self.fields if f.get('name') == name]
+
     def _biosys_infer(self):
         """
         Rules:
-        - fields of type 'any' should be converted to type 'string'
+        - Fields of type 'any' should be converted to type 'string'
+        - Fields of type 'date' or 'datetime' should have format = 'any' instead of default
+          (the 'any' makes the date parser more flexible)
+        - If it contains a latitude/longitude schema set the lat/long columns type='number' with constraint required
         """
-        for field in [f for f in self.fields if f.get('type') == 'any']:
-            field['type'] = 'string'
+        for field in self.fields:
+            type_ = field.get('type')
+            format_ = field.get('format')
+
+            if type_ == 'any':
+                field['type'] = 'string'
+
+            if type_ in ['date', 'datetime'] and format_ == 'default':
+                field['format'] = 'any'
+
+        # geometry inference
+        geo_parser = GeometryParser(self.schema)
+        if geo_parser.is_lat_long:
+            lat_fields = self.get_fields_by_name(geo_parser.latitude_field.name)
+            lon_fields = self.get_fields_by_name(geo_parser.longitude_field.name)
+            if len(lat_fields) == 1 and len(lon_fields) == 1:
+                lat_field = lat_fields[0]
+                lon_field = lon_fields[0]
+                self.set_type('number', lat_field)
+                self.set_type('number', lon_field)
+                self.set_required(lat_field)
+                self.set_required(lon_field)
+            else:
+                # more that one lat or long fields? Should not happen.
+                pass
+
         self.package.commit()
