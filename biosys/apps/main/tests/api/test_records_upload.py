@@ -43,7 +43,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             ['A1', 'B1'],
             ['A2', 'B2']
         ]
-        file_ = helpers.to_csv_file(csv_data)
+        file_ = helpers.rows_to_csv_file(csv_data)
         client = self.custodian_1_client
         self.assertEquals(0, self.ds.record_queryset.count())
         file_name = path.basename(file_)
@@ -99,7 +99,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             ['A1', 'B1'],
             ['A2', 'B2']
         ]
-        file_ = helpers.to_xlsx_file(csv_data)
+        file_ = helpers.rows_to_xlsx_file(csv_data)
         client = self.custodian_1_client
         self.assertEquals(0, self.ds.record_queryset.count())
         file_name = path.basename(file_)
@@ -156,7 +156,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             ['A1', '', 'something', 'B1'],
             ['A2', '', 'something', 'B2']
         ]
-        file_ = helpers.to_xlsx_file(csv_data)
+        file_ = helpers.rows_to_xlsx_file(csv_data)
         client = self.custodian_1_client
         self.assertEquals(0, self.ds.record_queryset.count())
         file_name = path.basename(file_)
@@ -303,7 +303,7 @@ class TestObservation(helpers.BaseUserTestCase):
             ['What', 'Site'],
             ['No Date', self.site.code]
         ]
-        file_ = helpers.to_xlsx_file(csv_data)
+        file_ = helpers.rows_to_xlsx_file(csv_data)
         client = self.custodian_1_client
         with open(file_, 'rb') as fp:
             data = {
@@ -324,7 +324,7 @@ class TestObservation(helpers.BaseUserTestCase):
             ['What', 'Site', 'When'],
             ['No Date', self.site.code, '04/06/2017']
         ]
-        file_ = helpers.to_xlsx_file(csv_data)
+        file_ = helpers.rows_to_xlsx_file(csv_data)
         client = self.custodian_1_client
         with open(file_, 'rb') as fp:
             data = {

@@ -2,8 +2,10 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 
 import datetime
 from collections import OrderedDict
+from os import path
 
 from django.contrib.auth import get_user_model, logout
+from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from django.db.models import Q
 from django.db.models.expressions import RawSQL
 from django.shortcuts import get_object_or_404
@@ -16,7 +18,7 @@ from rest_framework.views import APIView, Response
 from main import models, constants
 from main.api import serializers
 from main.api.helpers import to_bool
-from main.api.uploaders import SiteUploader, FileReader, RecordCreator
+from main.api.uploaders import SiteUploader, FileReader, RecordCreator, DataPackageBuilder
 from main.api.validators import get_record_validator_for_dataset
 from main.models import Project, Site, Dataset, Record
 from main.utils_auth import is_admin
@@ -639,3 +641,48 @@ class GeoConvertView(generics.GenericAPIView):
                                 .format(self.output, [self.OUTPUT_DATA, self.OUTPUT_GEOMETRY]),
                                 status=status.HTTP_400_BAD_REQUEST)
 
+
+class InferDatasetView(APIView):
+    """
+    Accept a xlsx or csv file and return a datapackage with schema inferred
+    """
+    permission_classes = (IsAuthenticated,)
+    parser_classes = (FormParser, MultiPartParser)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            # we want the uploaded file to be physically saved on disk (no InMemoryFileUploaded) so we force the file
+            # upload handlers of the request.
+            request.upload_handlers = [TemporaryFileUploadHandler(request)]
+            file_obj = request.data.get('file')
+            if file_obj is None:
+                response_data = {
+                    'errors': 'Missing file'
+                }
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
+            if file_obj.content_type not in FileReader.SUPPORTED_TYPES:
+                msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type,
+                                                                        SiteUploader.SUPPORTED_TYPES)
+                return Response(msg, status=status.HTTP_501_NOT_IMPLEMENTED)
+
+            dataset_name = path.splitext(file_obj.name)[0]
+            builder = DataPackageBuilder.infer_from_file(file_obj.temporary_file_path(), name=dataset_name)
+            if builder.valid:
+                response_data = {
+                    'name': builder.title,  # use the data-package title instead of name (name is a slug)
+                    'type': builder.infer_biosys_type(),
+                    'data_package': builder.descriptor
+                }
+                return Response(response_data, status=status.HTTP_200_OK)
+            else:
+                errors = [str(e) for e in builder.errors]
+                response_data = {
+                    'errors': errors
+                }
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            response_data = {
+                'errors': str(e)
+            }
+            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)

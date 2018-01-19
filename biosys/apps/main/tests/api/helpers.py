@@ -27,17 +27,25 @@ if 'rest_framework.authentication.SessionAuthentication' \
         .append('rest_framework.authentication.SessionAuthentication')
 
 
-def to_xlsx_file(rows):
-    h, f = tempfile.mkstemp(suffix='.xlsx')
+def rows_to_workbook(rows, sheet_title=None):
     wb = Workbook(write_only=True)
-    ws = wb.create_sheet()
+    ws = wb.create_sheet(title=sheet_title)
     for row in rows:
         ws.append(row)
+    return wb
+
+
+def workbook_to_xlsx_file(wb):
+    h, f = tempfile.mkstemp(suffix='.xlsx')
     wb.save(f)
     return f
 
 
-def to_csv_file(rows):
+def rows_to_xlsx_file(rows):
+    return workbook_to_xlsx_file(rows_to_workbook(rows))
+
+
+def rows_to_csv_file(rows):
     h, f = tempfile.mkstemp(text=True, suffix='.csv')
     with open(f, 'wt') as csvfile:
         writer = csv.writer(csvfile)
