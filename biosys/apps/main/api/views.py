@@ -665,9 +665,13 @@ class InferDatasetView(APIView):
                 msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type,
                                                                         SiteUploader.SUPPORTED_TYPES)
                 return Response(msg, status=status.HTTP_501_NOT_IMPLEMENTED)
-
+            file_format = 'csv' if file_obj.content_type in FileReader.CSV_TYPES else 'xlsx'
             dataset_name = path.splitext(file_obj.name)[0]
-            builder = DataPackageBuilder.infer_from_file(file_obj.temporary_file_path(), name=dataset_name)
+            builder = DataPackageBuilder.infer_from_file(
+                file_obj.temporary_file_path(),
+                name=dataset_name,
+                format_=file_format
+            )
             if builder.valid:
                 response_data = {
                     'name': builder.title,  # use the data-package title instead of name (name is a slug)
