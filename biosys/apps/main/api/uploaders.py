@@ -1,5 +1,4 @@
 import codecs
-import csv
 import datetime
 from os import path
 
@@ -11,7 +10,6 @@ from django.utils import six, timezone
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 
-
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
 from main.models import Site, Dataset
@@ -19,8 +17,14 @@ from main.utils_data_package import GeometryParser, ObservationSchema, SpeciesOb
 from main.utils_misc import get_value
 from main.utils_species import HerbieFacade, get_key_for_value
 
+if six.PY2:
+    import unicodecsv as csv
+else:
+    import csv
+
 
 def xlsx_to_csv(file):
+
     def _format(cell):
         result = cell.value
         if isinstance(result, datetime.datetime):
