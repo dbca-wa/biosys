@@ -336,7 +336,7 @@ class DataPackageBuilder:
     def infer_biosys_type(self):
         """
         Use the schema models in utils to infer the type.
-        The constructor should throw an exception if something is not correc
+        The constructor should throw an exception if something is not correct
         :return:
         """
         # TODO: use a better control workflow than exception

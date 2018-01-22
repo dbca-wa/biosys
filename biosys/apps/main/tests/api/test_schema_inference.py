@@ -132,7 +132,7 @@ class TestGenericSchema(InferTestBase):
             columns,
             ['Something', '2018-01-19'],
             ['Another thing', dt.date(2017, 12, 29).isoformat()],
-            ['Another thing', dt.date(2017, 8, 1).isoformat()]
+            ['Another thing', '2017-08-01']
         ]
         client = self.custodian_1_client
         file_ = helpers.rows_to_xlsx_file(rows)
@@ -162,8 +162,8 @@ class TestGenericSchema(InferTestBase):
 
     def test_observation_with_lat_long(self):
         """
-        Scenario:
-         Given that a column named latitude and longitude exists
+        Scenario: File with column Latitude and Longitude
+         Given that a column named Latitude and Longitude exists
          Then they should be of type 'number'
          And they should be set as required
          And they should be tagged with the appropriate biosys tag
