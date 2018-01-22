@@ -57,7 +57,7 @@ class TestGenericSchema(InferTestBase):
     def _more_setup(self):
         self.url = reverse('api:infer-dataset')
 
-    def test_generic_string_and_number_simple(self):
+    def test_generic_string_and_number_simple_xls(self):
         """
         Test that the infer detect numbers and integers type
         """
@@ -117,7 +117,67 @@ class TestGenericSchema(InferTestBase):
             self.assertFalse(field.required)
             self.assertEquals(field.format, 'default')
 
-    def test_generic_date_iso(self):
+    def test_generic_string_and_number_simple_csv(self):
+        """
+        Test that the infer detect numbers and integers type
+        """
+        columns = ['Name', 'Age', 'Weight', 'Comments']
+        rows = [
+            columns,
+            ['Frederic', '56', '80.5', 'a comment'],
+            ['Hilda', '24', '56', '']
+        ]
+        client = self.custodian_1_client
+        file_ = helpers.rows_to_csv_file(rows)
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp,
+            }
+            resp = client.post(self.url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            # should be json
+            self.assertEqual(resp.get('content-type'), 'application/json')
+            received = resp.json()
+
+            # name should be set with the file name
+            self.assertIn('name', received)
+            file_name = path.splitext(path.basename(fp.name))[0]
+            self.assertEquals(file_name, received.get('name'))
+            # type should be 'generic'
+            self.assertIn('type', received)
+            self.assertEquals('generic', received.get('type'))
+
+            # data_package verification
+            self.assertIn('data_package', received)
+            self.verify_inferred_data(received)
+
+            # verify schema
+            schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
+            schema = utils_data_package.GenericSchema(schema_descriptor)
+            self.assertEquals(len(schema.fields), len(columns))
+            self.assertEquals(schema.field_names, columns)
+
+            field = schema.get_field_by_name('Name')
+            self.assertEquals(field.type, 'string')
+            self.assertFalse(field.required)
+            self.assertEquals(field.format, 'default')
+
+            field = schema.get_field_by_name('Age')
+            self.assertEquals(field.type, 'integer')
+            self.assertFalse(field.required)
+            self.assertEquals(field.format, 'default')
+
+            field = schema.get_field_by_name('Weight')
+            self.assertEquals(field.type, 'number')
+            self.assertFalse(field.required)
+            self.assertEquals(field.format, 'default')
+
+            field = schema.get_field_by_name('Comments')
+            self.assertEquals(field.type, 'string')
+            self.assertFalse(field.required)
+            self.assertEquals(field.format, 'default')
+
+    def test_generic_date_iso_xls(self):
         """
         Scenario: date column with ISO string 'yyyy-mm-dd'
         Given that a column is provided with strings of form 'yyyy-mm-dd'
@@ -157,7 +217,7 @@ class TestGenericSchema(InferTestBase):
             self.assertFalse(field.required)
             self.assertEquals(field.format, 'any')
 
-    def test_observation_with_lat_long(self):
+    def test_observation_with_lat_long_xls(self):
         """
         Scenario: File with column Latitude and Longitude
          Given that a column named Latitude and Longitude exists
