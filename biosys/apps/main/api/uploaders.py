@@ -16,7 +16,7 @@ from main.models import Site, Dataset
 from main.utils_data_package import GeometryParser, ObservationSchema, SpeciesObservationSchema, BiosysSchema
 from main.utils_misc import get_value
 from main.utils_species import HerbieFacade, get_key_for_value
-
+# TODO: remove when python3
 if six.PY2:
     import unicodecsv as csv
 else:
