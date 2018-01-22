@@ -128,6 +128,7 @@ class BiosysSchema:
               }
     }
     """
+    BIOSYS_KEY_NAME = 'biosys'
     OBSERVATION_DATE_TYPE_NAME = 'observationDate'
     LATITUDE_TYPE_NAME = 'latitude'
     LONGITUDE_TYPE_NAME = 'longitude'
@@ -204,7 +205,7 @@ class SchemaField:
         # the tableschema field.
         self.tableschema_field = TableField(self.descriptor)
         # biosys specific
-        self.biosys = BiosysSchema(self.descriptor.get('biosys'))
+        self.biosys = BiosysSchema(self.descriptor.get(BiosysSchema.BIOSYS_KEY_NAME))
         self.constraints = SchemaConstraints(self.descriptor.get('constraints', {}))
 
     # implement some dict like methods
@@ -450,14 +451,14 @@ class GenericSchema(object):
     def required_fields(self):
         return [f for f in self.fields if f.required]
 
-    def get_field_by_mame(self, name):
+    def get_field_by_name(self, name):
         for f in self.fields:
             if f.name == name:
                 return f
         return None
 
     def field_validation_error(self, field_name, value):
-        field = self.get_field_by_mame(field_name)
+        field = self.get_field_by_name(field_name)
         if field is not None:
             return field.validation_error(value)
         else:
@@ -912,7 +913,7 @@ class GeometryParser(object):
                 self.errors.append(format_required_message(self.northing_field))
 
     def is_valid(self):
-        return not self.errors
+        return not bool(self.errors)
 
     @property
     def is_easting_northing(self):
@@ -1076,7 +1077,7 @@ class GeometryParser(object):
             return site_code_field, errors
         if site_code_field is None:
             site_code_fk = self.schema.get_fk_for_model_field('Site', 'code')
-            site_code_field = self.schema.get_field_by_mame(site_code_fk.data_field) if site_code_fk else None
+            site_code_field = self.schema.get_field_by_name(site_code_fk.data_field) if site_code_fk else None
         return site_code_field, None
 
 

@@ -1025,7 +1025,7 @@ class TestSpeciesObservationSchema(TestCase):
             SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
 
         # add biosys type
-        field_desc['biosys'] = {
+        field_desc[BiosysSchema.BIOSYS_KEY_NAME] = {
             'type': 'speciesName'
         }
         descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)

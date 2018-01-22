@@ -4,15 +4,18 @@ import datetime
 from os import path
 
 import datapackage
+from openpyxl import load_workbook
+
 from django.conf import settings
 from django.utils import six, timezone
-from openpyxl import load_workbook
-from slugify import slugify
+from django.utils.text import slugify
+from django.core.exceptions import ValidationError
+
 
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
 from main.models import Site, Dataset
-from main.utils_data_package import GeometryParser, ObservationSchema, SpeciesObservationSchema
+from main.utils_data_package import GeometryParser, ObservationSchema, SpeciesObservationSchema, BiosysSchema
 from main.utils_misc import get_value
 from main.utils_species import HerbieFacade, get_key_for_value
 
@@ -288,6 +291,22 @@ class DataPackageBuilder:
         builder._add_resource_from_file(file_path, format_=format_, name=name)
         return builder
 
+    @staticmethod
+    def set_type(type_, field):
+        field['type'] = type_
+
+    @staticmethod
+    def set_required(field, required=True):
+        constraints = field.get('constraints', {})
+        constraints['required'] = required
+        field['constraints'] = constraints
+
+    @staticmethod
+    def set_biosys_type(field, type_):
+        biosys_tag = field.get(BiosysSchema.BIOSYS_KEY_NAME, {})
+        biosys_tag['type'] = type_
+        field[BiosysSchema.BIOSYS_KEY_NAME] = biosys_tag
+
     def __init__(self, descriptor=None, title=None, **kwargs):
         descriptor = descriptor or {}
         if title:
@@ -320,7 +339,7 @@ class DataPackageBuilder:
     def infer_biosys_type(self):
         """
         Use the schema models in utils to infer the type.
-        The constructor should throw an exception if something is not correc
+        The constructor should throw an exception if something is not correct
         :return:
         """
         # TODO: use a better control workflow than exception
@@ -362,11 +381,45 @@ class DataPackageBuilder:
     def fields(self):
         return self.schema.get('fields') if self.schema else []
 
+    def get_fields_by_name(self, name):
+        return [f for f in self.fields if f.get('name') == name]
+
     def _biosys_infer(self):
         """
         Rules:
-        - fields of type 'any' should be converted to type 'string'
+        - Fields of type 'any' should be converted to type 'string'
+        - Fields of type 'date' or 'datetime' should have format = 'any' instead of default
+          (the 'any' makes the date parser more flexible)
+        - If it contains a latitude/longitude schema set the lat/long columns type='number' with constraint required
+          and they should be tagged with the correct biosys tag.
         """
-        for field in [f for f in self.fields if f.get('type') == 'any']:
-            field['type'] = 'string'
+        for field in self.fields:
+            type_ = field.get('type')
+            format_ = field.get('format')
+
+            if type_ == 'any':
+                field['type'] = 'string'
+
+            if type_ in ['date', 'datetime'] and format_ == 'default':
+                field['format'] = 'any'
+
+        # geometry inference
+        geo_parser = GeometryParser(self.schema)
+        if geo_parser.is_lat_long:
+            lat_fields = self.get_fields_by_name(geo_parser.latitude_field.name)
+            lon_fields = self.get_fields_by_name(geo_parser.longitude_field.name)
+            if len(lat_fields) == 1 and len(lon_fields) == 1:
+                lat_field = lat_fields[0]
+                lon_field = lon_fields[0]
+                self.set_type('number', lat_field)
+                self.set_type('number', lon_field)
+                self.set_required(lat_field)
+                self.set_required(lon_field)
+                self.set_biosys_type(lat_field, BiosysSchema.LATITUDE_TYPE_NAME)
+                self.set_biosys_type(lon_field, BiosysSchema.LONGITUDE_TYPE_NAME)
+            else:
+                # more that one lat or long fields? Should not happen.
+                # The GeometryParser should detect the error anf return False to is_lat_long().
+                e = ValidationError("Two or more Latitude or Longitude columns.")
+                self.biosys_errors.append(e)
         self.package.commit()
