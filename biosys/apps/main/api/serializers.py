@@ -114,14 +114,19 @@ class SchemaValidator:
 
 
 class RecordSerializer(serializers.ModelSerializer):
+    # TODO: Split the serializer in 3 subclasses. One for every type of dataset.
     def __init__(self, instance=None, **kwargs):
         super(RecordSerializer, self).__init__(instance, **kwargs)
         ctx = kwargs.get('context', {})
-        strict = ctx.get('strict', False)
-        species_mapping = ctx.get('species_mapping')
-        schema_validator = SchemaValidator(strict=strict, species_mapping=species_mapping)
+        self.dataset = ctx.get('dataset')
+        self.strict_schema_validation = ctx.get('strict', False)
+        schema_validator = SchemaValidator(strict=self.strict_schema_validation)
         self.fields['data'].validators = [schema_validator]
-        self.dataset = kwargs.get('context', {}).get('dataset', None)
+        # species naming service
+        self.species_naming_facade_class = ctx.get('species_naming_facade_class')
+        # the next object will hold a cache version of the 'species_name' -> name_id obtained
+        # from the species_naming_facade above.
+        self.species_name_id_mapping_cached = None
 
     @staticmethod
     def get_site(dataset, data, force_create=False):
@@ -193,7 +198,7 @@ class RecordSerializer(serializers.ModelSerializer):
         # either a species name or a nameId
         species_name = schema.cast_species_name(schema_data)
         name_id = schema.cast_species_name_id(schema_data)
-        species_mapping = self.context.get('species_mapping')
+        species_mapping = self.get_species_name_id_mapping()
         if species_mapping:
             # name id takes precedence
             if name_id:
@@ -205,13 +210,18 @@ class RecordSerializer(serializers.ModelSerializer):
             else:
                 raise Exception('Missing Species Name or Species NameId')
         else:
-            # what to do if we don't have an species mapping (herbie down?)
+            # TODO: what to do if we don't have a species mapping?
             name_id = name_id or -1
         instance.species_name = species_name
         instance.name_id = name_id
         if commit:
             instance.save()
         return instance
+
+    def get_species_name_id_mapping(self):
+        if self.species_name_id_mapping_cached is None and self.species_naming_facade_class is not None:
+            self.species_name_id_mapping_cached = self.species_naming_facade_class().name_id_by_species_name()
+        return self.species_name_id_mapping_cached
 
     def set_fields_from_data(self, instance, validated_data):
         try:
