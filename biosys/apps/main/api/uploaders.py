@@ -4,10 +4,13 @@ import datetime
 from os import path
 
 import datapackage
+from openpyxl import load_workbook
+
 from django.conf import settings
 from django.utils import six, timezone
 from django.utils.text import slugify
-from openpyxl import load_workbook
+from django.core.exceptions import ValidationError
+
 
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
@@ -416,6 +419,7 @@ class DataPackageBuilder:
                 self.set_biosys_type(lon_field, BiosysSchema.LONGITUDE_TYPE_NAME)
             else:
                 # more that one lat or long fields? Should not happen.
-                pass
-
+                # The GeometryParser should detect the error anf return False to is_lat_long().
+                e = ValidationError("Two or more Latitude or Longitude columns.")
+                self.biosys_errors.append(e)
         self.package.commit()

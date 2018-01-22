@@ -1,17 +1,14 @@
-import json
-from os import path
 import datetime as dt
+from os import path
 
-from dateutil.parser import parse as dt_parse
 from datapackage import Package
+from django.core.exceptions import ValidationError
 from django.shortcuts import reverse
 from rest_framework import status
 
-from django.core.exceptions import ValidationError
-
-from main.tests.api import helpers
-from main.models import Dataset
 from main import utils_data_package
+from main.models import Dataset
+from main.tests.api import helpers
 from main.utils_data_package import BiosysSchema
 
 
@@ -100,22 +97,22 @@ class TestGenericSchema(InferTestBase):
             self.assertEquals(len(schema.fields), len(columns))
             self.assertEquals(schema.field_names, columns)
 
-            field = schema.get_field_by_mame('Name')
+            field = schema.get_field_by_name('Name')
             self.assertEquals(field.type, 'string')
             self.assertFalse(field.required)
             self.assertEquals(field.format, 'default')
 
-            field = schema.get_field_by_mame('Age')
+            field = schema.get_field_by_name('Age')
             self.assertEquals(field.type, 'integer')
             self.assertFalse(field.required)
             self.assertEquals(field.format, 'default')
 
-            field = schema.get_field_by_mame('Weight')
+            field = schema.get_field_by_name('Weight')
             self.assertEquals(field.type, 'number')
             self.assertFalse(field.required)
             self.assertEquals(field.format, 'default')
 
-            field = schema.get_field_by_mame('Comments')
+            field = schema.get_field_by_name('Comments')
             self.assertEquals(field.type, 'string')
             self.assertFalse(field.required)
             self.assertEquals(field.format, 'default')
@@ -150,12 +147,12 @@ class TestGenericSchema(InferTestBase):
             # verify schema
             schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
             schema = utils_data_package.GenericSchema(schema_descriptor)
-            field = schema.get_field_by_mame('What')
+            field = schema.get_field_by_name('What')
             self.assertEquals(field.type, 'string')
             self.assertFalse(field.required)
             self.assertEquals(field.format, 'default')
 
-            field = schema.get_field_by_mame('When')
+            field = schema.get_field_by_name('When')
             self.assertEquals(field.type, 'date')
             self.assertFalse(field.required)
             self.assertEquals(field.format, 'any')
@@ -190,8 +187,8 @@ class TestGenericSchema(InferTestBase):
             # verify fields attributes
             schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
             schema = utils_data_package.GenericSchema(schema_descriptor)
-            lat_field = schema.get_field_by_mame('Latitude')
-            lon_field = schema.get_field_by_mame('Longitude')
+            lat_field = schema.get_field_by_name('Latitude')
+            lon_field = schema.get_field_by_name('Longitude')
             self.assertEquals(lat_field.type, 'number')
             self.assertEquals(lon_field.type, 'number')
             self.assertTrue(lat_field.required)
