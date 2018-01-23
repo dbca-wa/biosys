@@ -120,11 +120,9 @@ class RecordSerializer(serializers.ModelSerializer):
         ctx = kwargs.get('context', {})
         self.dataset = ctx.get('dataset')
         self.strict_schema_validation = ctx.get('strict', False)
-        schema_validator = SchemaValidator(strict=self.strict_schema_validation)
-        self.fields['data'].validators = [schema_validator]
         # species naming service
         self.species_naming_facade_class = ctx.get('species_naming_facade_class')
-        # the next object will hold a cache version of the 'species_name' -> name_id obtained
+        # the next object will hold a cached version of the 'species_name' -> name_id obtained
         # from the species_naming_facade above.
         self.species_name_id_mapping_cached = None
 
@@ -219,7 +217,11 @@ class RecordSerializer(serializers.ModelSerializer):
         return instance
 
     def get_species_name_id_mapping(self):
-        if self.species_name_id_mapping_cached is None and self.species_naming_facade_class is not None:
+        if all([
+            self.species_name_id_mapping_cached is None,
+            self.species_naming_facade_class is not None,
+            callable(getattr(self.species_naming_facade_class, 'name_id_by_species_name'))
+        ]):
             self.species_name_id_mapping_cached = self.species_naming_facade_class().name_id_by_species_name()
         return self.species_name_id_mapping_cached
 
@@ -233,6 +235,20 @@ class RecordSerializer(serializers.ModelSerializer):
             return instance
         except Exception as e:
             raise serializers.ValidationError(e)
+
+    def validate_data(self, data):
+        """
+        Validate the Record.data JSONField.
+        We add a schema validator.
+        :param data:
+        :return:
+        """
+        schema_validator = SchemaValidator(strict=self.strict_schema_validation)
+        schema_validator.dataset = self.dataset
+        if self.dataset and self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
+            schema_validator.kwargs['species_name_id_mapping'] = self.get_species_name_id_mapping()
+        schema_validator(data)
+        return data
 
     def create(self, validated_data):
         """
