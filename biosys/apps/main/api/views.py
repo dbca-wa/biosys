@@ -25,6 +25,7 @@ from main.utils_auth import is_admin
 from main.utils_data_package import Exporter
 from main.utils_http import WorkbookResponse
 from main.utils_species import HerbieFacade
+from main.utils_misc import search_json_field, order_by_json_field
 
 
 class UserPermission(BasePermission):
@@ -275,60 +276,19 @@ class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesM
                 ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
         return ctx
 
-    def search_data(self, qs, search_param, order_by=None):
-        """
-        Search does not support searching within JSONField.
-        :param qs: queryset
-        :param search_param: value to search
-        :param order_by: field to order by, prefixed with '-' for descending order
-        :return: the queryset after search filters applied
-        """
-        field_names = self.dataset.schema.field_names
-
-        where_clauses = []
-        params = []
-        for field_name in field_names:
-            where_clauses.append('data->>%s ILIKE %s')
-
-            params += [field_name, '%' + search_param + '%']
-
-            if order_by is not None and (order_by == field_name or order_by == '-' + field_name):
-                if order_by.startswith('-'):
-                    qs = qs.order_by(RawSQL('data->>%s', (order_by[1:],)).desc())
-                else:
-                    qs = qs.order_by(RawSQL('data->>%s', (order_by,)))
-
-        return qs.extra(where=['OR '.join(where_clauses)], params=params)
-
-    def order_by_data_field(self, qs, ordering_param):
-        """
-        Order by does not support ordering within JSONField.
-        :param qs: queryset
-        :param ordering_param: field to order by, prefixed with '-' for descending order
-        :return: the queryset after ordering is applied if order_by param is within data
-        """
-        field_names = self.dataset.schema.field_names
-
-        for field_name in field_names:
-            if ordering_param == field_name or ordering_param == '-' + field_name:
-                if ordering_param.startswith('-'):
-                    qs = qs.order_by(RawSQL('data->>%s', (ordering_param[1:],)).desc())
-                else:
-                    qs = qs.order_by(RawSQL('data->>%s', (ordering_param,)))
-
-        return qs
-
     def get_queryset(self):
         if self.dataset:
             queryset = self.dataset.record_queryset
 
             search_param = self.request.query_params.get('search')
             if search_param is not None:
-                queryset = self.search_data(queryset, search_param)
+                queryset = search_json_field(queryset, 'data', self.dataset.schema.field_names, search_param)
+                queryset = search_json_field(queryset, 'source_info', ['file_name', 'row'], search_param)
 
             ordering_param = self.request.query_params.get('ordering')
             if ordering_param is not None:
-                queryset = self.order_by_data_field(queryset, ordering_param)
+                queryset = order_by_json_field(queryset, 'data', self.dataset.schema.field_names, ordering_param)
+                queryset = order_by_json_field(queryset, 'source_info', ['file_name', 'row'], ordering_param)
 
             return queryset
         else:
