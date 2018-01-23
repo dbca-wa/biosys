@@ -205,6 +205,36 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             self.assertEquals(self.project_1.record_count, len(csv_data) - 1)
             self.assertEquals(self.ds.record_count, len(csv_data) - 1)
 
+    def test_unicode(self):
+        """
+        Test that unicode characters works
+        """
+        csv_data = [
+            [u'Column A', u'Column B'],
+            [u'Some char: \u1234', u'The euro char: \u20ac']
+        ]
+        file_ = helpers.rows_to_xlsx_file(csv_data)
+        client = self.custodian_1_client
+        self.assertEquals(0, self.ds.record_queryset.count())
+        with open(file_, 'rb') as fp:
+            data = {
+                'file': fp,
+                'strict': False
+            }
+            resp = client.post(self.url, data=data, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            # The records should be saved in order of the row
+            qs = self.ds.record_queryset.order_by('pk')
+            self.assertEquals(len(csv_data) - 1, qs.count())
+
+            index = 0
+            record = qs[index]
+            expected_data = {
+                'Column A': u'Some char: \u1234',
+                'Column B': u'The euro char: \u20ac',
+            }
+            self.assertEquals(expected_data, record.data)
+
 
 class TestObservation(helpers.BaseUserTestCase):
     all_fields_nothing_required = [

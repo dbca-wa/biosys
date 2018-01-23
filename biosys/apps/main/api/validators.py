@@ -159,7 +159,7 @@ class SpeciesObservationValidator(ObservationValidator):
         super(SpeciesObservationValidator, self).__init__(dataset, schema_error_as_warning)
         self.species_name_col = self.schema.species_name_field.name if self.schema.species_name_field else None
         self.species_name_id_col = self.schema.species_name_id_field.name if self.schema.species_name_id_field else None
-        self.species_mapping = kwargs.get('species_mapping')
+        self.species_name_id_mapping = kwargs.get('species_name_id_mapping')
 
     def validate(self, data, schema_error_as_warning=True):
         result = super(SpeciesObservationValidator, self).validate(data)
@@ -178,8 +178,8 @@ class SpeciesObservationValidator(ObservationValidator):
     def validate_species(self, data):
         result = RecordValidatorResult()
         name_id = self.schema.cast_species_name_id(data)
-        if name_id and self.species_mapping is not None:
-            if name_id not in self.species_mapping.values():
+        if name_id and self.species_name_id_mapping is not None:
+            if name_id not in self.species_name_id_mapping.values():
                 message = "Cannot find a species with nameId={}".format(name_id)
                 result.add_column_error(self.species_name_id_col, message)
         return result

@@ -271,8 +271,8 @@ class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesM
         ctx = super(DatasetRecordsView, self).get_serializer_context()
         if self.dataset:
             ctx['dataset'] = self.dataset
-            if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION and 'species_mapping' not in ctx:
-                ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
+            if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION and 'species_naming_facade_class' not in ctx:
+                ctx['species_naming_facade_class'] = self.species_facade_class
         return ctx
 
     def search_data(self, qs, search_param, order_by=None):
@@ -394,9 +394,7 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
         ctx['dataset'] = self.dataset
         ctx['strict'] = self.strict
         if self.dataset and self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
-            # set the species map for name id lookup
-            if 'species_mapping' not in ctx:
-                ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
+            ctx['species_naming_facade_class'] = self.species_facade_class
         return ctx
 
     def list(self, request, *args, **kwargs):
