@@ -38,6 +38,26 @@ def search_json_field(qs, json_field_name, keys, search_param):
     return qs.extra(where=['OR '.join(where_clauses)], params=params)
 
 
+def search_json_fields(qs, field_info, search_param):
+    """
+    Search does not support searching within JSONField.
+    :param qs: queryset
+    :param field_info: dictionary with json_field_name as the key and each json_field's respective keys as the value
+    :param search_param: value to search
+    :return: the queryset after search filters applied
+    """
+    where_clauses = []
+    params = []
+
+    for json_field_name in field_info.keys():
+        for key in field_info[json_field_name]:
+            where_clauses.append(json_field_name + '->>%s ILIKE %s')
+
+            params += [key, '%' + search_param + '%']
+
+    return qs.extra(where=['OR '.join(where_clauses)], params=params)
+
+
 def order_by_json_field(qs, json_field_name, keys, ordering_param):
     """
     Order by does not support ordering within JSONField.

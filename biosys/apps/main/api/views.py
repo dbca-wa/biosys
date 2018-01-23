@@ -25,7 +25,7 @@ from main.utils_auth import is_admin
 from main.utils_data_package import Exporter
 from main.utils_http import WorkbookResponse
 from main.utils_species import HerbieFacade
-from main.utils_misc import search_json_field, order_by_json_field
+from main.utils_misc import search_json_fields, order_by_json_field
 
 
 class UserPermission(BasePermission):
@@ -282,8 +282,12 @@ class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesM
 
             search_param = self.request.query_params.get('search')
             if search_param is not None:
-                queryset = search_json_field(queryset, 'data', self.dataset.schema.field_names, search_param)
-                queryset = search_json_field(queryset, 'source_info', ['file_name', 'row'], search_param)
+                field_info = {
+                    'data': self.dataset.schema.field_names,
+                    'source_info': ['file_name', 'row']
+                }
+
+                queryset = search_json_fields(queryset, field_info, search_param)
 
             ordering_param = self.request.query_params.get('ordering')
             if ordering_param is not None:
