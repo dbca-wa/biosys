@@ -217,6 +217,47 @@ class TestGenericSchema(InferTestBase):
             self.assertFalse(field.required)
             self.assertEquals(field.format, 'any')
 
+    def test_mix_types_infer_most_plausible(self):
+        """
+        Scenario: column with more integers than string should be infer a type='integer'
+        Given than a column contains 2 strings then 5 integers
+        Then the column type should be 'integer'
+        """
+        columns = ['How Many']
+        rows = [
+            columns,
+            [1],
+            ['1 or 2'],
+            ['3 or 4'],
+            [2],
+            [3],
+            [4],
+            [5]
+        ]
+        client = self.custodian_1_client
+        file_ = helpers.rows_to_xlsx_file(rows)
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp,
+            }
+            resp = client.post(self.url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            received = resp.json()
+            # data_package verification
+            self.assertIn('data_package', received)
+            self.verify_inferred_data(received)
+
+            # verify schema
+            schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
+            schema = utils_data_package.GenericSchema(schema_descriptor)
+            field = schema.get_field_by_name('How Many')
+            self.assertEquals(field.type, 'integer')
+
+
+class TestObservationSchema(InferTestBase):
+    def _more_setup(self):
+        self.url = reverse('api:infer-dataset')
+
     def test_observation_with_lat_long_xls(self):
         """
         Scenario: File with column Latitude and Longitude
