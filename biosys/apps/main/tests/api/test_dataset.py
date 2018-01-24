@@ -1,5 +1,3 @@
-import json
-
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
@@ -626,74 +624,56 @@ class TestDatasetRecordsSearchAndOrdering(TestCase):
         dataset = Dataset.objects.all()[2]
 
         self.assertIsNotNone(dataset)
-
         self.assertEqual(dataset.record_queryset.count(), 10)
 
         url = reverse('api:dataset-records', kwargs={'pk': dataset.pk})
 
         # test fetch all records for dataset
         resp = self.client.get(url, format='json')
-
         self.assertEqual(resp.status_code, 200)
-
-        json_response = json.loads(force_text(resp.content))
-
-        self.assertEqual(len(json_response), 10)
+        self.assertEqual(len(resp.json()), 10)
 
         # test fetching records in dataset using specific search term specific term
         resp = self.client.get(url + '?search=Chalino', format='json')
-
         self.assertEqual(resp.status_code, 200)
 
-        json_response = json.loads(force_text(resp.content))
-
-        self.assertEqual(len(json_response), 2)
+        self.assertEqual(len(resp.json()), 2)
 
     def test_server_side_ordering(self):
         # this dataset has records in it
         dataset = Dataset.objects.all()[2]
 
         self.assertIsNotNone(dataset)
-
         self.assertEqual(dataset.record_queryset.count(), 10)
 
         url = reverse('api:dataset-records', kwargs={'pk': dataset.pk})
 
         # check unordered request is not ordered by family
         resp = self.client.get(url, format='json')
-
         self.assertEqual(resp.status_code, 200)
 
-        json_response = json.loads(force_text(resp.content))
-
+        json_response = resp.json()
         self.assertEqual(len(json_response), 10)
 
         record_families = [record['data']['Family'] for record in json_response]
-
         self.assertNotEqual(record_families, sorted(record_families))
 
         # check is request ordered by family is ordered by family in alphabetical order
         resp = self.client.get(url + '?ordering=Family', format='json')
-
         self.assertEqual(resp.status_code, 200)
 
-        json_response = json.loads(force_text(resp.content))
-
+        json_response = resp.json()
         self.assertEqual(len(json_response), 10)
 
         record_families = [record['data']['Family'] for record in json_response]
-
         self.assertEqual(record_families, sorted(record_families))
 
         # check is request ordered by family in descending order is ordered by family in reverse alphabetical order
         resp = self.client.get(url + '?ordering=-Family', format='json')
-
         self.assertEqual(resp.status_code, 200)
 
-        json_response = json.loads(force_text(resp.content))
-
+        json_response = resp.json()
         self.assertEqual(len(json_response), 10)
 
         record_families = [record['data']['Family'] for record in json_response]
-
         self.assertEqual(record_families, list(reversed(sorted(record_families))))
