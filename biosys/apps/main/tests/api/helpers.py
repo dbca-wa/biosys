@@ -135,6 +135,63 @@ class BaseUserTestCase(TestCase):
         self.assertIsNotNone(record)
         return record
 
+    def _create_dataset_from_rows(self, rows):
+        """
+        Use the infer end-point and create the dataset
+        :param rows: list of lists e.g: [['What', 'When'], ['A bird', '2018-01-24'],...]
+        :return: the dataset object
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        infer_url = reverse('api:infer-dataset')
+        file_ = rows_to_xlsx_file(rows)
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp,
+            }
+            resp = client.post(infer_url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            # create the dataset. We should have to just add the project id from the returned data
+            payload = resp.json()
+            payload['project'] = project.pk
+            resp = client.post(
+                reverse('api:dataset-list'),
+                data=payload,
+                format='json')
+            self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+            dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
+            self.assertIsNotNone(dataset)
+            return dataset
+
+    def _create_records_from_rows(self, rows, dataset_pk, strict=True):
+        """
+        Use the the upload end-point
+        :param rows same format as _create_dataset_from_rows
+        :param dataset_pk:
+        :return: the response
+        """
+        file_ = rows_to_xlsx_file(rows)
+        client = self.custodian_1_client
+        with open(file_, 'rb') as fp:
+            url = reverse('api:dataset-upload', kwargs={'pk': dataset_pk})
+            payload = {
+                'file': fp,
+                'strict': strict  # upload in strict mode
+            }
+            resp = client.post(url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            return resp
+
+    def _create_dataset_and_records_from_rows(self, rows):
+        """
+        Combine _create_dataset_from_rows and _create_records_from_rows
+        :param rows: see _create_dataset_from_rows
+        :return: the dataset object
+        """
+        dataset = self._create_dataset_from_rows(rows)
+        self._create_records_from_rows(rows, dataset.pk)
+        return dataset
+
 
 class LightSpeciesFacade(SpeciesFacade):
     def name_id_by_species_name(self):
@@ -313,4 +370,3 @@ def add_foreign_key_to_schema(schema, options):
 
 def set_strict_mode(url):
     return url + '?strict'
-
