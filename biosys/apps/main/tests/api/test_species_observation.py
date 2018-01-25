@@ -1032,10 +1032,6 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
     The test suite uses a mock herbie facade with a static species_name -> nameId dict
     @see helpers.SOME_SPECIES_NAME_NAME_ID_MAP
     """
-    fixtures = [
-        'test-users',
-        'test-projects'
-    ]
 
     species_facade_class = helpers.LightSpeciesFacade
 
@@ -1075,21 +1071,6 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         schema = helpers.create_schema_from_fields(schema_fields)
         return schema
 
-    def _create_dataset_with_schema(self, project, client, schema):
-        resp = client.post(
-            reverse('api:dataset-list'),
-            data={
-                "name": "Test NameId",
-                "type": Dataset.TYPE_SPECIES_OBSERVATION,
-                "project": project.pk,
-                'data_package': helpers.create_data_package_from_schema(schema)
-            },
-            format='json')
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
-        self.assertIsNotNone(dataset)
-        return dataset
-
     def test_species_name_collected_upload(self):
         """
         Happy path: upload excel with a valid nameId.
@@ -1098,7 +1079,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         # data
         csv_data = [
             ['NameId', 'When', 'Latitude', 'Longitude'],
@@ -1134,7 +1115,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         record_data = {
             'NameId': 25454,  # "Canis lupus"
             'When': '12/12/2017',
@@ -1162,7 +1143,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         record_data = {
             'NameId': 25454,  # "Canis lupus"
             'When': '12/12/2017',
@@ -1203,7 +1184,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         # data
         csv_data = [
             ['NameId', 'When', 'Latitude', 'Longitude'],
@@ -1230,7 +1211,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         record_data = {
             'NameId': 9999,  # wrong
             'When': '12/12/2017',
@@ -1255,10 +1236,6 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
     The test suite uses a mock herbie facade with a static species_name -> nameId dict
     @see helpers.SOME_SPECIES_NAME_NAME_ID_MAP
     """
-    fixtures = [
-        'test-users',
-        'test-projects'
-    ]
 
     species_facade_class = helpers.LightSpeciesFacade
 
@@ -1303,21 +1280,6 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         schema = helpers.create_schema_from_fields(schema_fields)
         return schema
 
-    def _create_dataset_with_schema(self, project, client, schema):
-        resp = client.post(
-            reverse('api:dataset-list'),
-            data={
-                "name": "Test NameId",
-                "type": Dataset.TYPE_SPECIES_OBSERVATION,
-                "project": project.pk,
-                'data_package': helpers.create_data_package_from_schema(schema)
-            },
-            format='json')
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
-        self.assertIsNotNone(dataset)
-        return dataset
-
     def test_species_name_collected_upload(self):
         """
         Happy path: upload excel with a valid nameId.
@@ -1326,7 +1288,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id_and_species_name()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         # data
         csv_data = [
             ['NameId', 'Species Name', 'When', 'Latitude', 'Longitude'],
@@ -1362,7 +1324,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id_and_species_name()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         # data
         csv_data = [
             ['NameId', 'Species Name', 'When', 'Latitude', 'Longitude'],
@@ -1398,7 +1360,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id_and_species_name()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         record_data = {
             'NameId': 25454,  # "Canis lupus"
             'Species Name': 'Chubby Bat',
@@ -1427,7 +1389,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id_and_species_name()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         record_data = {
             'NameId': 25454,  # "Canis lupus"
             'Species Name': 'Chubby Bat',
@@ -1462,3 +1424,68 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         record.refresh_from_db()
         self.assertEqual(record.name_id, new_name_id)
         self.assertEqual(record.species_name, expected_species_name)
+
+
+class TestCompositeSpeciesName(helpers.BaseUserTestCase):
+    """
+    Test for species name composed from Genus, Species, infra_rank, infra_name columns
+    Paul Gioa specs from https://decbugs.com/view.php?id=6674:
+    1. If the field Genus is present (or tagged with biosys type Genus) it takes priority over species_name
+    2. If Genus is present, there must also be a field Species (or tagged with biosys type Species). If not, then revert to Species_Name (if present)
+    3. If Genus and species present, then user may optionally specify Infraspecific_Rank and Infraspecific_Name (or fields tagged with Infraspecific_Rank and Infraspecific_Name)
+    4. An aggregated species name is constructed by using something like (genus.strip() + " " + species.strip() + " " + infraspecific_rank.strip() + " " + infraspecific_rank).strip()
+    """
+
+    def assert_create_dataset(self, schema):
+        try:
+            return self._create_dataset_with_schema(
+                self.project_1,
+                self.custodian_1_client,
+                schema,
+                dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+            )
+        except Exception as e:
+            self.fail('Species Observation dataset creation failed for schema {schema}'.format(
+                schema=schema
+            ))
+
+    def test_genus_species_only_happy_path(self):
+        schema_fields = [
+            {
+                "name": "Genus",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Species",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        dataset = self.assert_create_dataset(schema)
+        records = [
+            ['Genus', 'Species', 'When', 'Latitude', 'Longitude'],
+            ['Canis', 'lupus', '2018-01-25', -32.0, 115.75]
+        ]
+        resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk)
+        print(resp.json())

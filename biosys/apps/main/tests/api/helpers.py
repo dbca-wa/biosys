@@ -163,7 +163,7 @@ class BaseUserTestCase(TestCase):
             self.assertIsNotNone(dataset)
             return dataset
 
-    def _create_records_from_rows(self, rows, dataset_pk, strict=True):
+    def _upload_records_from_rows(self, rows, dataset_pk, strict=True):
         """
         Use the the upload end-point
         :param rows same format as _create_dataset_from_rows
@@ -189,7 +189,7 @@ class BaseUserTestCase(TestCase):
         :return: the dataset object
         """
         dataset = self._create_dataset_from_rows(rows)
-        self._create_records_from_rows(rows, dataset.pk)
+        self._upload_records_from_rows(rows, dataset.pk)
         return dataset
 
 

@@ -631,6 +631,10 @@ class SpeciesObservationSchema(ObservationSchema):
     An ObservationSchema with a Species Name
     """
     SPECIES_NAME_FIELD_NAME = 'Species Name'
+    GENUS_FIELD_NAME = 'Genus'
+    SPECIES_FIELD_NAME = 'Species'
+    INFRA_SPECIFIC_RANK_FIELD_NAME = 'Infraspecific Rank'
+    INFRA_SPECIFIC_NAME_FIELD_NAME = 'Infraspecific Name'
     SPECIES_NAME_ID_FIELD_NAMES_LOWER = ['name id', 'nameid', 'species nameid', 'species name id']
 
     def __init__(self, descriptor):
@@ -639,6 +643,12 @@ class SpeciesObservationSchema(ObservationSchema):
         :param descriptor:
         """
         super(SpeciesObservationSchema, self).__init__(descriptor)
+        self.species_name_parser = SpeciesNameParser(self)
+        self.errors += self.species_name_parser.errors
+        if self.errors:
+            msg = "\n".join(self.errors)
+            raise SpeciesObservationSchemaError(msg)
+
         try:
             self.species_name_field = self.find_species_name_field_or_throws(self, enforce_required=False)
         except SpeciesObservationSchemaError:
@@ -1079,6 +1089,24 @@ class GeometryParser(object):
             site_code_fk = self.schema.get_fk_for_model_field('Site', 'code')
             site_code_field = self.schema.get_field_by_name(site_code_fk.data_field) if site_code_fk else None
         return site_code_field, None
+
+
+class SpeciesNameParser(object):
+    """
+    A utility class to extract a species name from a schema
+    """
+    def __init__(self, schema):
+        if not isinstance(schema, GenericSchema):
+            schema = GenericSchema(schema)
+        self.schema = schema
+        self.errors = []
+        self.errors.append('SpeciesNameParser Not Implemented')
+
+    def _build_species_name(self, record):
+        return ''
+
+    def cast_species_name(self, record):
+        return self._build_species_name(record)
 
 
 class Exporter:
