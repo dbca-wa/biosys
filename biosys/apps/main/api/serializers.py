@@ -126,6 +126,16 @@ class RecordSerializer(serializers.ModelSerializer):
         # from the species_naming_facade above.
         self.species_name_id_mapping_cached = None
 
+        # dynamic fields
+        request = ctx.get('request')
+        if request:
+            expected_fields = request.query_params.getlist('fields', [])
+            if expected_fields:
+                existing_fields = self.fields.keys()
+                excluded_fields = set(existing_fields) - set(expected_fields)
+                for field in excluded_fields:
+                    self.fields.pop(field)
+
     @staticmethod
     def get_site(dataset, data, force_create=False):
         schema = dataset.schema
