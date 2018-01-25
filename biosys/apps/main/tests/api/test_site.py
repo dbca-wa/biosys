@@ -501,22 +501,6 @@ class TestSiteUpload(TestCase):
             qs = Site.objects.filter(project=project)
             self.assertEquals(len(csv_data) - 1, qs.count())
             self.assertEquals(['C1', 'C2'], [s.code for s in qs.order_by('code')])
-            self.assertEquals(['Site 1', 'Site 2'], [s.name for s in qs.order_by('name')])
-            self.assertEquals(['Description1', 'Description2'], [s.description for s in qs.order_by('description')])
-
-            # test geom and attr
-            s = qs.filter(code='C1').first()
-            self.assertEquals((116, -32), (s.geometry.x, s.geometry.y))
-            expected_attributes = {
-                'Latitude': '-32',
-                'Longitude': '116',
-                'Datum': '',
-                'Attribute1': 'attr11',
-                'Attribute2': 'attr12'}
-
-            self.assertEquals(expected_attributes, s.attributes)
-
-            self.assertEqual(project.site_count, len(csv_data) - 1)
 
 
 class TestSerialization(helpers.BaseUserTestCase):
