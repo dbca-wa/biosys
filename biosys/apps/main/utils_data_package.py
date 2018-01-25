@@ -633,8 +633,8 @@ class SpeciesObservationSchema(ObservationSchema):
     SPECIES_NAME_FIELD_NAME = 'Species Name'
     GENUS_FIELD_NAME = 'Genus'
     SPECIES_FIELD_NAME = 'Species'
-    INFRA_SPECIFIC_RANK_FIELD_NAME = 'Infraspecific Rank'
-    INFRA_SPECIFIC_NAME_FIELD_NAME = 'Infraspecific Name'
+    INFRA_SPECIFIC_RANK_FIELD_NAME = 'Infraspecific_Rank'
+    INFRA_SPECIFIC_NAME_FIELD_NAME = 'Infraspecific_Name'
     SPECIES_NAME_ID_FIELD_NAMES_LOWER = ['name id', 'nameid', 'species nameid', 'species name id']
 
     def __init__(self, descriptor):

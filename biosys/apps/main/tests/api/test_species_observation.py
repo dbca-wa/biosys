@@ -1488,4 +1488,3 @@ class TestCompositeSpeciesName(helpers.BaseUserTestCase):
             ['Canis', 'lupus', '2018-01-25', -32.0, 115.75]
         ]
         resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk)
-        print(resp.json())
