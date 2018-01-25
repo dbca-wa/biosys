@@ -37,7 +37,7 @@ class TestFieldSelection(helpers.BaseUserTestCase):
         expected_fields = ['geometry']
         for record in records:
             self.assertIsInstance(record, dict)
-            self.assertListEqual(sorted(list(record.keys())), sorted(expected_fields))
+            self.assertEquals(sorted(list(record.keys())), sorted(expected_fields))
 
     def test_geometry_and_id(self):
         """
@@ -61,7 +61,7 @@ class TestFieldSelection(helpers.BaseUserTestCase):
         expected_fields = ['geometry', 'id']
         for record in records:
             self.assertIsInstance(record, dict)
-            self.assertListEqual(sorted(list(record.keys())), sorted(expected_fields))
+            self.assertEquals(sorted(list(record.keys())), sorted(expected_fields))
 
     def test_geometry_and_id_record_end_point(self):
         """
@@ -87,12 +87,12 @@ class TestFieldSelection(helpers.BaseUserTestCase):
         for record in records:
             self.assertIsInstance(record, dict)
             # only key = geometry
-            self.assertListEqual(sorted(list(record.keys())), sorted(expected_fields))
+            self.assertEquals(sorted(list(record.keys())), sorted(expected_fields))
             # request record individually
             url = reverse('api:record-detail', kwargs={'pk': record.get('id')})
             resp = client.get(url, data=query_params, format='json')
             self.assertEquals(status.HTTP_200_OK, resp.status_code)
-            self.assertListEqual(sorted(list(resp.json().keys())), sorted(expected_fields))
+            self.assertEquals(sorted(list(resp.json().keys())), sorted(expected_fields))
 
     def test_not_existing_field(self):
         """
@@ -114,7 +114,7 @@ class TestFieldSelection(helpers.BaseUserTestCase):
         expected_fields = []
         for record in records:
             self.assertIsInstance(record, dict)
-            self.assertListEqual(sorted(list(record.keys())), sorted(expected_fields))
+            self.assertEquals(sorted(list(record.keys())), sorted(expected_fields))
 
     def test_one_not_existing_field(self):
         """
@@ -136,5 +136,5 @@ class TestFieldSelection(helpers.BaseUserTestCase):
         expected_fields = ['geometry']
         for record in records:
             self.assertIsInstance(record, dict)
-            self.assertListEqual(sorted(list(record.keys())), sorted(expected_fields))
+            self.assertEquals(sorted(list(record.keys())), sorted(expected_fields))
 
