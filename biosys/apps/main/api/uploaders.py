@@ -94,7 +94,7 @@ class FileReader(object):
 
 class SiteUploader(FileReader):
     COLUMN_MAP = {
-        'code': ['code', 'site code'],
+        'code': ['code', 'site code', 'site_code'],
         'name': ['name', 'site name'],
         'description': ['description']
     }

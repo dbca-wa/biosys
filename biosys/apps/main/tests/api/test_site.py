@@ -1,15 +1,9 @@
 import json
-import re
-from os import path
-
-from openpyxl import load_workbook
 
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
-from django.utils import six
-
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -483,6 +477,46 @@ class TestSiteUpload(TestCase):
                 'Attribute2': 'attr12'}
 
             self.assertEquals(expected_attributes, site.attributes)
+
+    def test_site_code_column_name(self):
+        """
+        Test that a column named 'site_code' can be used to extract the site code
+        """
+        csv_data = [
+            ['site_code', 'Site Name', 'Description', 'Latitude', 'Longitude', 'Datum', 'Attribute1', 'Attribute2'],
+            ['C1', 'Site 1', 'Description1', -32, 116, '', 'attr11', 'attr12'],
+            ['C2', 'Site 2', 'Description2', -31, 117, '', 'attr21', 'attr22']
+        ]
+        csv_file = helpers.rows_to_csv_file(csv_data)
+        project = self.project_1
+        client = self.custodian_1_client
+        url = reverse('api:upload-sites', kwargs={'pk': project.pk})
+        self.assertEquals(0, Site.objects.filter(project=project).count())
+        with open(csv_file) as fp:
+            data = {
+                'file': fp
+            }
+            resp = client.post(url, data=data, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            qs = Site.objects.filter(project=project)
+            self.assertEquals(len(csv_data) - 1, qs.count())
+            self.assertEquals(['C1', 'C2'], [s.code for s in qs.order_by('code')])
+            self.assertEquals(['Site 1', 'Site 2'], [s.name for s in qs.order_by('name')])
+            self.assertEquals(['Description1', 'Description2'], [s.description for s in qs.order_by('description')])
+
+            # test geom and attr
+            s = qs.filter(code='C1').first()
+            self.assertEquals((116, -32), (s.geometry.x, s.geometry.y))
+            expected_attributes = {
+                'Latitude': '-32',
+                'Longitude': '116',
+                'Datum': '',
+                'Attribute1': 'attr11',
+                'Attribute2': 'attr12'}
+
+            self.assertEquals(expected_attributes, s.attributes)
+
+            self.assertEqual(project.site_count, len(csv_data) - 1)
 
 
 class TestSerialization(helpers.BaseUserTestCase):
