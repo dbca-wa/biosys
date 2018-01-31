@@ -216,7 +216,7 @@ class RecordSerializer(serializers.ModelSerializer):
             elif species_name:
                 name_id = int(species_mapping.get(species_name, -1))
             else:
-                raise Exception('Missing Species Name or Species NameId')
+                raise Exception('Missing Species Name or Species Name Id')
         else:
             # TODO: what to do if we don't have a species mapping?
             name_id = name_id or -1

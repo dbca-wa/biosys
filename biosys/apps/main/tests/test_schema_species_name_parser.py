@@ -279,12 +279,35 @@ class TestGenusAndSpecies(TestCase):
         self.assertEquals(parser.infra_rank_field.name, 'InfraSpecific rank')
         self.assertIsNotNone(parser.infra_name_field)
         self.assertEquals(parser.infra_name_field.name, 'InfraSpecific Name')
-        expected_species_name = 'Canis Lupus infra name sub. rank'
         data = {
             'Genus': ' Canis ',
             'Species': ' Lupus ',
-            'InfraSpecific rank': 'sub. rank ',
-            'InfraSpecific Name': 'infra name ',
+            'InfraSpecific rank': 'subsp. familiaris ',
+            'InfraSpecific Name': 'more stuff ',
         }
+        # expect: genus + species + infra_rank + infra_name
+        expected_species_name = 'Canis Lupus subsp. familiaris more stuff'
+        casted_value = parser.cast_species_name(data)
+        self.assertEquals(expected_species_name, casted_value)
+
+        data = {
+            'Genus': ' Canis ',
+            'Species': ' Lupus ',
+            'InfraSpecific rank': 'subsp. familiaris ',
+            'InfraSpecific Name': '',
+        }
+        # expect: genus + species + infra_rank + infra_name
+        expected_species_name = 'Canis Lupus subsp. familiaris'
+        casted_value = parser.cast_species_name(data)
+        self.assertEquals(expected_species_name, casted_value)
+
+        data = {
+            'Genus': ' Canis ',
+            'Species': ' Lupus ',
+            'InfraSpecific rank': '',
+            'InfraSpecific Name': 'infra name',
+        }
+        # expect: genus + species + infra_rank + infra_name
+        expected_species_name = 'Canis Lupus infra name'
         casted_value = parser.cast_species_name(data)
         self.assertEquals(expected_species_name, casted_value)

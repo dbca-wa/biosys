@@ -1034,20 +1034,6 @@ class SpeciesNameParser(object):
                             name_id_biosys_type=BiosysSchema.SPECIES_NAME_ID_TYPE_NAME
                             )
                 self.errors.append(msg)
-            elif not any([self.species_name_field and self.species_name_field.required,
-                          self.name_id_field and self.name_id_field.required]):
-                # One of them should be required.
-                if self.species_name_field and self.name_id_field:
-                    msg = "One of the fields '{species_name}' or '{name_id}' field must be set as required.".format(
-                        species_name=self.species_name_field.name,
-                        name_id=self.name_id_field.name
-                    )
-                else:
-                    field_name = self.species_name_field.name if self.species_name_field else self.name_id_field.name
-                    msg = "The field {field_name} must be set as required".format(
-                        field_name=field_name
-                    )
-                self.errors.append(msg)
         else:
             # Genus => Multi-column name
             # We must have a 'Species' column
@@ -1059,13 +1045,11 @@ class SpeciesNameParser(object):
                             species_biosys_type=BiosysSchema.SPECIES_TYPE_NAME
                             )
                 self.errors.append(msg)
-            # Both of them should be required
-            for field in [self.genus_field, self.species_field]:
-                if field and not field.required:
-                    msg = "The field {field_name} must be set as required".format(
-                        field_name=field.name
-                    )
-                    self.errors.append(msg)
+
+        # check required constraint.
+        self.required_errors = self._check_required_constraint()
+
+        self.errors += self.required_errors
 
     def is_valid(self):
         return not bool(self.errors)
@@ -1099,6 +1083,14 @@ class SpeciesNameParser(object):
         ])
 
     @property
+    def is_name_id_only(self):
+        return all([
+            self.has_name_id,
+            not self.has_species_name,
+            not self.has_genus_and_species
+        ])
+
+    @property
     def has_name_id(self):
         return self.name_id_field
 
@@ -1113,22 +1105,31 @@ class SpeciesNameParser(object):
 
     def _compose_species_name(self, record):
         """
-        genus + " " + species + " " + infra_name + " " + infra_rank
-        :return:
+        genus + " " + species + " " + infra_rank + " " + infra_name
+        see https://decbugs.com/view.php?id=6674
+        :return: Will raise an exception if constraints are not respected
         """
-        return '{genus} {species} {infra_name} {infra_rank}'.format(
-            genus=self._cast_field(self.genus_field, record),
-            species=self._cast_field(self.species_field, record),
-            infra_name=self._cast_field(self.infra_name_field, record),
-            infra_rank=self._cast_field(self.infra_rank_field, record)
-        ).strip()
+        result = ''
+        for field in [self.genus_field, self.species_field, self.infra_rank_field, self.infra_name_field]:
+            value = self._cast_field(field, record)
+            if value:
+                result += ' {}'.format(value)
+        return result.strip()
 
     @staticmethod
     def _cast_field(field, record):
+        """
+        :param field:
+        :param record:
+        :return: The casted value or None. It will throw an exception if constraints are not respected
+         Warning could return None for empty string
+        """
         if field is not None:
-            return field.cast(record.get(field.name))
+            value = record.get(field.name)
+            # use the cast method to throw constraint errors
+            return field.cast(value)
         else:
-            return ''
+            return None
 
     def _parse_species_fields(self):
         # Genus
@@ -1183,6 +1184,38 @@ class SpeciesNameParser(object):
         if errors:
             self.errors += errors
 
+    def _check_required_constraint(self):
+        """
+        6 cases depending which fields are in the schema:
+        see note in https://decbugs.com/view.php?id=6674
+
+        |species_name|
+            req
+        |name_id|
+            req
+        |genus|species|
+          req   req
+        |species_name| name_id |
+          not req      not req
+        |genus|species|species_name|
+          req   req     not req
+        | genus |species|species_name|name_id|
+          not r.  not r.  not req      not req
+
+        :return: list of errors
+        """
+        errors = []
+        required_msg = "The field {} must be set as required."
+        if self.is_species_name_only and not self.species_name_field.required:
+            errors.append(required_msg.format(self.species_name_field.name))
+        if self.is_name_id_only and not self.name_id_field.required:
+            errors.append(required_msg.format(self.name_id_field.name))
+        if self.has_genus_and_species and not self.has_name_id:
+            if not self.genus_field.required:
+                errors.append(required_msg.format(self.genus_field.name))
+            if not self.species_field.required:
+                errors.append(required_msg.format(self.species_field.name))
+        return errors
 
 class Exporter:
     def __init__(self, dataset, records=None):
