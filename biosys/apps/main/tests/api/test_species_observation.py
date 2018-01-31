@@ -1,22 +1,16 @@
 import datetime
 import re
 from os import path
-from unittest import skip
-from dateutil.parser import parse as dt_parse
 
-from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
 from django.core.urlresolvers import reverse
-from django.test import TestCase, override_settings
 from django.utils import timezone, six
 from openpyxl import load_workbook
 from rest_framework import status
-from rest_framework.test import APIClient
 
-from main.models import Project, Site, Dataset, Record
+from main.models import Dataset, Record
 from main.tests.api import helpers
 from main.tests.test_data_package import clone
-from main.utils_auth import is_admin
 from main.utils_species import NoSpeciesFacade
 
 
@@ -1541,33 +1535,61 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         self.assertEqual(record.species_name, expected_species_name)
 
 
-@skip("Until old tests passed")
 class TestCompositeSpeciesName(helpers.BaseUserTestCase):
     """
     Test for species name composed from Genus, Species, infra_rank, infra_name columns
-    Paul Gioa specs from https://decbugs.com/view.php?id=6674:
-    1. If the field Genus is present (or tagged with biosys type Genus) it takes priority over species_name
-    2. If Genus is present, there must also be a field Species (or tagged with biosys type Species). If not, then revert to Species_Name (if present)
-    3. If Genus and species present, then user may optionally specify Infraspecific_Rank and Infraspecific_Name (or fields tagged with Infraspecific_Rank and Infraspecific_Name)
-    4. An aggregated species name is constructed by using something like (genus.strip() + " " + species.strip() + " " + infraspecific_rank.strip() + " " + infraspecific_rank).strip()
     """
 
     species_facade_class = helpers.LightSpeciesFacade
 
-    def assert_create_dataset(self, schema):
-        try:
-            return self._create_dataset_with_schema(
-                self.project_1,
-                self.custodian_1_client,
-                schema,
-                dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
-            )
-        except Exception as e:
-            self.fail('Species Observation dataset creation failed for schema {schema}'.format(
-                schema=schema
-            ))
+    @staticmethod
+    def schema_with_4_columns_genus():
+        schema_fields = [
+            {
+                "name": "Genus",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Species",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "InfraSpecific Rank",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "InfraSpecific Name",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        return schema
 
-    def test_genus_species_only_happy_path(self):
+    @staticmethod
+    def schema_with_2_columns_genus():
         schema_fields = [
             {
                 "name": "Genus",
@@ -1600,9 +1622,65 @@ class TestCompositeSpeciesName(helpers.BaseUserTestCase):
             },
         ]
         schema = helpers.create_schema_from_fields(schema_fields)
+        return schema
+
+    def _more_setup(self):
+        # set the HerbieFacade class
+        from main.api.views import SpeciesMixin
+        SpeciesMixin.species_facade_class = self.species_facade_class
+        self.client = self.custodian_1_client
+
+    def assert_create_dataset(self, schema):
+        try:
+            return self._create_dataset_with_schema(
+                self.project_1,
+                self.custodian_1_client,
+                schema,
+                dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+            )
+        except Exception as e:
+            self.fail('Species Observation dataset creation failed for schema {schema}'.format(
+                schema=schema
+            ))
+
+    def test_genus_species_only_happy_path(self):
+        schema = self.schema_with_2_columns_genus()
         dataset = self.assert_create_dataset(schema)
         records = [
             ['Genus', 'Species', 'When', 'Latitude', 'Longitude'],
-            ['Canis', 'lupus', '2018-01-25', -32.0, 115.75]
+            ['Canis', 'lupus', '2018-01-25', -32.0, 115.75],
         ]
         resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk)
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        received = resp.json()
+        rec_id = received[0]['recordId']
+        record = Record.objects.filter(pk=rec_id).first()
+        self.assertEquals(record.species_name, 'Canis lupus')
+        self.assertEquals(record.name_id, 25454)
+
+    def test_validation_missing_species(self):
+        schema = self.schema_with_2_columns_genus()
+        dataset = self.assert_create_dataset(schema)
+        data = {
+            'Genus': "Canis",
+            'When': '2018-01-25',
+            'Latitude': -32.0,
+            'Longitude': 115.75
+        }
+        url = helpers.url_post_record_strict()
+        payload = {
+            'dataset': dataset.pk,
+            'data': data
+        }
+        resp = self.client.post(url, payload, format='json')
+        self.assertEquals(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        received_json = resp.json()
+        # should contain one error on the 'data' for the species field
+        self.assertIn('data', received_json)
+        errors = received_json.get('data')
+        self.assertIsInstance(errors, list)
+        self.assertEquals(len(errors), 1)
+        error = errors[0]
+        # should be "Species::msg"
+        pattern = re.compile(r"^Species::(.+)$")
+        self.assertTrue(pattern.match(error))
