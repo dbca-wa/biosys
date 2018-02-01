@@ -209,7 +209,7 @@ class RecordSerializer(serializers.ModelSerializer):
         species_mapping = self.get_species_name_id_mapping()
         if species_mapping:
             # name id takes precedence
-            if name_id:
+            if name_id and name_id != -1:
                 species_name = get_key_for_value(species_mapping, int(name_id), None)
                 if not species_name:
                     raise Exception("Cannot find a species with nameId={}".format(name_id))

@@ -1049,6 +1049,11 @@ class SpeciesNameParser(object):
         # check required constraint.
         self.required_errors = self._check_required_constraint()
 
+        # if name_id it should be integer
+        if self.name_id_field is not None and self.name_id_field.type != 'integer':
+            msg = "The name id field '{}' should be of type 'integer'".format(self.name_id_field.name)
+            self.errors.append(msg)
+
         self.errors += self.required_errors
 
     def is_valid(self):
@@ -1109,12 +1114,12 @@ class SpeciesNameParser(object):
         see https://decbugs.com/view.php?id=6674
         :return: Will raise an exception if constraints are not respected
         """
-        result = ''
+        values = []
         for field in [self.genus_field, self.species_field, self.infra_rank_field, self.infra_name_field]:
             value = self._cast_field(field, record)
             if value:
-                result += ' {}'.format(value)
-        return result.strip()
+                values.append(value)
+        return ' '.join(values)
 
     @staticmethod
     def _cast_field(field, record):

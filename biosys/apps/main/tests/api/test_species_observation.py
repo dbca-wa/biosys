@@ -353,7 +353,7 @@ class TestDataValidation(helpers.BaseUserTestCase):
         url = reverse('api:record-list')
         ds.record_queryset.delete()
         self.assertEqual(
-            client.post(url, data=payload, format='json').status_code,
+            client.post(url, payload, format='json').status_code,
             status.HTTP_201_CREATED
         )
         self.assertEquals(ds.record_queryset.count(), 1)
@@ -792,7 +792,7 @@ class TestSpeciesNameExtraction(helpers.BaseUserTestCase):
         }
         url = reverse('api:record-list')
         self.assertEqual(
-            client.post(url, data=payload, format='json').status_code,
+            client.post(url, payload, format='json').status_code,
             status.HTTP_201_CREATED
         )
         self.assertEquals(ds.record_queryset.count(), 1)
@@ -812,7 +812,7 @@ class TestSpeciesNameExtraction(helpers.BaseUserTestCase):
         }
         url = reverse('api:record-detail', kwargs={"pk": record.pk})
         self.assertEqual(
-            client.put(url, data=payload, format='json').status_code,
+            client.put(url, payload, format='json').status_code,
             status.HTTP_200_OK
         )
         record.refresh_from_db()
@@ -820,7 +820,7 @@ class TestSpeciesNameExtraction(helpers.BaseUserTestCase):
 
     def test_patch(self):
         """
-        Test that name extraction after a PUT method
+        Test that name extraction after a PATCH method
         """
         project = self.project_1
         client = self.custodian_1_client
@@ -838,7 +838,7 @@ class TestSpeciesNameExtraction(helpers.BaseUserTestCase):
         }
         url = reverse('api:record-list')
         self.assertEqual(
-            client.post(url, data=payload, format='json').status_code,
+            client.post(url, payload, format='json').status_code,
             status.HTTP_201_CREATED
         )
         self.assertEquals(ds.record_queryset.count(), 1)
@@ -857,7 +857,7 @@ class TestSpeciesNameExtraction(helpers.BaseUserTestCase):
         }
         url = reverse('api:record-detail', kwargs={"pk": record.pk})
         self.assertEqual(
-            client.patch(url, data=payload, format='json').status_code,
+            client.patch(url, payload, format='json').status_code,
             status.HTTP_200_OK
         )
         record.refresh_from_db()
@@ -931,7 +931,7 @@ class TestNameIDFromSpeciesName(helpers.BaseUserTestCase):
             }
             url = reverse('api:record-list')
             self.assertEqual(
-                client.post(url, data=payload, format='json').status_code,
+                client.post(url, payload, format='json').status_code,
                 status.HTTP_201_CREATED
             )
             self.assertEquals(ds.record_queryset.count(), 1)
@@ -958,7 +958,7 @@ class TestNameIDFromSpeciesName(helpers.BaseUserTestCase):
         }
         url = reverse('api:record-list')
         self.assertEqual(
-            client.post(url, data=payload, format='json').status_code,
+            client.post(url, payload, format='json').status_code,
             status.HTTP_201_CREATED
         )
         self.assertEquals(ds.record_queryset.count(), 1)
@@ -979,7 +979,7 @@ class TestNameIDFromSpeciesName(helpers.BaseUserTestCase):
         expected_name_id = 25454
         url = reverse('api:record-detail', kwargs={"pk": record.pk})
         self.assertEqual(
-            client.put(url, data=payload, format='json').status_code,
+            client.put(url, payload, format='json').status_code,
             status.HTTP_200_OK
         )
         record.refresh_from_db()
@@ -1006,7 +1006,7 @@ class TestNameIDFromSpeciesName(helpers.BaseUserTestCase):
         }
         url = reverse('api:record-list')
         self.assertEqual(
-            client.post(url, data=payload, format='json').status_code,
+            client.post(url, payload, format='json').status_code,
             status.HTTP_201_CREATED
         )
         self.assertEquals(ds.record_queryset.count(), 1)
@@ -1026,7 +1026,7 @@ class TestNameIDFromSpeciesName(helpers.BaseUserTestCase):
         expected_name_id = 25454
         url = reverse('api:record-detail', kwargs={"pk": record.pk})
         self.assertEqual(
-            client.patch(url, data=payload, format='json').status_code,
+            client.patch(url, payload, format='json').status_code,
             status.HTTP_200_OK
         )
         record.refresh_from_db()
@@ -1194,7 +1194,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
             payload = {
                 'file': fp
             }
-            resp = client.post(url, data=payload, format='multipart')
+            resp = client.post(url, payload, format='multipart')
             self.assertEquals(status.HTTP_200_OK, resp.status_code)
             records = Record.objects.filter(dataset=dataset)
             self.assertEquals(records.count(), len(csv_data) - 1)
@@ -1229,7 +1229,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
             'data': record_data
         }
         url = reverse('api:record-list')
-        resp = client.post(url, data=payload, format='json')
+        resp = client.post(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         record = Record.objects.filter(id=resp.json().get('id')).first()
         self.assertIsNotNone(record)
@@ -1258,7 +1258,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
             'data': record_data
         }
         url = reverse('api:record-list')
-        resp = client.post(url, data=payload, format='json')
+        resp = client.post(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         record = Record.objects.filter(id=resp.json().get('id')).first()
         self.assertIsNotNone(record)
@@ -1273,7 +1273,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         payload = {
             'data': record_data
         }
-        resp = client.patch(url, data=payload, format='json')
+        resp = client.patch(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         record.refresh_from_db()
         self.assertEqual(record.name_id, new_name_id)
@@ -1302,7 +1302,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
             payload = {
                 'file': fp
             }
-            resp = client.post(url, data=payload, format='multipart')
+            resp = client.post(url, payload, format='multipart')
             self.assertEquals(status.HTTP_400_BAD_REQUEST, resp.status_code)
             records = Record.objects.filter(dataset=dataset)
             # should be only one record (the good one)
@@ -1328,7 +1328,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
             'data': record_data
         }
         url = reverse('api:record-list')
-        resp = client.post(url, data=payload, format='json')
+        resp = client.post(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(Record.objects.filter(dataset=dataset).count(), 0)
 
@@ -1408,7 +1408,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
             payload = {
                 'file': fp
             }
-            resp = client.post(url, data=payload, format='multipart')
+            resp = client.post(url, payload, format='multipart')
             self.assertEquals(status.HTTP_200_OK, resp.status_code)
             records = Record.objects.filter(dataset=dataset)
             self.assertEquals(records.count(), len(csv_data) - 1)
@@ -1445,7 +1445,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
             payload = {
                 'file': fp
             }
-            resp = client.post(url, data=payload, format='multipart')
+            resp = client.post(url, payload, format='multipart')
             self.assertEquals(status.HTTP_200_OK, resp.status_code)
             records = Record.objects.filter(dataset=dataset)
             self.assertEquals(records.count(), len(csv_data) - 1)
@@ -1481,7 +1481,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
             'data': record_data
         }
         url = reverse('api:record-list')
-        resp = client.post(url, data=payload, format='json')
+        resp = client.post(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         record = Record.objects.filter(id=resp.json().get('id')).first()
         self.assertIsNotNone(record)
@@ -1511,7 +1511,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
             'data': record_data
         }
         url = reverse('api:record-list')
-        resp = client.post(url, data=payload, format='json')
+        resp = client.post(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         record = Record.objects.filter(id=resp.json().get('id')).first()
         self.assertIsNotNone(record)
@@ -1528,7 +1528,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         payload = {
             'data': record_data
         }
-        resp = client.patch(url, data=payload, format='json')
+        resp = client.patch(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         record.refresh_from_db()
         self.assertEqual(record.name_id, new_name_id)
