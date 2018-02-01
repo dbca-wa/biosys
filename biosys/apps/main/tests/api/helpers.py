@@ -163,7 +163,7 @@ class BaseUserTestCase(TestCase):
             self.assertIsNotNone(dataset)
             return dataset
 
-    def _create_records_from_rows(self, rows, dataset_pk, strict=True):
+    def _upload_records_from_rows(self, rows, dataset_pk, strict=True):
         """
         Use the the upload end-point
         :param rows same format as _create_dataset_from_rows
@@ -176,10 +176,10 @@ class BaseUserTestCase(TestCase):
             url = reverse('api:dataset-upload', kwargs={'pk': dataset_pk})
             payload = {
                 'file': fp,
-                'strict': strict  # upload in strict mode
             }
+            if strict:
+                payload['strict'] = True
             resp = client.post(url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
             return resp
 
     def _create_dataset_and_records_from_rows(self, rows):
@@ -189,7 +189,8 @@ class BaseUserTestCase(TestCase):
         :return: the dataset object
         """
         dataset = self._create_dataset_from_rows(rows)
-        self._create_records_from_rows(rows, dataset.pk)
+        resp = self._upload_records_from_rows(rows, dataset.pk)
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
         return dataset
 
 
@@ -370,3 +371,7 @@ def add_foreign_key_to_schema(schema, options):
 
 def set_strict_mode(url):
     return url + '?strict'
+
+
+def url_post_record_strict():
+    return set_strict_mode(reverse('api:record-list'))

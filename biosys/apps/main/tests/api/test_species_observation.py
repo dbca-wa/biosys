@@ -2,23 +2,19 @@ import datetime
 import re
 from os import path
 
-from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
 from django.core.urlresolvers import reverse
-from django.test import TestCase, override_settings
 from django.utils import timezone, six
 from openpyxl import load_workbook
 from rest_framework import status
-from rest_framework.test import APIClient
 
-from main.models import Project, Site, Dataset, Record
+from main.models import Dataset, Record
 from main.tests.api import helpers
 from main.tests.test_data_package import clone
-from main.utils_auth import is_admin
 from main.utils_species import NoSpeciesFacade
 
 
-class TestPermissions(TestCase):
+class TestPermissions(helpers.BaseUserTestCase):
     """
     Test Permissions
     Get: authenticated
@@ -26,71 +22,74 @@ class TestPermissions(TestCase):
     Create: admin, custodians
     Delete: admin, custodians
     """
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-species-observations'
-    ]
     species_facade_class = NoSpeciesFacade
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
-    def setUp(self):
+    @staticmethod
+    def schema_with_species_name():
+        schema_fields = [
+            {
+                "name": "Species Name",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        return schema
+
+    def _more_setup(self):
+        # set the HerbieFacade class
         from main.api.views import SpeciesMixin
         SpeciesMixin.species_facade_class = self.species_facade_class
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_species_name()
+        self.ds_1 = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        self.record_1 = self._create_default_record()
 
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Site1").first()
-        self.ds_1 = Dataset.objects.filter(name="Bats1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = self.ds_1.record_model.objects.filter(dataset=self.ds_1).first()
-        self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-
-        self.custodian_2_user = User.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.custodian_2_user.set_password(password)
-        self.custodian_2_user.save()
-        self.custodian_2_client = APIClient()
-        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
-        self.site_2 = Site.objects.filter(code="Site2").first()
-        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
-
-        self.readonly_user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
-        self.readonly_user.set_password(password)
-        self.readonly_user.save()
-        self.readonly_client = APIClient()
-        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
-
-        self.anonymous_client = APIClient()
+    def _create_default_record(self):
+        ds = self.ds_1
+        client = self.custodian_1_client
+        data = {
+            'Species Name': 'Chubby Bat',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
+        payload = {
+            "dataset": ds.pk,
+            "data": data
+        }
+        url = reverse('api:record-list')
+        ds.record_queryset.delete()
+        self.assertEqual(
+            client.post(url, data=payload, format='json').status_code,
+            status.HTTP_201_CREATED
+        )
+        return ds.record_queryset.first()
 
     def test_get(self):
         urls = [
             reverse('api:record-list'),
-            reverse('api:record-detail', kwargs={'pk': 1})
+            reverse('api:record-detail', kwargs={'pk': self.record_1.pk})
         ]
         access = {
             "forbidden": [self.anonymous_client],
@@ -152,12 +151,10 @@ class TestPermissions(TestCase):
         data = [
             {
                 "dataset": rec.dataset.pk,
-                "site": rec.site.pk,
                 "data": rec.data
             },
             {
                 "dataset": rec.dataset.pk,
-                "site": rec.site.pk,
                 "data": rec.data
             }
         ]
@@ -272,137 +269,143 @@ class TestPermissions(TestCase):
                 )
 
 
-class TestDataValidation(TestCase):
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-species-observations'
-    ]
-
+class TestDataValidation(helpers.BaseUserTestCase):
     species_facade_class = NoSpeciesFacade
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
-    def setUp(self):
+    @staticmethod
+    def schema_with_species_name():
+        schema_fields = [
+            {
+                "name": "Species Name",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        return schema
+
+    def _more_setup(self):
+        # set the HerbieFacade class
         from main.api.views import SpeciesMixin
         SpeciesMixin.species_facade_class = self.species_facade_class
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_species_name()
+        self.ds_1 = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
 
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Site1").first()
-        self.ds_1 = Dataset.objects.filter(name="Bats1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = self.ds_1.record_model.objects.filter(dataset=self.ds_1).first()
-        self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-
-        self.custodian_2_user = User.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.custodian_2_user.set_password(password)
-        self.custodian_2_user.save()
-        self.custodian_2_client = APIClient()
-        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
-        self.site_2 = Site.objects.filter(code="Site2").first()
-        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
-
-        self.readonly_user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
-        self.readonly_user.set_password(password)
-        self.readonly_user.save()
-        self.readonly_client = APIClient()
-        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
-
-        self.anonymous_client = APIClient()
+    def _create_default_record(self):
+        ds = self.ds_1
+        client = self.custodian_1_client
+        data = {
+            'Species Name': 'Chubby Bat',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
+        payload = {
+            "dataset": ds.pk,
+            "data": data
+        }
+        url = reverse('api:record-list')
+        ds.record_queryset.delete()
+        self.assertEqual(
+            client.post(url, data=payload, format='json').status_code,
+            status.HTTP_201_CREATED
+        )
+        return ds.record_queryset.first()
 
     def test_create_one_happy_path(self):
         """
         Test the create of one record
         :return:
         """
-        # grab one existing an re-inject it
-        record = self.record_1
         ds = self.ds_1
+        client = self.custodian_1_client
         data = {
-            "dataset": record.dataset.pk,
-            "data": record.data
+            'Species Name': 'Chubby Bat',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
+        payload = {
+            "dataset": ds.pk,
+            "data": data
         }
         url = reverse('api:record-list')
-        client = self.custodian_1_client
-        count = ds.record_queryset.count()
+        ds.record_queryset.delete()
         self.assertEqual(
-            client.post(url, data, format='json').status_code,
+            client.post(url, payload, format='json').status_code,
             status.HTTP_201_CREATED
         )
-        self.assertEquals(ds.record_queryset.count(), count + 1)
+        self.assertEquals(ds.record_queryset.count(), 1)
 
     def test_empty_not_allowed(self):
         ds = self.ds_1
-        record = self.record_1
-        data = {
-            "dataset": record.dataset.pk,
+        client = self.custodian_1_client
+        payload = {
+            "dataset": ds.pk,
             "data": {}
         }
         url = reverse('api:record-list')
-        client = self.custodian_1_client
         count = ds.record_queryset.count()
         self.assertEqual(
-            client.post(url, data, format='json').status_code,
+            client.post(url, payload, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
         self.assertEquals(ds.record_queryset.count(), count)
 
     def test_create_column_not_in_schema(self):
         """
-        Test that if we introduce a column not in the the dataset it will not validate
-        :return:
+        Test that if we introduce a column not in the schema it will not validate in strict mode
         """
         ds = self.ds_1
-        record = self.record_1
-        incorrect_data = clone(record.data)
-        incorrect_data['Extra Column'] = "Extra Value"
-        data = {
-            "dataset": record.dataset.pk,
-            "data": incorrect_data
-        }
-        url = reverse('api:record-list')
-        # set strict mode
-        url = helpers.set_strict_mode(url)
         client = self.custodian_1_client
-        count = ds.record_queryset.count()
+        data = {
+            'Species Name': 'Chubby Bat',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31',
+            'Extra Column': 'Extra Value'
+        }
+        payload = {
+            "dataset": ds.pk,
+            "data": data
+        }
+        url = helpers.set_strict_mode(reverse('api:record-list'))
+        ds.record_queryset.delete()
         self.assertEqual(
-            client.post(url, data, format='json').status_code,
+            client.post(url, data=payload, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(ds.record_queryset.count(), count)
+        self.assertEquals(ds.record_queryset.count(), 0)
 
     def test_update_column_not_in_schema(self):
         """
-        Test that if we introduce a column not in the the dataset it will not validate
+        Test that updating a record with column not in the schema it will not validate in strict mode
         :return:
         """
         ds = self.ds_1
-        record = self.record_1
+        client = self.custodian_1_client
+        record = self._create_default_record()
         incorrect_data = clone(record.data)
         incorrect_data['Extra Column'] = "Extra Value"
         data = {
@@ -412,7 +415,6 @@ class TestDataValidation(TestCase):
         url = reverse('api:record-detail', kwargs={"pk": record.pk})
         # set strict mode
         url = helpers.set_strict_mode(url)
-        client = self.custodian_1_client
         count = ds.record_queryset.count()
         self.assertEqual(
             client.put(url, data, format='json').status_code,
@@ -431,7 +433,7 @@ class TestDataValidation(TestCase):
         :return:
         """
         ds = self.ds_1
-        record = self.record_1
+        record = self._create_default_record()
         date_column = ds.schema.observation_date_field.name
         new_data = clone(record.data)
         url_post = reverse('api:record-list')
@@ -481,7 +483,7 @@ class TestDataValidation(TestCase):
         :return:
         """
         ds = self.ds_1
-        record = self.record_1
+        record = self._create_default_record()
         lat_column = ds.schema.latitude_field.name
         new_data = clone(record.data)
         url_post = reverse('api:record-list')
@@ -527,8 +529,8 @@ class TestDataValidation(TestCase):
 
     def test_species_name(self):
         ds = self.ds_1
-        record = self.record_1
-        column = ds.schema.species_name_field.name
+        record = self._create_default_record()
+        column = ds.schema.species_name_parser.species_name_field.name
         new_data = clone(record.data)
         url_post = reverse('api:record-list')
         url_update = reverse('api:record-detail', kwargs={'pk': record.pk})
@@ -572,337 +574,364 @@ class TestDataValidation(TestCase):
             self.assertEquals(ds.record_queryset.count(), count)
 
 
-class TestDateTimeAndGeometryExtraction(TestCase):
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-species-observations'
-    ]
-
+class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
     species_facade_class = NoSpeciesFacade
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
-    def setUp(self):
+    @staticmethod
+    def schema_with_species_name():
+        schema_fields = [
+            {
+                "name": "Species Name",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        return schema
+
+    def _more_setup(self):
+        # set the HerbieFacade class
         from main.api.views import SpeciesMixin
         SpeciesMixin.species_facade_class = self.species_facade_class
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Site1").first()
-        self.ds_1 = Dataset.objects.filter(name="Bats1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = self.ds_1.record_model.objects.filter(dataset=self.ds_1).first()
-        self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-
-        self.custodian_2_user = User.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.custodian_2_user.set_password(password)
-        self.custodian_2_user.save()
-        self.custodian_2_client = APIClient()
-        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
-        self.site_2 = Site.objects.filter(code="Site2").first()
-        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
-
-        self.readonly_user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
-        self.readonly_user.set_password(password)
-        self.readonly_user.save()
-        self.readonly_client = APIClient()
-        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
-
-        self.anonymous_client = APIClient()
 
     def test_create(self):
         """
         Test that the date and geometry are extracted from the data
         and saved in DB
-        :return:
         """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_species_name()
+        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        data = {
+            'Species Name': 'Chubby Bat',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
+
         # clear all records
-        ds = self.ds_1
         ds.record_queryset.delete()
         self.assertEquals(ds.record_queryset.count(), 0)
-        record = self.record_1
-        data = {
-            "dataset": record.dataset.pk,
-            "data": record.data
+        payload = {
+            "dataset": ds.pk,
+            "data": data
         }
-        expected_datetime = record.datetime
-        expected_geojson = record.geometry.geojson
         url = reverse('api:record-list')
-        client = self.custodian_1_client
         self.assertEqual(
-            client.post(url, data, format='json').status_code,
+            client.post(url, data=payload, format='json').status_code,
             status.HTTP_201_CREATED
         )
         self.assertEquals(ds.record_queryset.count(), 1)
-        self.assertEquals(ds.record_queryset.first().datetime, expected_datetime)
-        self.assertEquals(ds.record_queryset.first().geometry.geojson, expected_geojson)
+        record = ds.record_queryset.first()
+        expected_date = datetime.date(2018, 1, 31)
+        self.assertEquals(timezone.localtime(record.datetime).date(), expected_date)
+        geometry = record.geometry
+        self.assertIsInstance(geometry, Point)
+        self.assertEquals((115.75, -32.0), (geometry.x, geometry.y))
 
     def test_update(self):
         """
         Test that the date and geometry are extracted from the data
-        and saved in DB
-        :return:
+        and saved in DB after a PATCH of the record data
         """
-        # clear all records
-        ds = self.ds_1
-        record = self.record_1
-        new_data = clone(record.data)
-        # change date
-        date = '20/4/2016'
-        expected_date = datetime.date(2016, 4, 20)
-        new_data[ds.schema.observation_date_field.name] = date
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_species_name()
+        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        data = {
+            'Species Name': 'Chubby Bat',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
 
+        # clear all records
+        ds.record_queryset.delete()
+        self.assertEquals(ds.record_queryset.count(), 0)
+        payload = {
+            "dataset": ds.pk,
+            "data": data
+        }
+        url = reverse('api:record-list')
+        self.assertEqual(
+            client.post(url, data=payload, format='json').status_code,
+            status.HTTP_201_CREATED
+        )
+        self.assertEquals(ds.record_queryset.count(), 1)
+        record = ds.record_queryset.first()
+        # date and lat/lon
         # change lat/lon
-        lon = 111.111
-        lat = 22.222
-        new_data[ds.schema.longitude_field.name] = lon
-        new_data[ds.schema.latitude_field.name] = lat
-        expected_geojson = Point(lon, lat).geojson
-
         data = {
-            "dataset": record.dataset.pk,
-            "data": new_data
+            'Species Name': 'Chubby Bat',
+            'Latitude': 22.222,
+            'Longitude': 111.111,
+            'When': '2017-12-24'
         }
-        count = ds.record_queryset.count()
+        payload = {
+            "data": data
+        }
         url = reverse('api:record-detail', kwargs={"pk": record.pk})
-        client = self.custodian_1_client
         self.assertEqual(
-            client.patch(url, data, format='json').status_code,
+            client.patch(url, data=payload, format='json').status_code,
             status.HTTP_200_OK
         )
-        self.assertEquals(ds.record_queryset.count(), count)
-        dtz = timezone.localtime(ds.record_queryset.first().datetime)
-        self.assertEquals(dtz.date(), expected_date)
-        self.assertEquals(ds.record_queryset.first().geometry.geojson, expected_geojson)
+        record.refresh_from_db()
+        expected_date = datetime.date(2017, 12, 24)
+        self.assertEquals(timezone.localtime(record.datetime).date(), expected_date)
+        geometry = record.geometry
+        self.assertIsInstance(geometry, Point)
+        self.assertEquals((111.111, 22.222), (geometry.x, geometry.y))
 
 
-class TestSpeciesNameExtraction(TestCase):
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-species-observations'
-    ]
-
+class TestSpeciesNameExtraction(helpers.BaseUserTestCase):
     species_facade_class = NoSpeciesFacade
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
-    def setUp(self):
+    @staticmethod
+    def schema_with_species_name():
+        schema_fields = [
+            {
+                "name": "Species Name",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        return schema
+
+    def _more_setup(self):
+        # set the HerbieFacade class
         from main.api.views import SpeciesMixin
         SpeciesMixin.species_facade_class = self.species_facade_class
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Site1").first()
-        self.ds_1 = Dataset.objects.filter(name="Bats1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = self.ds_1.record_model.objects.filter(dataset=self.ds_1).first()
-        self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-
-        self.custodian_2_user = User.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.custodian_2_user.set_password(password)
-        self.custodian_2_user.save()
-        self.custodian_2_client = APIClient()
-        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
-        self.site_2 = Site.objects.filter(code="Site2").first()
-        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
-
-        self.readonly_user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
-        self.readonly_user.set_password(password)
-        self.readonly_user.save()
-        self.readonly_client = APIClient()
-        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
-
-        self.anonymous_client = APIClient()
 
     def test_create(self):
         """
-        Test that the species name is extracted from the data and saved in DB
-        :return:
+        Test that the species name is extracted from the data and saved in DB even if the species is not valid
         """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_species_name()
+        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        data = {
+            'Species Name': 'Chubby Bat',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
+
         # clear all records
-        ds = self.ds_1
         ds.record_queryset.delete()
         self.assertEquals(ds.record_queryset.count(), 0)
-        record = self.record_1
-        data = {
-            "dataset": record.dataset.pk,
-            "data": record.data
+        payload = {
+            "dataset": ds.pk,
+            "data": data
         }
-        expected_name = record.species_name
         url = reverse('api:record-list')
-        client = self.custodian_1_client
         self.assertEqual(
-            client.post(url, data, format='json').status_code,
+            client.post(url, data=payload, format='json').status_code,
             status.HTTP_201_CREATED
         )
         self.assertEquals(ds.record_queryset.count(), 1)
-        self.assertEquals(ds.record_queryset.first().species_name, expected_name)
+        self.assertEquals(ds.record_queryset.first().species_name, 'Chubby Bat')
 
     def test_update(self):
         """
-        Test that the species name is extracted from the data and saved in DB
-        :return:
+        Test that name extraction after a PUT method
         """
-        # clear all records
-        ds = self.ds_1
-        record = self.record_1
-        new_data = clone(record.data)
-        # change species name
-        name = 'Chubby Bat'
-        self.assertEqual(ds.record_queryset.filter(species_name=name).count(), 0)
-        new_data[ds.schema.species_name_field.name] = name
-        data = {
-            "dataset": record.dataset.pk,
-            "data": new_data
-        }
-        count = ds.record_queryset.count()
-        url = reverse('api:record-detail', kwargs={"pk": record.pk})
+        project = self.project_1
         client = self.custodian_1_client
+        schema = self.schema_with_species_name()
+        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        data = {
+            'Species Name': 'Chubby Bat',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
+        payload = {
+            "dataset": ds.pk,
+            "data": data
+        }
+        url = reverse('api:record-list')
         self.assertEqual(
-            client.patch(url, data, format='json').status_code,
+            client.post(url, payload, format='json').status_code,
+            status.HTTP_201_CREATED
+        )
+        self.assertEquals(ds.record_queryset.count(), 1)
+        record = ds.record_queryset.first()
+        self.assertEquals(record.species_name, 'Chubby Bat')
+
+        # update the species_name
+        data = {
+            'Species Name': ' Canis lupus ',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
+        payload = {
+            "dataset": ds.pk,
+            "data": data
+        }
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
+        self.assertEqual(
+            client.put(url, payload, format='json').status_code,
             status.HTTP_200_OK
         )
-        self.assertEquals(ds.record_queryset.count(), count)
-        self.assertEqual(ds.record_queryset.filter(species_name=name).count(), 1)
+        record.refresh_from_db()
+        self.assertEqual(record.species_name, 'Canis lupus')
+
+    def test_patch(self):
+        """
+        Test that name extraction after a PATCH method
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_species_name()
+        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        data = {
+            'Species Name': 'Chubby Bat',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
+        payload = {
+            "dataset": ds.pk,
+            "data": data
+        }
+        url = reverse('api:record-list')
+        self.assertEqual(
+            client.post(url, payload, format='json').status_code,
+            status.HTTP_201_CREATED
+        )
+        self.assertEquals(ds.record_queryset.count(), 1)
+        record = ds.record_queryset.first()
+        self.assertEquals(record.species_name, 'Chubby Bat')
+
+        # update the species_name
+        data = {
+            'Species Name': 'Canis lupus ',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
+        payload = {
+            "data": data
+        }
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
+        self.assertEqual(
+            client.patch(url, payload, format='json').status_code,
+            status.HTTP_200_OK
+        )
+        record.refresh_from_db()
+        self.assertEqual(record.species_name, 'Canis lupus')
 
 
-class TestNameIDFromSpeciesName(TestCase):
+class TestNameIDFromSpeciesName(helpers.BaseUserTestCase):
     """
     Test that we retrieve the name id from the species facade
     """
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-species-observations'
-    ]
 
     species_facade_class = helpers.LightSpeciesFacade
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
-    def setUp(self):
+    @staticmethod
+    def schema_with_species_name():
+        schema_fields = [
+            {
+                "name": "Species Name",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        return schema
+
+    def _more_setup(self):
+        # set the HerbieFacade class
         from main.api.views import SpeciesMixin
         SpeciesMixin.species_facade_class = self.species_facade_class
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Site1").first()
-        self.ds_1 = Dataset.objects.filter(name="Bats1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = self.ds_1.record_model.objects.filter(dataset=self.ds_1).first()
-        self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-
-        self.custodian_2_user = User.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.custodian_2_user.set_password(password)
-        self.custodian_2_user.save()
-        self.custodian_2_client = APIClient()
-        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
-        self.site_2 = Site.objects.filter(code="Site2").first()
-        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
-
-        self.readonly_user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
-        self.readonly_user.set_password(password)
-        self.readonly_user.save()
-        self.readonly_client = APIClient()
-        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
-
-        self.anonymous_client = APIClient()
 
     def test_create(self):
         """
         Test that the name_id is retrieved from the species facade from the species_name
         :return:
         """
-        ds = self.ds_1
-        record = self.record_1
-        column = ds.schema.species_name_field.name
-        new_data = clone(record.data)
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_species_name()
+        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        data = {
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
         for species_name, name_id in list(helpers.LightSpeciesFacade().name_id_by_species_name().items())[:2]:
             ds.record_queryset.delete()
             self.assertEquals(ds.record_queryset.count(), 0)
-            new_data[column] = species_name
-            data = {
-                "dataset": record.dataset.pk,
-                "data": new_data
+            data['Species Name'] = species_name
+            payload = {
+                "dataset": ds.pk,
+                "data": data
             }
             url = reverse('api:record-list')
-            client = self.custodian_1_client
             self.assertEqual(
-                client.post(url, data, format='json').status_code,
+                client.post(url, payload, format='json').status_code,
                 status.HTTP_201_CREATED
             )
             self.assertEquals(ds.record_queryset.count(), 1)
@@ -911,26 +940,97 @@ class TestNameIDFromSpeciesName(TestCase):
     def test_update(self):
         """
         Test that the name_id is retrieved from the species facade from the species_name
-        :return:
         """
-        ds = self.ds_1
-        record = self.record_1
-        column = ds.schema.species_name_field.name
-        new_data = clone(record.data)
-        for species_name, name_id in list(helpers.LightSpeciesFacade().name_id_by_species_name().items())[:2]:
-            new_data[column] = species_name
-            data = {
-                "dataset": record.dataset.pk,
-                "data": new_data
-            }
-            url = reverse('api:record-detail', kwargs={"pk": record.pk})
-            client = self.custodian_1_client
-            self.assertEqual(
-                client.put(url, data, format='json').status_code,
-                status.HTTP_200_OK
-            )
-            record.refresh_from_db()
-            self.assertEqual(record.name_id, name_id)
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_species_name()
+        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        # create a record with a wrong species name. Should have name_id = -1
+        data = {
+            'Species Name': 'Chubby Bat',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
+        payload = {
+            "dataset": ds.pk,
+            "data": data
+        }
+        url = reverse('api:record-list')
+        self.assertEqual(
+            client.post(url, payload, format='json').status_code,
+            status.HTTP_201_CREATED
+        )
+        self.assertEquals(ds.record_queryset.count(), 1)
+        record = ds.record_queryset.first()
+        self.assertEquals(record.name_id, -1)
+
+        # update the species_name
+        data = {
+            'Species Name': 'Canis lupus',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
+        payload = {
+            "dataset": ds.pk,
+            "data": data
+        }
+        expected_name_id = 25454
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
+        self.assertEqual(
+            client.put(url, payload, format='json').status_code,
+            status.HTTP_200_OK
+        )
+        record.refresh_from_db()
+        self.assertEqual(record.name_id, expected_name_id)
+
+    def test_patch(self):
+        """
+        Same as above but wit a patch method instead of put
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        schema = self.schema_with_species_name()
+        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        # create a record with a wrong species name. Should have name_id = -1
+        data = {
+            'Species Name': 'Chubby Bat',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
+        payload = {
+            "dataset": ds.pk,
+            "data": data
+        }
+        url = reverse('api:record-list')
+        self.assertEqual(
+            client.post(url, payload, format='json').status_code,
+            status.HTTP_201_CREATED
+        )
+        self.assertEquals(ds.record_queryset.count(), 1)
+        record = ds.record_queryset.first()
+        self.assertEquals(record.name_id, -1)
+
+        # update the species_name
+        data = {
+            'Species Name': 'Canis lupus',
+            'Latitude': -32.0,
+            'Longitude': 115.75,
+            'When': '2018-01-31'
+        }
+        payload = {
+            "data": data
+        }
+        expected_name_id = 25454
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
+        self.assertEqual(
+            client.patch(url, payload, format='json').status_code,
+            status.HTTP_200_OK
+        )
+        record.refresh_from_db()
+        self.assertEqual(record.name_id, expected_name_id)
 
 
 class TestExport(helpers.BaseUserTestCase):
@@ -1027,15 +1127,11 @@ class TestExport(helpers.BaseUserTestCase):
 class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
     """
     Use case:
-    The schema doesn't include a Species Name but just a NameId column.
+    The schema doesn't include a Species Name but just a Name Id column.
     Test that using the upload (excel) or API the species name is collected from herbie and populated.
     The test suite uses a mock herbie facade with a static species_name -> nameId dict
     @see helpers.SOME_SPECIES_NAME_NAME_ID_MAP
     """
-    fixtures = [
-        'test-users',
-        'test-projects'
-    ]
 
     species_facade_class = helpers.LightSpeciesFacade
 
@@ -1048,7 +1144,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
     def schema_with_name_id():
         schema_fields = [
             {
-                "name": "NameId",
+                "name": "Name Id",
                 "type": "integer",
                 "constraints": helpers.REQUIRED_CONSTRAINTS
             },
@@ -1075,33 +1171,19 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         schema = helpers.create_schema_from_fields(schema_fields)
         return schema
 
-    def _create_dataset_with_schema(self, project, client, schema):
-        resp = client.post(
-            reverse('api:dataset-list'),
-            data={
-                "name": "Test NameId",
-                "type": Dataset.TYPE_SPECIES_OBSERVATION,
-                "project": project.pk,
-                'data_package': helpers.create_data_package_from_schema(schema)
-            },
-            format='json')
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
-        self.assertIsNotNone(dataset)
-        return dataset
-
     def test_species_name_collected_upload(self):
         """
-        Happy path: upload excel with a valid nameId.
+        Happy path: upload excel with a valid Name Id.
         :return:
         """
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema,
+                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         # data
         csv_data = [
-            ['NameId', 'When', 'Latitude', 'Longitude'],
+            ['Name Id', 'When', 'Latitude', 'Longitude'],
             [25454, '01/01/2017', -32.0, 115.75],  # "Canis lupus"
             ['24204', '02/02/2017', -33.0, 116.0]  # "Vespadelus douglasorum"
         ]
@@ -1112,7 +1194,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
             payload = {
                 'file': fp
             }
-            resp = client.post(url, data=payload, format='multipart')
+            resp = client.post(url, payload, format='multipart')
             self.assertEquals(status.HTTP_200_OK, resp.status_code)
             records = Record.objects.filter(dataset=dataset)
             self.assertEquals(records.count(), len(csv_data) - 1)
@@ -1134,9 +1216,10 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema,
+                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         record_data = {
-            'NameId': 25454,  # "Canis lupus"
+            'Name Id': 25454,  # "Canis lupus"
             'When': '12/12/2017',
             'Latitude': -32.0,
             'Longitude': 115.756
@@ -1146,7 +1229,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
             'data': record_data
         }
         url = reverse('api:record-list')
-        resp = client.post(url, data=payload, format='json')
+        resp = client.post(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         record = Record.objects.filter(id=resp.json().get('id')).first()
         self.assertIsNotNone(record)
@@ -1155,16 +1238,17 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
 
     def test_species_name_collected_api_update(self):
         """
-        Updating the nameId should update the species name
+        Updating the Name Id should update the species name
         :return:
         """
         # create record
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema,
+                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         record_data = {
-            'NameId': 25454,  # "Canis lupus"
+            'Name Id': 25454,  # "Canis lupus"
             'When': '12/12/2017',
             'Latitude': -32.0,
             'Longitude': 115.756
@@ -1174,22 +1258,22 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
             'data': record_data
         }
         url = reverse('api:record-list')
-        resp = client.post(url, data=payload, format='json')
+        resp = client.post(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         record = Record.objects.filter(id=resp.json().get('id')).first()
         self.assertIsNotNone(record)
         self.assertEqual(record.name_id, 25454)
         self.assertEqual(record.species_name, "Canis lupus")
 
-        # patch nameId
+        # patch Name Id
         new_name_id = 24204
-        record_data['NameId'] = new_name_id
+        record_data['Name Id'] = new_name_id
         expected_species_name = 'Vespadelus douglasorum'
         url = reverse('api:record-detail', kwargs={'pk': record.pk})
         payload = {
             'data': record_data
         }
-        resp = client.patch(url, data=payload, format='json')
+        resp = client.patch(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         record.refresh_from_db()
         self.assertEqual(record.name_id, new_name_id)
@@ -1197,16 +1281,17 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
 
     def test_wrong_id_rejected_upload(self):
         """
-        If a wrong nameId is provided the system assume its an error
+        If a wrong Name Id is provided the system assume its an error
         :return:
         """
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema,
+                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         # data
         csv_data = [
-            ['NameId', 'When', 'Latitude', 'Longitude'],
+            ['Name Id', 'When', 'Latitude', 'Longitude'],
             [99934, '01/01/2017', -32.0, 115.75],  # wrong
             ['24204', '02/02/2017', -33.0, 116.0]  # "Vespadelus douglasorum"
         ]
@@ -1217,7 +1302,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
             payload = {
                 'file': fp
             }
-            resp = client.post(url, data=payload, format='multipart')
+            resp = client.post(url, payload, format='multipart')
             self.assertEquals(status.HTTP_400_BAD_REQUEST, resp.status_code)
             records = Record.objects.filter(dataset=dataset)
             # should be only one record (the good one)
@@ -1230,9 +1315,10 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema,
+                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         record_data = {
-            'NameId': 9999,  # wrong
+            'Name Id': 9999,  # wrong
             'When': '12/12/2017',
             'Latitude': -32.0,
             'Longitude': 115.756
@@ -1242,7 +1328,7 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
             'data': record_data
         }
         url = reverse('api:record-list')
-        resp = client.post(url, data=payload, format='json')
+        resp = client.post(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(Record.objects.filter(dataset=dataset).count(), 0)
 
@@ -1250,15 +1336,11 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
 class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
     """
     Use case:
-    The schema includes a Species Name and a NameId column.
-    Test that the nameID takes precedence
-    The test suite uses a mock herbie facade with a static species_name -> nameId dict
+    The schema includes a Species Name and a Name Id column.
+    Test that the Name Id takes precedence
+    The test suite uses a mock herbie facade with a static species_name -> Name Id dict
     @see helpers.SOME_SPECIES_NAME_NAME_ID_MAP
     """
-    fixtures = [
-        'test-users',
-        'test-projects'
-    ]
 
     species_facade_class = helpers.LightSpeciesFacade
 
@@ -1271,7 +1353,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
     def schema_with_name_id_and_species_name():
         schema_fields = [
             {
-                "name": "NameId",
+                "name": "Name Id",
                 "type": "integer",
                 "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
             },
@@ -1303,33 +1385,19 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         schema = helpers.create_schema_from_fields(schema_fields)
         return schema
 
-    def _create_dataset_with_schema(self, project, client, schema):
-        resp = client.post(
-            reverse('api:dataset-list'),
-            data={
-                "name": "Test NameId",
-                "type": Dataset.TYPE_SPECIES_OBSERVATION,
-                "project": project.pk,
-                'data_package': helpers.create_data_package_from_schema(schema)
-            },
-            format='json')
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
-        self.assertIsNotNone(dataset)
-        return dataset
-
     def test_species_name_collected_upload(self):
         """
-        Happy path: upload excel with a valid nameId.
+        Happy path: upload excel with a valid Name Id.
         :return:
         """
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id_and_species_name()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema,
+                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         # data
         csv_data = [
-            ['NameId', 'Species Name', 'When', 'Latitude', 'Longitude'],
+            ['Name Id', 'Species Name', 'When', 'Latitude', 'Longitude'],
             [25454, 'Chubby Bat', '01/01/2017', -32.0, 115.75],  # "Canis lupus"
             ['24204', 'French Frog', '02/02/2017', -33.0, 116.0]  # "Vespadelus douglasorum"
         ]
@@ -1340,7 +1408,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
             payload = {
                 'file': fp
             }
-            resp = client.post(url, data=payload, format='multipart')
+            resp = client.post(url, payload, format='multipart')
             self.assertEquals(status.HTTP_200_OK, resp.status_code)
             records = Record.objects.filter(dataset=dataset)
             self.assertEquals(records.count(), len(csv_data) - 1)
@@ -1356,16 +1424,17 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
 
     def test_nameId_collected_upload(self):
         """
-        Test that if nameId is not provided it is collected from the species list
+        Test that if Name Id is not provided it is collected from the species list
         :return:
         """
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id_and_species_name()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema,
+                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         # data
         csv_data = [
-            ['NameId', 'Species Name', 'When', 'Latitude', 'Longitude'],
+            ['Name Id', 'Species Name', 'When', 'Latitude', 'Longitude'],
             ['', 'Canis lupus', '01/01/2017', -32.0, 115.75],  # "Canis lupus"
             ['', 'Vespadelus douglasorum', '02/02/2017', -33.0, 116.0]  # "Vespadelus douglasorum"
         ]
@@ -1376,7 +1445,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
             payload = {
                 'file': fp
             }
-            resp = client.post(url, data=payload, format='multipart')
+            resp = client.post(url, payload, format='multipart')
             self.assertEquals(status.HTTP_200_OK, resp.status_code)
             records = Record.objects.filter(dataset=dataset)
             self.assertEquals(records.count(), len(csv_data) - 1)
@@ -1398,9 +1467,10 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id_and_species_name()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema,
+                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         record_data = {
-            'NameId': 25454,  # "Canis lupus"
+            'Name Id': 25454,  # "Canis lupus"
             'Species Name': 'Chubby Bat',
             'When': '12/12/2017',
             'Latitude': -32.0,
@@ -1411,7 +1481,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
             'data': record_data
         }
         url = reverse('api:record-list')
-        resp = client.post(url, data=payload, format='json')
+        resp = client.post(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         record = Record.objects.filter(id=resp.json().get('id')).first()
         self.assertIsNotNone(record)
@@ -1420,16 +1490,17 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
 
     def test_species_name_collected_api_update(self):
         """
-        Updating the nameId should update the species name
+        Updating the Name Id should update the species name
         :return:
         """
         # create record
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id_and_species_name()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, client, schema,
+                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         record_data = {
-            'NameId': 25454,  # "Canis lupus"
+            'Name Id': 25454,  # "Canis lupus"
             'Species Name': 'Chubby Bat',
             'When': '12/12/2017',
             'Latitude': -32.0,
@@ -1440,7 +1511,7 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
             'data': record_data
         }
         url = reverse('api:record-list')
-        resp = client.post(url, data=payload, format='json')
+        resp = client.post(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         record = Record.objects.filter(id=resp.json().get('id')).first()
         self.assertIsNotNone(record)
@@ -1449,16 +1520,167 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         # TODO: the species name in the data is not updated. Should we?
         self.assertEqual(record.data.get('Species Name'), 'Chubby Bat')
 
-        # patch nameId
+        # patch Name Id
         new_name_id = 24204
-        record_data['NameId'] = new_name_id
+        record_data['Name Id'] = new_name_id
         expected_species_name = 'Vespadelus douglasorum'
         url = reverse('api:record-detail', kwargs={'pk': record.pk})
         payload = {
             'data': record_data
         }
-        resp = client.patch(url, data=payload, format='json')
+        resp = client.patch(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         record.refresh_from_db()
         self.assertEqual(record.name_id, new_name_id)
         self.assertEqual(record.species_name, expected_species_name)
+
+
+class TestCompositeSpeciesName(helpers.BaseUserTestCase):
+    """
+    Test for species name composed from Genus, Species, infra_rank, infra_name columns
+    """
+
+    species_facade_class = helpers.LightSpeciesFacade
+
+    @staticmethod
+    def schema_with_4_columns_genus():
+        schema_fields = [
+            {
+                "name": "Genus",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Species",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "InfraSpecific Rank",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "InfraSpecific Name",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        return schema
+
+    @staticmethod
+    def schema_with_2_columns_genus():
+        schema_fields = [
+            {
+                "name": "Genus",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Species",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        return schema
+
+    def _more_setup(self):
+        # set the HerbieFacade class
+        from main.api.views import SpeciesMixin
+        SpeciesMixin.species_facade_class = self.species_facade_class
+        self.client = self.custodian_1_client
+
+    def assert_create_dataset(self, schema):
+        try:
+            return self._create_dataset_with_schema(
+                self.project_1,
+                self.custodian_1_client,
+                schema,
+                dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+            )
+        except Exception as e:
+            self.fail('Species Observation dataset creation failed for schema {schema}'.format(
+                schema=schema
+            ))
+
+    def test_genus_species_only_happy_path(self):
+        schema = self.schema_with_2_columns_genus()
+        dataset = self.assert_create_dataset(schema)
+        records = [
+            ['Genus', 'Species', 'When', 'Latitude', 'Longitude'],
+            ['Canis', 'lupus', '2018-01-25', -32.0, 115.75],
+        ]
+        resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk)
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        received = resp.json()
+        rec_id = received[0]['recordId']
+        record = Record.objects.filter(pk=rec_id).first()
+        self.assertEquals(record.species_name, 'Canis lupus')
+        self.assertEquals(record.name_id, 25454)
+
+    def test_validation_missing_species(self):
+        schema = self.schema_with_2_columns_genus()
+        dataset = self.assert_create_dataset(schema)
+        data = {
+            'Genus': "Canis",
+            'When': '2018-01-25',
+            'Latitude': -32.0,
+            'Longitude': 115.75
+        }
+        url = helpers.url_post_record_strict()
+        payload = {
+            'dataset': dataset.pk,
+            'data': data
+        }
+        resp = self.client.post(url, payload, format='json')
+        self.assertEquals(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        received_json = resp.json()
+        # should contain one error on the 'data' for the species field
+        self.assertIn('data', received_json)
+        errors = received_json.get('data')
+        self.assertIsInstance(errors, list)
+        self.assertEquals(len(errors), 1)
+        error = errors[0]
+        # should be "Species::msg"
+        pattern = re.compile(r"^Species::(.+)$")
+        self.assertTrue(pattern.match(error))
