@@ -661,7 +661,7 @@ class SpeciesObservationSchema(ObservationSchema):
 
 
 def format_required_message(field):
-    return "The field named '{field_name}' must have the 'required' constraint set to true.".format(
+    return "The field '{field_name}' is required (set the \"required\" constraint to \"true\").".format(
         field_name=field.name
     )
 
@@ -1214,17 +1214,17 @@ class SpeciesNameParser(object):
         :return: list of errors
         """
         errors = []
-        required_msg = "The field {} must be set as required."
         if self.is_species_name_only and not self.species_name_field.required:
-            errors.append(required_msg.format(self.species_name_field.name))
+            errors.append(format_required_message(self.species_name_field))
         if self.is_name_id_only and not self.name_id_field.required:
-            errors.append(required_msg.format(self.name_id_field.name))
+            errors.append(format_required_message(self.name_id_field))
         if self.has_genus_and_species and not self.has_name_id:
             if not self.genus_field.required:
-                errors.append(required_msg.format(self.genus_field.name))
+                errors.append(format_required_message(self.genus_field))
             if not self.species_field.required:
-                errors.append(required_msg.format(self.species_field.name))
+                errors.append(format_required_message(self.species_field))
         return errors
+
 
 class Exporter:
     def __init__(self, dataset, records=None):
