@@ -508,6 +508,7 @@ class DataPackageBuilder:
                     infra_name_field = self.get_fields_by_name(parser.infra_name_field.name)[0]
                     self.set_type('string', infra_name_field)
                     self.set_biosys_type(infra_name_field, BiosysSchema.INFRA_SPECIFIC_NAME_TYPE_NAME)
+                success = True
 
         except Exception as e:
             self.errors.append(str(e))
