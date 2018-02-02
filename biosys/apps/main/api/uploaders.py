@@ -3,19 +3,19 @@ import datetime
 from os import path
 
 import datapackage
-from openpyxl import load_workbook
-
 from django.conf import settings
 from django.utils import six, timezone
 from django.utils.text import slugify
-from django.core.exceptions import ValidationError
+from openpyxl import load_workbook
 
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
 from main.models import Site, Dataset
-from main.utils_data_package import GeometryParser, ObservationSchema, SpeciesObservationSchema, BiosysSchema
+from main.utils_data_package import GeometryParser, ObservationSchema, SpeciesObservationSchema, BiosysSchema, \
+    SpeciesNameParser
 from main.utils_misc import get_value
 from main.utils_species import HerbieFacade, get_key_for_value
+
 # TODO: remove when python3
 if six.PY2:
     import unicodecsv as csv
@@ -23,17 +23,17 @@ else:
     import csv
 
 
-def xlsx_to_csv(file):
+def xlsx_to_csv(file_):
 
-    def _format(cell):
-        result = cell.value
+    def _format(cell_):
+        result = cell_.value
         if isinstance(result, datetime.datetime):
             result = result.strftime(settings.DATE_FORMAT)
         return result
 
     output = six.StringIO()
     writer = csv.writer(output)
-    wb = load_workbook(filename=file, read_only=True)
+    wb = load_workbook(filename=file_, read_only=True)
     ws = wb.active
     for row in ws.rows:
         r = [_format(cell) for cell in row]
@@ -60,18 +60,18 @@ class FileReader(object):
     ]
     SUPPORTED_TYPES = CSV_TYPES + XLSX_TYPES
 
-    def __init__(self, file):
-        if file.content_type not in self.SUPPORTED_TYPES:
-            msg = "Wrong file type {}. Should be one of: {}".format(file.content_type, self.SUPPORTED_TYPES)
+    def __init__(self, file_):
+        if file_.content_type not in self.SUPPORTED_TYPES:
+            msg = "Wrong file type {}. Should be one of: {}".format(file_.content_type, self.SUPPORTED_TYPES)
             raise Exception(msg)
 
-        self.file = file
-        if hasattr(file, 'name'):
-            self.file_name = file.name
-        extension = path.splitext(file.name)[1].lower() if file.name else ''
+        self.file = file_
+        if hasattr(file_, 'name'):
+            self.file_name = file_.name
+        extension = path.splitext(file_.name)[1].lower() if file_.name else ''
         # On windows a .csv file can be send with an excel mime type.
-        if file.content_type in self.XLSX_TYPES and extension != '.csv':
-            self.file = xlsx_to_csv(file)
+        if file_.content_type in self.XLSX_TYPES and extension != '.csv':
+            self.file = xlsx_to_csv(file_)
             self.reader = csv.DictReader(self.file)
         else:
             if six.PY3:
@@ -147,8 +147,8 @@ class SiteUploader(FileReader):
         ]
     }
 
-    def __init__(self, file, project):
-        super(SiteUploader, self).__init__(file)
+    def __init__(self, file_, project):
+        super(SiteUploader, self).__init__(file_)
         self.project = project
         self.geo_parser = GeometryParser(self.GEO_PARSER_SCHEMA)
 
@@ -394,8 +394,8 @@ class DataPackageBuilder:
         - Fields of type 'any' should be converted to type 'string'
         - Fields of type 'date' or 'datetime' should have format = 'any' instead of default
           (the 'any' makes the date parser more flexible)
-        - If it contains a latitude/longitude schema set the lat/long columns type='number' with constraint required
-          and they should be tagged with the correct biosys tag.
+        - infer observation type
+        - infer species observation type.
         """
         for field in self.fields:
             type_ = field.get('type')
@@ -407,23 +407,110 @@ class DataPackageBuilder:
             if type_ in ['date', 'datetime'] and format_ == 'default':
                 field['format'] = 'any'
 
-        # geometry inference
-        geo_parser = GeometryParser(self.schema)
-        if geo_parser.is_lat_long:
-            lat_fields = self.get_fields_by_name(geo_parser.latitude_field.name)
-            lon_fields = self.get_fields_by_name(geo_parser.longitude_field.name)
-            if len(lat_fields) == 1 and len(lon_fields) == 1:
-                lat_field = lat_fields[0]
-                lon_field = lon_fields[0]
+        is_observation = self._infer_observation()
+        if is_observation:
+            self._infer_species_observation()
+        self.package.commit()
+
+    def _infer_observation(self):
+        """
+        Try to infer an Observation from column names and modify field attributes to match the schema specification.
+
+        Scenarios:
+        - If it contains a latitude/longitude fields set the lat/long columns type='number' with constraint required
+          and they should be tagged with the correct biosys tag.
+        - If it contains a easting/northing fields set the easting/northing columns type='number' with constraint required
+          and they should be tagged with the correct biosys tag.
+
+        see tests.api.test_schema_inference.TestObservation for full specs.
+
+        :return: True if successfully inferred an observation
+        """
+        success = False
+        try:
+            # geometry inference
+            geo_parser = GeometryParser(self.schema)
+            # Lat/Long
+            if geo_parser.is_lat_long:
+                lat_field = self.get_fields_by_name(geo_parser.latitude_field.name)[0]
+                lon_field = self.get_fields_by_name(geo_parser.longitude_field.name)[0]
                 self.set_type('number', lat_field)
                 self.set_type('number', lon_field)
-                self.set_required(lat_field)
-                self.set_required(lon_field)
                 self.set_biosys_type(lat_field, BiosysSchema.LATITUDE_TYPE_NAME)
                 self.set_biosys_type(lon_field, BiosysSchema.LONGITUDE_TYPE_NAME)
-            else:
-                # more that one lat or long fields? Should not happen.
-                # The GeometryParser should detect the error anf return False to is_lat_long().
-                e = ValidationError("Two or more Latitude or Longitude columns.")
-                self.biosys_errors.append(e)
-        self.package.commit()
+                if geo_parser.is_lat_long_only:
+                    self.set_required(lat_field)
+                    self.set_required(lon_field)
+                success = True
+
+            # Easting/Northing
+            if geo_parser.is_easting_northing:
+                easting_field = self.get_fields_by_name(geo_parser.easting_field.name)[0]
+                northing_field = self.get_fields_by_name(geo_parser.northing_field.name)[0]
+                self.set_type('number', easting_field)
+                self.set_type('number', northing_field)
+                self.set_biosys_type(easting_field, BiosysSchema.EASTING_TYPE_NAME)
+                self.set_biosys_type(northing_field, BiosysSchema.NORTHING_TYPE_NAME)
+                if geo_parser.is_easting_northing_only:
+                    self.set_required(easting_field)
+                    self.set_required(northing_field)
+                if geo_parser.has_datum:
+                    datum_field = self.get_fields_by_name(geo_parser.datum_field.name)[0]
+                    self.set_type('string', datum_field)
+                    self.set_biosys_type(datum_field, BiosysSchema.DATUM_TYPE_NAME)
+                success = True
+        except Exception as e:
+            self.errors.append(str(e))
+            success = False
+
+        return success
+
+    def _infer_species_observation(self):
+        """
+        Try to infer a Species Observation from column names and modify field attributes to match the schema
+        specification.
+        Warning: this method assumes that the Observation inference part has been done.
+        Scenarios:
+        - If it contains a column 'Species Name' it should be a string and they should be tagged
+        with the correct biosys tag. If it's the only species column it should be set as required
+        - Same for columns 'genus' and 'species'.
+
+        see tests.api.test_schema_inference.TestSpeciesObservation for full specs.
+
+        :return: True if successfully inferred an observation
+        """
+        success = False
+        try:
+            parser = SpeciesNameParser(self.schema)
+            if parser.has_species_name:
+                species_name_field = self.get_fields_by_name(parser.species_name_field.name)[0]
+                self.set_type('string', species_name_field)
+                self.set_biosys_type(species_name_field, BiosysSchema.SPECIES_NAME_TYPE_NAME)
+                if parser.is_species_name_only:
+                    self.set_required(species_name_field)
+                success = True
+            if parser.has_genus_and_species:
+                genus_field = self.get_fields_by_name(parser.genus_field.name)[0]
+                self.set_type('string', genus_field)
+                self.set_biosys_type(genus_field, BiosysSchema.GENUS_TYPE_NAME)
+
+                species_field = self.get_fields_by_name(parser.species_field.name)[0]
+                self.set_type('string', species_field)
+                self.set_biosys_type(species_field, BiosysSchema.SPECIES_TYPE_NAME)
+                if parser.is_genus_and_species_only:
+                    self.set_required(genus_field)
+                    self.set_required(species_field)
+                if parser.infra_rank_field:
+                    infra_rank_field = self.get_fields_by_name(parser.infra_rank_field.name)[0]
+                    self.set_type('string', infra_rank_field)
+                    self.set_biosys_type(infra_rank_field, BiosysSchema.INFRA_SPECIFIC_RANK_TYPE_NAME)
+                if parser.infra_name_field:
+                    infra_name_field = self.get_fields_by_name(parser.infra_name_field.name)[0]
+                    self.set_type('string', infra_name_field)
+                    self.set_biosys_type(infra_name_field, BiosysSchema.INFRA_SPECIFIC_NAME_TYPE_NAME)
+
+        except Exception as e:
+            self.errors.append(str(e))
+            success = False
+
+        return success

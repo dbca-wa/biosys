@@ -867,6 +867,10 @@ class GeometryParser(object):
             not self.is_lat_long
         ])
 
+    @property
+    def has_datum(self):
+        return self.datum_field is not None
+
     def get_site_code(self, record):
         return record.get(self.site_code_field.name) if self.site_code_field else None
 
