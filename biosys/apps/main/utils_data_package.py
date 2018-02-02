@@ -136,9 +136,13 @@ class BiosysSchema:
     NORTHING_TYPE_NAME = 'northing'
     DATUM_TYPE_NAME = 'datum'
     ZONE_TYPE_NAME = 'zone'
+    SITE_CODE_TYPE_NAME = 'siteCode'
     SPECIES_NAME_TYPE_NAME = 'speciesName'
     SPECIES_NAME_ID_TYPE_NAME = 'speciesNameId'
-    SITE_CODE_TYPE_NAME = 'siteCode'
+    GENUS_TYPE_NAME = 'genus'
+    SPECIES_TYPE_NAME = 'species'
+    INFRA_SPECIFIC_RANK_TYPE_NAME = 'InfraSpecificRank'
+    INFRA_SPECIFIC_NAME_TYPE_NAME = 'InfraSpecificName'
 
     def __init__(self, descriptor):
         self.descriptor = descriptor or {}
@@ -631,7 +635,11 @@ class SpeciesObservationSchema(ObservationSchema):
     An ObservationSchema with a Species Name
     """
     SPECIES_NAME_FIELD_NAME = 'Species Name'
-    SPECIES_NAME_ID_FIELD_NAMES_LOWER = ['name id', 'nameid', 'species nameid', 'species name id']
+    GENUS_FIELD_NAME = 'Genus'
+    SPECIES_FIELD_NAME = 'Species'
+    INFRA_SPECIFIC_RANK_FIELD_NAME = 'Infraspecific Rank'
+    INFRA_SPECIFIC_NAME_FIELD_NAME = 'Infraspecific Name'
+    SPECIES_NAME_ID_FIELD_NAME = 'Name Id'
 
     def __init__(self, descriptor):
         """
@@ -639,109 +647,17 @@ class SpeciesObservationSchema(ObservationSchema):
         :param descriptor:
         """
         super(SpeciesObservationSchema, self).__init__(descriptor)
-        try:
-            self.species_name_field = self.find_species_name_field_or_throws(self, enforce_required=False)
-        except SpeciesObservationSchemaError:
-            self.species_name_field = None
-        try:
-            self.species_name_id_field = self.find_species_name_id_field(self)
-        except SpeciesObservationSchemaError:
-            self.species_name_field = None
-        if not self.species_name_field and not self.species_name_id_field:
-            msg = "The schema doesn't include a 'Species Name' field or a 'NameId' field. " \
-                  "In order to be a valid Species Observation one of these fields must be specified. " \
-                  "Alternatively you can 'tag' a field by adding a biosys type {} or {}" \
-                .format(BiosysSchema.SPECIES_NAME_TYPE_NAME, BiosysSchema.SPECIES_NAME_ID_TYPE_NAME)
+        self.species_name_parser = SpeciesNameParser(self)
+        self.errors += self.species_name_parser.errors
+        if self.errors:
+            msg = "\n".join(self.errors)
             raise SpeciesObservationSchemaError(msg)
-        # if only one of the fields it must be required
-        if self.species_name_field and not self.species_name_id_field and not self.species_name_field.required:
-            msg = 'The {field_name} field must be set as "required" (add "required": true in the constraints)'.format(
-                field_name=self.species_name_field.name
-            )
-            raise SpeciesObservationSchemaError(msg)
-        if not self.species_name_field and self.species_name_id_field and not self.species_name_id_field.required:
-            msg = 'The {field_name} field must be set as "required" (add "required": true in the constraints)'.format(
-                field_name=self.species_name_id_field.name
-            )
-            raise SpeciesObservationSchemaError(msg)
-
-    @staticmethod
-    def find_species_name_field_or_throws(schema, enforce_required=True):
-        """
-        Precedence Rules:
-        2- Look for biosys.type = 'speciesName'
-        3- Look for a field with name 'Species Name' case insensitive
-        :param enforce_required:
-        :param schema: a dict descriptor or a Schema instance
-        :return: The SchemaField or raise an exception if none or more than one
-        """
-        if not isinstance(schema, GenericSchema):
-            schema = GenericSchema(schema)
-        fields = [f for f in schema.fields if f.biosys.is_species_name()]
-        if len(fields) > 1:
-            msg = "More than one Biosys speciesName field found!. {}".format(fields)
-            raise SpeciesObservationSchemaError(msg)
-        if len(fields) == 1:
-            field = fields[0]
-            if enforce_required and not field.required:
-                msg = "The Biosys speciesName field must be set as 'required'. {}".format(field)
-                raise SpeciesObservationSchemaError(msg)
-            else:
-                return field
-        # no Biosys species_name field found look for column name
-        fields = [f for f in schema.fields if
-                  f.name.lower() == SpeciesObservationSchema.SPECIES_NAME_FIELD_NAME.lower()]
-        if len(fields) > 1:
-            msg = "More than one 'Species Name' field found!. {}".format(fields)
-            raise SpeciesObservationSchemaError(msg)
-        if len(fields) == 1:
-            field = fields[0]
-            if enforce_required and not field.required:
-                msg = "The 'Species Name' field must be set as 'required'. {}".format(field)
-                raise SpeciesObservationSchemaError(msg)
-            else:
-                return field
-        msg = "The schema doesn't include a required 'Species Name' field. " \
-              "It must have a field named {} or tagged with biosys type {}". \
-            format(SpeciesObservationSchema.SPECIES_NAME_FIELD_NAME, BiosysSchema.SPECIES_NAME_TYPE_NAME)
-        raise SpeciesObservationSchemaError(msg)
-
-    @staticmethod
-    def find_species_name_id_field(schema):
-        """
-        Precedence Rules:
-        2- Look for biosys.type = 'speciesNameId'
-        3- Look for a field with name 'NameId' or one the the possible names, case insensitive
-        Note:
-            the method will raise an SpeciesObservationSchemaError if two or more fields match either of the two rules.
-        """
-
-        result = None
-        if not isinstance(schema, GenericSchema):
-            schema = GenericSchema(schema)
-        fields = [f for f in schema.fields if f.biosys.is_species_name_id()]
-        if len(fields) > 1:
-            msg = "More than one Biosys {} type field found!. {}".format(BiosysSchema.SPECIES_NAME_ID_TYPE_NAME, fields)
-            raise SpeciesObservationSchemaError(msg)
-        if len(fields) == 1:
-            result = fields[0]
-
-        fields = [f for f in schema.fields if
-                  f.name.lower() in SpeciesObservationSchema.SPECIES_NAME_ID_FIELD_NAMES_LOWER]
-        if len(fields) > 1:
-            msg = "More than one 'Species NameId' field found!. {}".format(fields)
-            raise SpeciesObservationSchemaError(msg)
-        if len(fields) == 1:
-            result = fields[0]
-        return result
 
     def cast_species_name(self, record):
-        field = self.species_name_field
-        return field.cast(record.get(field.name)) if field is not None else None
+        return self.species_name_parser.cast_species_name(record)
 
     def cast_species_name_id(self, record):
-        field = self.species_name_id_field
-        return field.cast(record.get(field.name)) if field is not None else None
+        return self.species_name_parser.cast_species_name_id(record)
 
 
 def format_required_message(field):
@@ -1080,6 +996,231 @@ class GeometryParser(object):
             site_code_field = self.schema.get_field_by_name(site_code_fk.data_field) if site_code_fk else None
         return site_code_field, None
 
+
+class SpeciesNameParser(object):
+    """
+    A utility class to extract a species name from a schema.
+    Two cases:
+    - Single column Species Name or Name ID
+    - Multiple columns: Genus, Species + 2 optionals columns: Infra Rank and Infra Name
+    """
+
+    def __init__(self, schema):
+        if not isinstance(schema, GenericSchema):
+            schema = GenericSchema(schema)
+        self.schema = schema
+        # species split in multi-columns
+        self.genus_field = self.species_field = self.infra_name_field = self.infra_rank_field = None
+        # single column species name
+        self.species_name_field = None
+        # name id field
+        self.name_id_field = None
+
+        self.errors = []
+
+        self._parse_species_fields()
+
+        # Validation
+        if self.genus_field is None:
+            # Single column mode: species_name or name_id. One of them should exist.
+            if not self.species_name_field and not self.name_id_field:
+                msg = "The schema doesn't include a '{species_name_col_name}' field or a '{name_id_col_name}' field. " \
+                      "In order to be a valid Species Observation one of these fields must be specified. " \
+                      "Alternatively you can 'tag' a field by adding a biosys type: '{species_name_biosys_type}' " \
+                      "or '{name_id_biosys_type}'" \
+                    .format(species_name_col_name=SpeciesObservationSchema.SPECIES_NAME_FIELD_NAME,
+                            name_id_col_name=SpeciesObservationSchema.SPECIES_NAME_ID_FIELD_NAME,
+                            species_name_biosys_type=BiosysSchema.SPECIES_NAME_TYPE_NAME,
+                            name_id_biosys_type=BiosysSchema.SPECIES_NAME_ID_TYPE_NAME
+                            )
+                self.errors.append(msg)
+        else:
+            # Genus => Multi-column name
+            # We must have a 'Species' column
+            if self.species_field is None:
+                msg = "A field '{genus_col_name}' exists without a {species_col_name}. If the species field is named " \
+                      "differently, you can 'tag' it with the biosys type: '{species_biosys_type}'" \
+                    .format(genus_col_name=SpeciesObservationSchema.GENUS_FIELD_NAME,
+                            species_col_name=SpeciesObservationSchema.SPECIES_NAME_FIELD_NAME,
+                            species_biosys_type=BiosysSchema.SPECIES_TYPE_NAME
+                            )
+                self.errors.append(msg)
+
+        # check required constraint.
+        self.required_errors = self._check_required_constraint()
+
+        # if name_id it should be integer
+        if self.name_id_field is not None and self.name_id_field.type != 'integer':
+            msg = "The name id field '{}' should be of type 'integer'".format(self.name_id_field.name)
+            self.errors.append(msg)
+
+        self.errors += self.required_errors
+
+    def is_valid(self):
+        return not bool(self.errors)
+
+    @property
+    def valid(self):
+        return self.is_valid()
+
+    @property
+    def has_species_name(self):
+        return self.species_name_field is not None
+
+    @property
+    def is_species_name_only(self):
+        return all([
+            self.has_species_name,
+            not self.has_genus_and_species,
+            not self.has_name_id
+        ])
+
+    @property
+    def has_genus_and_species(self):
+        return self.genus_field is not None and self.species_field is not None
+
+    @property
+    def is_genus_and_species_only(self):
+        return all([
+            self.has_genus_and_species,
+            not self.has_species_name,
+            not self.has_name_id
+        ])
+
+    @property
+    def is_name_id_only(self):
+        return all([
+            self.has_name_id,
+            not self.has_species_name,
+            not self.has_genus_and_species
+        ])
+
+    @property
+    def has_name_id(self):
+        return self.name_id_field
+
+    def cast_species_name_id(self, record):
+        field = self.name_id_field
+        return field.cast(record.get(field.name)) if field is not None else None
+
+    def cast_species_name(self, record):
+        composite = self._compose_species_name(record) if self.has_genus_and_species else None
+        species_name = self._cast_field(self.species_name_field, record) if self.species_name_field else None
+        return composite or species_name
+
+    def _compose_species_name(self, record):
+        """
+        genus + " " + species + " " + infra_rank + " " + infra_name
+        see https://decbugs.com/view.php?id=6674
+        :return: Will raise an exception if constraints are not respected
+        """
+        values = []
+        for field in [self.genus_field, self.species_field, self.infra_rank_field, self.infra_name_field]:
+            value = self._cast_field(field, record)
+            if value:
+                values.append(value)
+        return ' '.join(values)
+
+    @staticmethod
+    def _cast_field(field, record):
+        """
+        :param field:
+        :param record:
+        :return: The casted value or None. It will throw an exception if constraints are not respected
+         Warning could return None for empty string
+        """
+        if field is not None:
+            value = record.get(field.name)
+            # use the cast method to throw constraint errors
+            return field.cast(value)
+        else:
+            return None
+
+    def _parse_species_fields(self):
+        # Genus
+        self.genus_field, errors = find_unique_field(
+            self.schema,
+            BiosysSchema.GENUS_TYPE_NAME,
+            SpeciesObservationSchema.GENUS_FIELD_NAME
+        )
+        if errors:
+            self.errors += errors
+
+        # Species
+        self.species_field, errors = find_unique_field(
+            self.schema,
+            BiosysSchema.SPECIES_TYPE_NAME,
+            SpeciesObservationSchema.SPECIES_FIELD_NAME
+        )
+        if errors:
+            self.errors += errors
+
+        # The infra rank and name
+        self.infra_name_field, errors = find_unique_field(
+            self.schema,
+            BiosysSchema.INFRA_SPECIFIC_NAME_TYPE_NAME,
+            SpeciesObservationSchema.INFRA_SPECIFIC_NAME_FIELD_NAME
+        )
+        if errors:
+            self.errors += errors
+        self.infra_rank_field, errors = find_unique_field(
+            self.schema,
+            BiosysSchema.INFRA_SPECIFIC_RANK_TYPE_NAME,
+            SpeciesObservationSchema.INFRA_SPECIFIC_RANK_FIELD_NAME
+        )
+        if errors:
+            self.errors += errors
+
+        # Species Name field
+        self.species_name_field, errors = find_unique_field(
+            self.schema,
+            BiosysSchema.SPECIES_NAME_TYPE_NAME,
+            SpeciesObservationSchema.SPECIES_NAME_FIELD_NAME
+        )
+        if errors:
+            self.errors += errors
+
+        # NameID
+        self.name_id_field, errors = find_unique_field(
+            self.schema,
+            BiosysSchema.SPECIES_NAME_ID_TYPE_NAME,
+            SpeciesObservationSchema.SPECIES_NAME_ID_FIELD_NAME,
+        )
+        if errors:
+            self.errors += errors
+
+    def _check_required_constraint(self):
+        """
+        6 cases depending which fields are in the schema:
+        see note in https://decbugs.com/view.php?id=6674
+
+        |species_name|
+            req
+        |name_id|
+            req
+        |genus|species|
+          req   req
+        |species_name| name_id |
+          not req      not req
+        |genus|species|species_name|
+          req   req     not req
+        | genus |species|species_name|name_id|
+          not r.  not r.  not req      not req
+
+        :return: list of errors
+        """
+        errors = []
+        required_msg = "The field {} must be set as required."
+        if self.is_species_name_only and not self.species_name_field.required:
+            errors.append(required_msg.format(self.species_name_field.name))
+        if self.is_name_id_only and not self.name_id_field.required:
+            errors.append(required_msg.format(self.name_id_field.name))
+        if self.has_genus_and_species and not self.has_name_id:
+            if not self.genus_field.required:
+                errors.append(required_msg.format(self.genus_field.name))
+            if not self.species_field.required:
+                errors.append(required_msg.format(self.species_field.name))
+        return errors
 
 class Exporter:
     def __init__(self, dataset, records=None):

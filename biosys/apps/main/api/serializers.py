@@ -126,6 +126,16 @@ class RecordSerializer(serializers.ModelSerializer):
         # from the species_naming_facade above.
         self.species_name_id_mapping_cached = None
 
+        # dynamic fields
+        request = ctx.get('request')
+        if request:
+            expected_fields = request.query_params.getlist('fields', [])
+            if expected_fields:
+                existing_fields = self.fields.keys()
+                excluded_fields = set(existing_fields) - set(expected_fields)
+                for field in excluded_fields:
+                    self.fields.pop(field)
+
     @staticmethod
     def get_site(dataset, data, force_create=False):
         schema = dataset.schema
@@ -199,14 +209,14 @@ class RecordSerializer(serializers.ModelSerializer):
         species_mapping = self.get_species_name_id_mapping()
         if species_mapping:
             # name id takes precedence
-            if name_id:
+            if name_id and name_id != -1:
                 species_name = get_key_for_value(species_mapping, int(name_id), None)
                 if not species_name:
                     raise Exception("Cannot find a species with nameId={}".format(name_id))
             elif species_name:
                 name_id = int(species_mapping.get(species_name, -1))
             else:
-                raise Exception('Missing Species Name or Species NameId')
+                raise Exception('Missing Species Name or Species Name Id')
         else:
             # TODO: what to do if we don't have a species mapping?
             name_id = name_id or -1

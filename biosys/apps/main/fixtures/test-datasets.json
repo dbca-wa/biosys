@@ -52,14 +52,20 @@
                   "type": "string",
                   "description": "",
                   "name": "Genus",
-                  "title": ""
+                  "title": "",
+                  "constraints": {
+                    "required": true
+                  }
                 },
                 {
                   "format": "default",
                   "type": "string",
                   "description": "",
                   "name": "Species",
-                  "title": ""
+                  "title": "",
+                  "constraints": {
+                    "required": true
+                  }
                 },
                 {
                   "biosys": {

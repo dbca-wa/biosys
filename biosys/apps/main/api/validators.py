@@ -157,8 +157,9 @@ class ObservationValidator(GenericRecordValidator):
 class SpeciesObservationValidator(ObservationValidator):
     def __init__(self, dataset, schema_error_as_warning=True, **kwargs):
         super(SpeciesObservationValidator, self).__init__(dataset, schema_error_as_warning)
-        self.species_name_col = self.schema.species_name_field.name if self.schema.species_name_field else None
-        self.species_name_id_col = self.schema.species_name_id_field.name if self.schema.species_name_id_field else None
+        self.parser = self.schema.species_name_parser
+        self.species_name_col = self.parser.species_name_field.name if self.parser.species_name_field else None
+        self.species_name_id_col = self.parser.name_id_field.name if self.parser.name_id_field else None
         self.species_name_id_mapping = kwargs.get('species_name_id_mapping')
 
     def validate(self, data, schema_error_as_warning=True):

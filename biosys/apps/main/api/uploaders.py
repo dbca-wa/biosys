@@ -94,7 +94,7 @@ class FileReader(object):
 
 class SiteUploader(FileReader):
     COLUMN_MAP = {
-        'code': ['code', 'site code'],
+        'code': ['code', 'site code', 'site_code'],
         'name': ['name', 'site name'],
         'description': ['description']
     }
@@ -260,7 +260,7 @@ class RecordCreator:
                     if name_id:
                         species_name = get_key_for_value(self.species_id_by_name, int(name_id), None)
                         if not species_name:
-                            column_name = self.schema.species_name_id_field.name
+                            column_name = self.schema.species_name_parser.name_id_field.name
                             message = "Cannot find a species with nameId={}".format(name_id)
                             validator_result.add_column_error(column_name, message)
                             return record, validator_result
