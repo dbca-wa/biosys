@@ -141,8 +141,8 @@ class BiosysSchema:
     SPECIES_NAME_ID_TYPE_NAME = 'speciesNameId'
     GENUS_TYPE_NAME = 'genus'
     SPECIES_TYPE_NAME = 'species'
-    INFRA_SPECIFIC_RANK_TYPE_NAME = 'InfraSpecificRank'
-    INFRA_SPECIFIC_NAME_TYPE_NAME = 'InfraSpecificName'
+    INFRA_SPECIFIC_RANK_TYPE_NAME = 'infraSpecificRank'
+    INFRA_SPECIFIC_NAME_TYPE_NAME = 'infraSpecificName'
 
     def __init__(self, descriptor):
         self.descriptor = descriptor or {}
@@ -661,7 +661,7 @@ class SpeciesObservationSchema(ObservationSchema):
 
 
 def format_required_message(field):
-    return "The field '{field_name}' is required (set the \"required\" constraint to \"true\").".format(
+    return "The field named '{field_name}' must have the 'required' constraint set to true.".format(
         field_name=field.name
     )
 
