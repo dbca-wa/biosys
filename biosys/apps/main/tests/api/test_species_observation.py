@@ -1658,6 +1658,22 @@ class TestCompositeSpeciesName(helpers.BaseUserTestCase):
         self.assertEquals(record.species_name, 'Canis lupus')
         self.assertEquals(record.name_id, 25454)
 
+    def test_genus_species_and_infra_specifics_happy_path(self):
+        schema = self.schema_with_4_columns_genus()
+        dataset = self.assert_create_dataset(schema)
+        records = [
+            ['Genus', 'Species', 'InfraSpecific Rank', 'InfraSpecific Name', 'When', 'Latitude', 'Longitude'],
+            ['Canis', 'lupus', 'subsp. familiaris ', ' rank naughty dog ', '2018-01-25', -32.0, 115.75],
+        ]
+        resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk)
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        received = resp.json()
+        rec_id = received[0]['recordId']
+        record = Record.objects.filter(pk=rec_id).first()
+        expected_species_name = 'Canis lupus subsp. familiaris rank naughty dog'
+        self.assertEquals(record.species_name, expected_species_name)
+        self.assertEquals(record.name_id, -1)
+
     def test_validation_missing_species(self):
         schema = self.schema_with_2_columns_genus()
         dataset = self.assert_create_dataset(schema)
