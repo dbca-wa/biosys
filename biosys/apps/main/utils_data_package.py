@@ -141,8 +141,8 @@ class BiosysSchema:
     SPECIES_NAME_ID_TYPE_NAME = 'speciesNameId'
     GENUS_TYPE_NAME = 'genus'
     SPECIES_TYPE_NAME = 'species'
-    INFRA_SPECIFIC_RANK_TYPE_NAME = 'infraSpecificRank'
-    INFRA_SPECIFIC_NAME_TYPE_NAME = 'infraSpecificName'
+    INFRA_SPECIFIC_RANK_TYPE_NAME = 'infraspecificRank'
+    INFRA_SPECIFIC_NAME_TYPE_NAME = 'infraspecificName'
 
     def __init__(self, descriptor):
         self.descriptor = descriptor or {}
@@ -870,6 +870,10 @@ class GeometryParser(object):
     @property
     def has_datum(self):
         return self.datum_field is not None
+
+    @property
+    def has_zone(self):
+        return self.zone_field is not None
 
     def get_site_code(self, record):
         return record.get(self.site_code_field.name) if self.site_code_field else None

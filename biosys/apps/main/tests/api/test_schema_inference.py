@@ -310,7 +310,62 @@ class TestObservationSchema(InferTestBase):
             # test biosys validity
             self.verify_inferred_data(received)
 
-    def test_observation_with_easting_northing_xls(self):
+    def test_observation_with_lat_long_datum_xls(self):
+        """
+        Scenario: File with column Latitude, Longitude and Datum
+         Given that columns named Latitude, Longitude and Datum exists
+         Then the dataset type should be inferred as Observation
+         And latitude should be of type 'number', set as required and tag with biosys type latitude
+         And longitude should be of type 'number', set as required and tag with biosys type longitude
+         And datum should be of type 'string', set as not required and with biosys type datum
+        """
+        columns = ['What', 'Latitude', 'Longitude', 'Datum']
+        rows = [
+            columns,
+            ['Observation1', -32, 117.75, 'WGS84'],
+            ['Observation with lat/long as string', '-32', '115.75', None]
+        ]
+        client = self.custodian_1_client
+        file_ = helpers.rows_to_xlsx_file(rows)
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp,
+            }
+            resp = client.post(self.url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            received = resp.json()
+            # type observation
+            self.assertEquals(Dataset.TYPE_OBSERVATION, received.get('type'))
+
+            # verify fields attributes
+            schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
+            schema = utils_data_package.GenericSchema(schema_descriptor)
+            lat_field = schema.get_field_by_name('Latitude')
+            self.assertEquals(lat_field.type, 'number')
+            self.assertTrue(lat_field.required)
+            biosys = lat_field.get('biosys')
+            biosys_type = biosys.get('type')
+            self.assertEquals(biosys_type, BiosysSchema.LATITUDE_TYPE_NAME)
+
+            lon_field = schema.get_field_by_name('Longitude')
+            self.assertEquals(lon_field.type, 'number')
+            self.assertTrue(lon_field.required)
+            biosys = lon_field.get('biosys')
+            biosys_type = biosys.get('type')
+            self.assertEquals(biosys_type, BiosysSchema.LONGITUDE_TYPE_NAME)
+
+            # datum
+            datum_field = schema.get_field_by_name('Datum')
+            self.assertEquals(datum_field.type, 'string')
+            self.assertFalse(datum_field.required)
+            biosys = datum_field.get('biosys')
+            biosys_type = biosys.get('type')
+            self.assertEquals(biosys_type, BiosysSchema.DATUM_TYPE_NAME)
+
+            # test that we can save the dataset back.
+            self.verify_inferred_data(received)
+
+    def test_observation_with_easting_northing_datum_xls(self):
         """
         Scenario: File with column Easting, Northing and Datum
          Given that a column named Easting , Northing and Datum exist
@@ -369,6 +424,69 @@ class TestObservationSchema(InferTestBase):
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
             self.assertEquals(biosys_type, BiosysSchema.DATUM_TYPE_NAME)
+
+            # test that we can save the dataset as returned
+            self.verify_inferred_data(received)
+
+    def test_observation_with_easting_northing_zone_xls(self):
+        """
+        Scenario: File with column Easting, Northing and Zone
+         Given that a column named Easting , Northing and Zone exist
+         Then the dataset type should be inferred as Observation
+         And the type of Easting and Northing should be 'number'
+         And Easting and Northing should be set as required
+         And they should be tagged with the appropriate biosys tag
+         And Zone should be of type string and not required.
+        """
+        columns = ['What', 'Easting', 'Northing', 'Zone', 'Comments']
+        rows = [
+            columns,
+            ['Something', 12563.233, 568932.345, 50, 'A dog'],
+            ['Observation with easting/northing as string', '12563.233', '568932.345', 50, 'A dog']
+        ]
+        client = self.custodian_1_client
+        file_ = helpers.rows_to_xlsx_file(rows)
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp,
+            }
+            resp = client.post(self.url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            received = resp.json()
+            # should be an observation
+            self.assertEquals(Dataset.TYPE_OBSERVATION, received.get('type'))
+            # data_package verification
+            self.assertIn('data_package', received)
+
+            # verify fields attributes
+            schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
+            schema = utils_data_package.GenericSchema(schema_descriptor)
+            east_field = schema.get_field_by_name('Easting')
+            self.assertIsNotNone(east_field)
+            self.assertEquals(east_field.type, 'number')
+            self.assertTrue(east_field.required)
+            biosys = east_field.get('biosys')
+            self.assertIsNotNone(biosys)
+            biosys_type = biosys.get('type')
+            self.assertEquals(biosys_type, BiosysSchema.EASTING_TYPE_NAME)
+
+            north_field = schema.get_field_by_name('Northing')
+            self.assertIsNotNone(north_field)
+            self.assertEquals(north_field.type, 'number')
+            self.assertTrue(north_field.required)
+            biosys = north_field.get('biosys')
+            self.assertIsNotNone(biosys)
+            biosys_type = biosys.get('type')
+            self.assertEquals(biosys_type, BiosysSchema.NORTHING_TYPE_NAME)
+
+            zone_field = schema.get_field_by_name('Zone')
+            self.assertIsNotNone(zone_field)
+            self.assertEquals(zone_field.type, 'integer')
+            self.assertFalse(zone_field.required)
+            biosys = zone_field.get('biosys')
+            self.assertIsNotNone(biosys)
+            biosys_type = biosys.get('type')
+            self.assertEquals(biosys_type, BiosysSchema.ZONE_TYPE_NAME)
 
             # test that we can save the dataset as returned
             self.verify_inferred_data(received)
