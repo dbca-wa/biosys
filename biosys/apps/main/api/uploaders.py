@@ -441,6 +441,10 @@ class DataPackageBuilder:
                 if geo_parser.is_lat_long_only:
                     self.set_required(lat_field)
                     self.set_required(lon_field)
+                if geo_parser.has_datum:
+                    datum_field = self.get_fields_by_name(geo_parser.datum_field.name)[0]
+                    self.set_type('string', datum_field)
+                    self.set_biosys_type(datum_field, BiosysSchema.DATUM_TYPE_NAME)
                 success = True
 
             # Easting/Northing
@@ -458,6 +462,10 @@ class DataPackageBuilder:
                     datum_field = self.get_fields_by_name(geo_parser.datum_field.name)[0]
                     self.set_type('string', datum_field)
                     self.set_biosys_type(datum_field, BiosysSchema.DATUM_TYPE_NAME)
+                if geo_parser.has_zone:
+                    zone_field = self.get_fields_by_name(geo_parser.zone_field.name)[0]
+                    self.set_type('integer', zone_field)
+                    self.set_biosys_type(zone_field, BiosysSchema.ZONE_TYPE_NAME)
                 success = True
         except Exception as e:
             self.errors.append(str(e))
