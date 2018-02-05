@@ -141,8 +141,8 @@ class BiosysSchema:
     SPECIES_NAME_ID_TYPE_NAME = 'speciesNameId'
     GENUS_TYPE_NAME = 'genus'
     SPECIES_TYPE_NAME = 'species'
-    INFRA_SPECIFIC_RANK_TYPE_NAME = 'InfraSpecificRank'
-    INFRA_SPECIFIC_NAME_TYPE_NAME = 'InfraSpecificName'
+    INFRA_SPECIFIC_RANK_TYPE_NAME = 'infraSpecificRank'
+    INFRA_SPECIFIC_NAME_TYPE_NAME = 'infraSpecificName'
 
     def __init__(self, descriptor):
         self.descriptor = descriptor or {}
@@ -867,6 +867,10 @@ class GeometryParser(object):
             not self.is_lat_long
         ])
 
+    @property
+    def has_datum(self):
+        return self.datum_field is not None
+
     def get_site_code(self, record):
         return record.get(self.site_code_field.name) if self.site_code_field else None
 
@@ -1210,17 +1214,17 @@ class SpeciesNameParser(object):
         :return: list of errors
         """
         errors = []
-        required_msg = "The field {} must be set as required."
         if self.is_species_name_only and not self.species_name_field.required:
-            errors.append(required_msg.format(self.species_name_field.name))
+            errors.append(format_required_message(self.species_name_field))
         if self.is_name_id_only and not self.name_id_field.required:
-            errors.append(required_msg.format(self.name_id_field.name))
+            errors.append(format_required_message(self.name_id_field))
         if self.has_genus_and_species and not self.has_name_id:
             if not self.genus_field.required:
-                errors.append(required_msg.format(self.genus_field.name))
+                errors.append(format_required_message(self.genus_field))
             if not self.species_field.required:
-                errors.append(required_msg.format(self.species_field.name))
+                errors.append(format_required_message(self.species_field))
         return errors
+
 
 class Exporter:
     def __init__(self, dataset, records=None):
