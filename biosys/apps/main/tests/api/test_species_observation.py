@@ -1666,7 +1666,6 @@ class TestCompositeSpeciesName(helpers.BaseUserTestCase):
             ['Canis', 'lupus', 'subsp. familiaris ', ' rank naughty dog ', '2018-01-25', -32.0, 115.75],
         ]
         resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk)
-        print(resp.json())
         self.assertEquals(resp.status_code, status.HTTP_200_OK)
         received = resp.json()
         rec_id = received[0]['recordId']
