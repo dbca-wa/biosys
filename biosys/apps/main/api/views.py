@@ -115,9 +115,13 @@ class ProjectSitesView(generics.ListCreateAPIView, generics.DestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         site_ids = request.data
-        if not site_ids and not isinstance(site_ids, list):
-            return Response("A list of site ids must be provided", status=status.HTTP_400_BAD_REQUEST)
-        Site.objects.filter(project=self.project, id__in=site_ids).delete()
+        if isinstance(site_ids, list):
+            qs = Site.objects.filter(project=self.project, id__in=site_ids)
+        elif site_ids == 'all':
+            qs = Site.objects.filter(project=self.project)
+        else:
+            return Response("A list of site ids must be provided or 'all'", status=status.HTTP_400_BAD_REQUEST)
+        qs.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
