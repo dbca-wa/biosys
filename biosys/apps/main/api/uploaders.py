@@ -34,15 +34,18 @@ def xlsx_to_csv(file_):
     output = six.StringIO()
     writer = csv.writer(output)
     wb = load_workbook(filename=file_, read_only=True)
-    ws = wb.active
-    for row in ws.rows:
-        r = [_format(cell) for cell in row]
-        writer.writerow(r)
+    # use the first sheet
+    if len(wb.worksheets) > 0:
+        ws = wb.worksheets[0]
+        for row in ws.rows:
+            r = [_format(cell) for cell in row]
+            writer.writerow(r)
     # rewind
     output.seek(0)
     return output
 
 
+# TODO: investigate the use frictionless tabulator.Stream as a xlsx/csv reader instead of this class
 class FileReader(object):
     """
     Accept a csv or a xlsx as file and provide a row generator.
