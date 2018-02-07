@@ -70,8 +70,8 @@ def order_by_json_field(qs, json_field_name, keys, ordering_param):
     for key in keys:
         if ordering_param == key or ordering_param == '-' + key:
             if ordering_param.startswith('-'):
-                qs = qs.order_by(RawSQL(json_field_name + '->>%s', (ordering_param[1:],)).desc())
+                qs = qs.order_by(RawSQL(json_field_name + '->%s', (ordering_param[1:],)).desc())
             else:
-                qs = qs.order_by(RawSQL(json_field_name + '->>%s', (ordering_param,)))
+                qs = qs.order_by(RawSQL(json_field_name + '->%s', (ordering_param,)))
 
     return qs
