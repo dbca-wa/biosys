@@ -7,7 +7,7 @@ from django.utils import timezone
 from django_dynamic_fixture import G
 from rest_framework import status
 
-from main.models import Dataset, Site
+from main.models import Dataset, Site, Record
 from main.tests.api import helpers
 
 
@@ -234,6 +234,79 @@ class TestGenericRecord(helpers.BaseUserTestCase):
                 'Column B': u'The euro char: \u20ac',
             }
             self.assertEquals(expected_data, record.data)
+
+    def test_headers_are_trimmed_csv(self):
+        """
+        Test that if the user upload a csv with columns containing heading or trailing space, the parser will trimmed it and
+        then compare to schema.
+        """
+        fields = ['What', 'When', 'Who']
+        dataset = self._create_dataset_from_rows([
+            fields
+        ])
+        schema = dataset.schema
+        self.assertEquals(schema.headers, fields)
+
+        # upload record
+        csv_data = [
+            ['What ', ' When', ' Who  '],
+            ['Something', '2018-02-01', 'me'],
+        ]
+        file_ = helpers.rows_to_csv_file(csv_data)
+        client = self.custodian_1_client
+        url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
+        with open(file_) as fp:
+            data = {
+                'file': fp,
+                'strict': True  # upload in strict mode
+            }
+            resp = client.post(url, data=data, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+
+            # verify stored data
+            record = dataset.record_queryset.first()
+            self.assertEquals(record.data.get('What'), 'Something')
+            self.assertEquals(record.data.get('When'), '2018-02-01')
+            self.assertEquals(record.data.get('Who'), 'me')
+            # verify that the fields with space doesn't exists
+            for f in csv_data[0]:
+                self.assertIsNone(record.data.get(f))
+
+    def test_headers_are_trimmed_xlsx(self):
+        """
+        Same as above but with an xlsx file
+        """
+        fields = ['What', 'When', 'Who']
+        dataset = self._create_dataset_from_rows([
+            fields
+        ])
+        schema = dataset.schema
+        self.assertEquals(schema.headers, fields)
+
+        # upload record
+        csv_data = [
+            ['What ', ' When', ' Who  '],
+            ['Something', '2018-02-01', 'me'],
+        ]
+        file_ = helpers.rows_to_xlsx_file(csv_data)
+        client = self.custodian_1_client
+        url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
+        with open(file_) as fp:
+            data = {
+                'file': fp,
+                'strict': True  # upload in strict mode
+            }
+            resp = client.post(url, data=data, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+
+            # verify stored data
+            record = dataset.record_queryset.first()
+            self.assertEquals(record.data.get('What'), 'Something')
+            self.assertEquals(record.data.get('When'), '2018-02-01')
+            self.assertEquals(record.data.get('Who'), 'me')
+            # verify that the fields with space doesn't exists
+            for f in csv_data[0]:
+                self.assertIsNone(record.data.get(f))
 
 
 class TestObservation(helpers.BaseUserTestCase):

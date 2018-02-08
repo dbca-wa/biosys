@@ -81,6 +81,9 @@ class FileReader(object):
                 self.reader = csv.DictReader(codecs.iterdecode(self.file, 'utf-8'))
             else:
                 self.reader = csv.DictReader(self.file)
+        # because users are stupid we want to trim/strip the headers (fieldnames).
+        self.reader.fieldnames = [f.strip() for f in self.reader.fieldnames]
+        self.reader.unicode_fieldnames = [f.strip() for f in self.reader.unicode_fieldnames]
 
     def __iter__(self):
         for row in self.reader:
