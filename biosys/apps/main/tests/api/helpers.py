@@ -54,19 +54,41 @@ def rows_to_csv_file(rows):
     return f
 
 
+class LightSpeciesFacade(SpeciesFacade):
+    def name_id_by_species_name(self):
+        """
+        :return: a dict where key is species_name and the value is name_id
+        """
+        return SOME_SPECIES_NAME_NAME_ID_MAP
+
+    def get_all_species(self, properties=None):
+        """
+        :param properties: a sequence of Property, e.g [PROPERTY_SPECIES_NAME, PROPERTY_NAME_ID] or None for all
+        attributes
+        :return: Return a list of species properties (see structure above) but with only the specified attributes.
+        NOTE: limiting the number of properties speed-up the request.
+        """
+        return []
+
+
 class BaseUserTestCase(TestCase):
     """
     A test case that provides some users and authenticated clients.
+    This class also set the species facade to be the test one (not real herbie).
     Also provide some high level API utility function
     """
     fixtures = [
         'test-users',
         'test-projects'
     ]
+    species_facade_class = LightSpeciesFacade
 
     @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
                        REST_FRAMEWORK_TEST_SETTINGS=REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
+        from main.api.views import SpeciesMixin
+        SpeciesMixin.species_facade_class = self.species_facade_class
+
         password = 'password'
         user_model = get_user_model()
         self.admin_user = user_model.objects.filter(username="admin").first()
@@ -193,22 +215,6 @@ class BaseUserTestCase(TestCase):
         self.assertEquals(resp.status_code, status.HTTP_200_OK)
         return dataset
 
-
-class LightSpeciesFacade(SpeciesFacade):
-    def name_id_by_species_name(self):
-        """
-        :return: a dict where key is species_name and the value is name_id
-        """
-        return SOME_SPECIES_NAME_NAME_ID_MAP
-
-    def get_all_species(self, properties=None):
-        """
-        :param properties: a sequence of Property, e.g [PROPERTY_SPECIES_NAME, PROPERTY_NAME_ID] or None for all
-        attributes
-        :return: Return a list of species properties (see structure above) but with only the specified attributes.
-        NOTE: limiting the number of properties speed-up the request.
-        """
-        return []
 
 
 def set_site(record_data, dataset, site):

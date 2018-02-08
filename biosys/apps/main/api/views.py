@@ -7,7 +7,6 @@ from os import path
 from django.contrib.auth import get_user_model, logout
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from django.db.models import Q
-from django.db.models.expressions import RawSQL
 from django.shortcuts import get_object_or_404
 from dry_rest_permissions.generics import DRYPermissions
 from rest_framework import viewsets, filters, generics, status

@@ -81,7 +81,7 @@ class Property:
         self.herbie_name = herbie_name
 
 
-class SpeciesFacade:
+class SpeciesFacade(object):
     PROPERTY_SPECIES_NAME = Property('species_name')
     PROPERTY_NAME_ID = Property('name_id')
 

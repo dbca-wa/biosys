@@ -1,8 +1,6 @@
 from django.contrib.auth.models import User
-from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
-from django.utils.encoding import force_text
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -600,80 +598,123 @@ class TestRecordsView(helpers.BaseUserTestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(len(resp.json()), 0)
 
-class TestDatasetRecordsSearchAndOrdering(TestCase):
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-generic-records'
-    ]
 
-    def setUp(self):
-        password = 'password'
-        user_model = get_user_model()
-        self.admin_user = user_model.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.assertTrue(self.client.login(username=self.admin_user.username, password=password))
+class TestDatasetRecordsSearchAndOrdering(helpers.BaseUserTestCase):
+
+    def _more_setup(self):
+        self.client = self.custodian_1_client
 
     def test_server_side_search(self):
-        # this dataset has records in it
-        dataset = Dataset.objects.all()[2]
-
-        self.assertIsNotNone(dataset)
-        self.assertEqual(dataset.record_queryset.count(), 10)
+        rows = [
+            ['When', 'Species', 'How Many', 'Latitude', 'Longitude', 'Comments'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
+            ['2018-02-10', 'Unknown', 3, -32.0, 115.75, 'Canis?'],
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
 
         url = reverse('api:dataset-records', kwargs={'pk': dataset.pk})
 
         # test fetch all records for dataset
         resp = self.client.get(url, format='json')
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(len(resp.json()), 10)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.json()), 4)
 
-        # test fetching records in dataset using specific search term specific term
-        resp = self.client.get(url + '?search=Chalino', format='json')
-        self.assertEqual(resp.status_code, 200)
+        # test fetching records in dataset using specific search term specific term.
+        # The search should search on all the columns
+        search = 'Canis'
+        expected_number_of_records = 3  # 2 records with canis in the species and one in comments
+        resp = self.client.get(url + '?search='+search, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(resp.json()), 2)
+        self.assertEqual(len(resp.json()), expected_number_of_records)
 
-    def test_server_side_ordering(self):
-        # this dataset has records in it
-        dataset = Dataset.objects.all()[2]
-
-        self.assertIsNotNone(dataset)
-        self.assertEqual(dataset.record_queryset.count(), 10)
+    def test_server_side_ordering_string(self):
+        rows = [
+            ['When', 'Species', 'How Many', 'Latitude', 'Longitude', 'Comments'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-10', 'Unknown', 2, -32.0, 115.75, 'Canis?'],
+            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
 
         url = reverse('api:dataset-records', kwargs={'pk': dataset.pk})
 
         # check unordered request is not ordered by family
         resp = self.client.get(url, format='json')
-        self.assertEqual(resp.status_code, 200)
-
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         json_response = resp.json()
-        self.assertEqual(len(json_response), 10)
+        self.assertEqual(len(resp.json()), 4)
 
-        record_families = [record['data']['Family'] for record in json_response]
-        self.assertNotEqual(record_families, sorted(record_families))
+        species = [row[1] for row in rows[1:]]
+        sorted_species = sorted(species)
+        self.assertNotEqual(species, sorted_species)
+
+        record_species = [record['data']['Species'] for record in json_response]
+        self.assertNotEqual(record_species, sorted_species)
 
         # check is request ordered by family is ordered by family in alphabetical order
-        resp = self.client.get(url + '?ordering=Family', format='json')
-        self.assertEqual(resp.status_code, 200)
+        resp = self.client.get(url + '?ordering=Species', format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         json_response = resp.json()
-        self.assertEqual(len(json_response), 10)
+        self.assertEqual(len(json_response), 4)
 
-        record_families = [record['data']['Family'] for record in json_response]
-        self.assertEqual(record_families, sorted(record_families))
+        record_species = [record['data']['Species'] for record in json_response]
+        self.assertEqual(record_species, sorted_species)
 
         # check is request ordered by family in descending order is ordered by family in reverse alphabetical order
-        resp = self.client.get(url + '?ordering=-Family', format='json')
-        self.assertEqual(resp.status_code, 200)
+        resp = self.client.get(url + '?ordering=-Species', format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         json_response = resp.json()
-        self.assertEqual(len(json_response), 10)
+        self.assertEqual(len(json_response), 4)
 
-        record_families = [record['data']['Family'] for record in json_response]
-        self.assertEqual(record_families, list(reversed(sorted(record_families))))
+        record_species = [record['data']['Species'] for record in json_response]
+        self.assertEqual(record_species, list(reversed(sorted_species)))
+
+    def test_server_side_ordering_row_number(self):
+        """
+        Test that we can order by the source_info['row'] (row number in the csv or xlsx) and that the
+        sort in numeric based not char based (10 is after 9)
+        """
+        # create 11 records (data not important)
+        rows = [
+            ['When', 'Species', 'How Many', 'Latitude', 'Longitude', 'Comments'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-10', 'Unknown', 2, -32.0, 115.75, 'Canis?'],
+            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-10', 'Unknown', 2, -32.0, 115.75, 'Canis?'],
+            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-10', 'Unknown', 2, -32.0, 115.75, 'Canis?'],
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
+
+        url = reverse('api:dataset-records', kwargs={'pk': dataset.pk})
+
+        resp = self.client.get(url + '?ordering=row', format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        json_response = resp.json()
+        self.assertEquals(len(json_response), 11)
+
+        # row start at 2
+        sorted_rows = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+        record_rows = [record['source_info']['row'] for record in json_response]
+        self.assertEqual(record_rows, sorted_rows)
+
+        # check is request ordered by family in descending order is ordered by family in reverse alphabetical order
+        resp = self.client.get(url + '?ordering=-row', format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        json_response = resp.json()
+        self.assertEquals(len(json_response), 11)
+
+        record_rows = [record['source_info']['row'] for record in json_response]
+        self.assertEqual(record_rows, list(reversed(sorted_rows)))
