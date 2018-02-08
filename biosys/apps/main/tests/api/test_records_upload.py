@@ -308,6 +308,33 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             for f in csv_data[0]:
                 self.assertIsNone(record.data.get(f))
 
+    def test_headers_not_trimmed_with_api(self):
+        """
+        Contrary to the upload csv or xlsx when using the API in strict mode, it should not accept fields with header
+        or trailing space
+        see notes on https://decbugs.com/view.php?id=6863
+        """
+        fields = ['What', 'When', 'Who']
+        dataset = self._create_dataset_from_rows([
+            fields
+        ])
+        schema = dataset.schema
+        self.assertEquals(schema.headers, fields)
+        # create record with trailing and heading space
+        data = {
+            'What  ': 'Something',
+            ' When': '2018-02-10',
+            '  Who  ': 'me'
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': data
+        }
+        client = self.custodian_1_client
+        url = helpers.set_strict_mode(reverse('api:record-list'))
+        resp = client.post(url, payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 class TestObservation(helpers.BaseUserTestCase):
     all_fields_nothing_required = [
