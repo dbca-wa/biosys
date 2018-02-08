@@ -86,6 +86,13 @@ class DatasetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dataset
         fields = '__all__'
+        validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=Dataset.objects.all(),
+                fields=('name', 'project'),
+                message='A dataset with this name already exists in the project.'
+            )
+        ]
 
 
 class SchemaValidator:
