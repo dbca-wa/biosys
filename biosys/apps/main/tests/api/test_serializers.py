@@ -18,7 +18,7 @@ class TestDatsetSerializer(helpers.BaseUserTestCase):
         dataset.name = 'Test'
         dataset.save()
 
-        # Trye serializer with a dataset with the same name
+        # Try serializer with a dataset with the same name
         data = {
             'name': dataset.name,
             'project': dataset.project.pk,
