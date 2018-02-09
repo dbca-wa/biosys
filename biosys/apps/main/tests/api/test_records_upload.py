@@ -291,12 +291,12 @@ class TestGenericRecord(helpers.BaseUserTestCase):
         file_ = helpers.rows_to_xlsx_file(csv_data)
         client = self.custodian_1_client
         url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
-        with open(file_) as fp:
+        with open(file_, 'rb') as fp:
             data = {
                 'file': fp,
                 'strict': True  # upload in strict mode
             }
-            resp = client.post(url, data=data, format='multipart')
+            resp = client.post(url, data, format='multipart')
             self.assertEquals(status.HTTP_200_OK, resp.status_code)
 
             # verify stored data
