@@ -32,4 +32,4 @@ class TestDatsetSerializer(helpers.BaseUserTestCase):
         errors = ser.errors
         self.assertEquals(['non_field_errors'], list(errors.keys()))
         self.assertEquals(1, len(errors.get('non_field_errors')))
-        self.assertIn('project, name must make a unique set', errors.get('non_field_errors')[0])
+        self.assertIn('A dataset with this name already exists in the project.', errors.get('non_field_errors')[0])
