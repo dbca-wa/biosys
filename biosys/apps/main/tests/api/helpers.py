@@ -216,7 +216,6 @@ class BaseUserTestCase(TestCase):
         return dataset
 
 
-
 def set_site(record_data, dataset, site):
     """
     Update the 'Site' column value with the given site code

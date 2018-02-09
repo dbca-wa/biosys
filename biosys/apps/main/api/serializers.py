@@ -57,8 +57,9 @@ class DatasetSerializer(serializers.ModelSerializer):
             Dataset.validate_data_package(value, self.dataset_type)
 
         def set_context(self, serializer_field):
-            data = serializer_field.parent.context['request'].data
-            self.dataset_type = data.get('type')
+            if 'request' in serializer_field.parent.context:
+                data = serializer_field.parent.context['request'].data
+                self.dataset_type = data.get('type')
 
     data_package = serializers.JSONField(
         validators=[

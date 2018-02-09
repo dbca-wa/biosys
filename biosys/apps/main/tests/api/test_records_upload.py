@@ -7,7 +7,7 @@ from django.utils import timezone
 from django_dynamic_fixture import G
 from rest_framework import status
 
-from main.models import Dataset, Site
+from main.models import Dataset, Site, Record
 from main.tests.api import helpers
 
 
@@ -234,6 +234,106 @@ class TestGenericRecord(helpers.BaseUserTestCase):
                 'Column B': u'The euro char: \u20ac',
             }
             self.assertEquals(expected_data, record.data)
+
+    def test_headers_are_trimmed_csv(self):
+        """
+        Test that if the user upload a csv with columns containing heading or trailing space, the parser will trimmed it and
+        then compare to schema.
+        """
+        fields = ['What', 'When', 'Who']
+        dataset = self._create_dataset_from_rows([
+            fields
+        ])
+        schema = dataset.schema
+        self.assertEquals(schema.headers, fields)
+
+        # upload record
+        csv_data = [
+            ['What ', ' When', ' Who  '],
+            ['Something', '2018-02-01', 'me'],
+        ]
+        file_ = helpers.rows_to_csv_file(csv_data)
+        client = self.custodian_1_client
+        url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
+        with open(file_) as fp:
+            data = {
+                'file': fp,
+                'strict': True  # upload in strict mode
+            }
+            resp = client.post(url, data=data, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+
+            # verify stored data
+            record = dataset.record_queryset.first()
+            self.assertEquals(record.data.get('What'), 'Something')
+            self.assertEquals(record.data.get('When'), '2018-02-01')
+            self.assertEquals(record.data.get('Who'), 'me')
+            # verify that the fields with space doesn't exists
+            for f in csv_data[0]:
+                self.assertIsNone(record.data.get(f))
+
+    def test_headers_are_trimmed_xlsx(self):
+        """
+        Same as above but with an xlsx file
+        """
+        fields = ['What', 'When', 'Who']
+        dataset = self._create_dataset_from_rows([
+            fields
+        ])
+        schema = dataset.schema
+        self.assertEquals(schema.headers, fields)
+
+        # upload record
+        csv_data = [
+            ['What ', ' When', ' Who  '],
+            ['Something', '2018-02-01', 'me'],
+        ]
+        file_ = helpers.rows_to_xlsx_file(csv_data)
+        client = self.custodian_1_client
+        url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
+        with open(file_, 'rb') as fp:
+            data = {
+                'file': fp,
+                'strict': True  # upload in strict mode
+            }
+            resp = client.post(url, data, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+
+            # verify stored data
+            record = dataset.record_queryset.first()
+            self.assertEquals(record.data.get('What'), 'Something')
+            self.assertEquals(record.data.get('When'), '2018-02-01')
+            self.assertEquals(record.data.get('Who'), 'me')
+            # verify that the fields with space doesn't exists
+            for f in csv_data[0]:
+                self.assertIsNone(record.data.get(f))
+
+    def test_headers_not_trimmed_with_api(self):
+        """
+        Contrary to the upload csv or xlsx when using the API in strict mode, it should not accept fields with header
+        or trailing space
+        see notes on https://decbugs.com/view.php?id=6863
+        """
+        fields = ['What', 'When', 'Who']
+        dataset = self._create_dataset_from_rows([
+            fields
+        ])
+        schema = dataset.schema
+        self.assertEquals(schema.headers, fields)
+        # create record with trailing and heading space
+        data = {
+            'What  ': 'Something',
+            ' When': '2018-02-10',
+            '  Who  ': 'me'
+        }
+        payload = {
+            'dataset': dataset.pk,
+            'data': data
+        }
+        client = self.custodian_1_client
+        url = helpers.set_strict_mode(reverse('api:record-list'))
+        resp = client.post(url, payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 class TestObservation(helpers.BaseUserTestCase):
