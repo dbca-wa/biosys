@@ -71,7 +71,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
-    filter_fields = ('id', 'name', 'custodians')
+    filter_fields = ('id', 'name', 'custodians', 'code')
 
 
 class ProjectPermission(BasePermission):
@@ -171,8 +171,7 @@ class SiteViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Site.objects.all()
     serializer_class = serializers.SiteSerializer
-    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
-    filter_fields = ('id', 'name', 'code')
+    filter_fields = ('id', 'name', 'code', 'project__name', 'project__code', 'project__id')
 
     def perform_update(self, serializer):
         """
@@ -195,6 +194,7 @@ class SiteViewSet(viewsets.ModelViewSet):
 class DatasetViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     serializer_class = serializers.DatasetSerializer
+    filter_fields = ('id', 'name', 'code', 'project__name', 'project__code', 'project__id')
 
     def get_queryset(self):
         queryset = models.Dataset.objects.all()
