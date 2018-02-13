@@ -669,3 +669,115 @@ class TestExport(helpers.BaseUserTestCase):
         self.assertEqual(date.data_type, Cell.TYPE_NUMERIC)
         self.assertEqual(datetime.data_type, Cell.TYPE_NUMERIC)
         self.assertEqual(boolean.data_type, Cell.TYPE_BOOL)
+
+
+class TestFiltering(helpers.BaseUserTestCase):
+
+    def test_filter_dataset(self):
+        dataset1 = self._create_dataset_and_records_from_rows([
+            ['What', 'When', 'Who'],
+            ['Crashed the db', '2018-02-14', 'Serge'],
+            ['Restored the db', '2018-02-14', 'Shay']
+        ])
+
+        dataset2 = self._create_dataset_and_records_from_rows([
+            ['What', 'When', 'Latitude', 'Longitude'],
+            ['Canis lupus', '2018-02-14', -32.0, 115.75],
+            ['Chubby bat', '2017-05-18', -34.4, 116.78]
+        ])
+
+        client = self.custodian_1_client
+
+        # no filters
+        url = reverse('api:record-list')
+        resp = client.get(url)
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEquals(len(records), 4)
+        expected_whats = sorted(['Crashed the db', 'Restored the db', 'Canis lupus', 'Chubby bat'])
+        self.assertEquals(sorted([r['data']['What'] for r in records]), expected_whats)
+
+        # dataset__id
+        expected_dataset = dataset1
+        url = reverse('api:record-list')
+        resp = client.get(url, {'dataset__id': expected_dataset.pk})
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEquals(len(records), 2)
+        expected_whats = sorted(['Crashed the db', 'Restored the db'])
+        self.assertEquals(sorted([r['data']['What'] for r in records]), expected_whats)
+
+        # dataset__name
+        expected_dataset = dataset2
+        url = reverse('api:record-list')
+        resp = client.get(url, {'dataset__name': expected_dataset.name})
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEquals(len(records), 2)
+        expected_whats = sorted(['Canis lupus', 'Chubby bat'])
+        self.assertEquals(sorted([r['data']['What'] for r in records]), expected_whats)
+
+    def test_search_in_json_data(self):
+        """
+        Test that if we provide a dataset and a search parameters we can search through the data json field
+        :return:
+        """
+        dataset1 = self._create_dataset_and_records_from_rows([
+            ['What', 'When', 'Who'],
+            ['Crashed the db', '2018-02-14', 'Serge'],
+            ['Restored the db', '2018-02-14', 'Shay']
+        ])
+
+        dataset2 = self._create_dataset_and_records_from_rows([
+            ['What', 'When', 'Latitude', 'Longitude'],
+            ['Canis lupus', '2018-02-14', -32.0, 115.75],
+            ['Chubby bat', '2017-05-18', -34.4, 116.78],
+            ['Chubby Serge', '2017-05-18', -34.4, 116.78]
+        ])
+
+        client = self.custodian_1_client
+
+        # search Serge in dataset1
+        url = reverse('api:record-list')
+        resp = client.get(url, {'search': 'Serge', "dataset__id": dataset1.pk})
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEquals(len(records), 1)
+        record = records[0]
+        expected_data = sorted(['Crashed the db', '2018-02-14', 'Serge'])
+        self.assertEquals(sorted(list(record['data'].values())), expected_data)
+
+        # search serge in dataset2 case insensitive
+        url = reverse('api:record-list')
+        resp = client.get(url, {'search': 'Serge', "dataset__id": dataset2.pk})
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEquals(len(records), 1)
+        record = records[0]
+        expected_data = sorted(['Chubby Serge', '2017-05-18', '-34.4', '116.78'])
+        self.assertEquals(sorted(list(record['data'].values())), expected_data)
+
+    def test_ordering_in_json_data(self):
+        """
+        Test that if we provide a dataset and an order parameters we can order through the data json field
+        :return:
+        """
+        dataset = self._create_dataset_and_records_from_rows([
+            ['What', 'When', 'Latitude', 'Longitude'],
+            ['Canis lupus', '2018-02-14', -32.0, 115.75],
+            ['Zebra', '2017-01-01', -34.7, 115.75],
+            ['Chubby bat', '2017-05-18', -34.4, 116.78],
+            ['Alligator', '2017-05-18', -34.4, 116.78]
+        ])
+
+        client = self.custodian_1_client
+
+        # order by What asc
+        url = reverse('api:record-list')
+        resp = client.get(url, {'order': 'What', "dataset__id": dataset.pk})
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEquals(len(records), 4)
+        expected_whats = sorted(['Alligator', 'Canis lupus', 'Chubby bat', 'Zebra'])
+        self.assertEquals(sorted([r['data']['What'] for r in records]), expected_whats)
+
