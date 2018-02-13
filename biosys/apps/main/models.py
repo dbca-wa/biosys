@@ -216,6 +216,7 @@ class Dataset(models.Model):
     project = models.ForeignKey('Project', null=False, blank=False, related_name='projects',
                                 related_query_name='project')
     name = models.CharField(max_length=200, null=False, blank=False)
+    code = models.CharField(max_length=50, blank=True)
     type = models.CharField(max_length=100, null=False, blank=False, choices=TYPE_CHOICES, default=TYPE_GENERIC)
     #  data_package should follow the Tabular Data Package format described at:
     #  https://frictionlessdata.io/specs/data-package/
