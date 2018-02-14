@@ -194,7 +194,6 @@ class SiteViewSet(viewsets.ModelViewSet):
 class DatasetViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     serializer_class = serializers.DatasetSerializer
-    filter_fields = ('id', 'name', 'code', 'project__name', 'project__code', 'project__id')
 
     def get_queryset(self):
         queryset = models.Dataset.objects.all()
@@ -349,6 +348,26 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
             if name:
                 ds = get_object_or_404(Dataset, name=name)
         return ds
+
+    def get_queryset(self):
+        queryset = super(RecordViewSet, self).get_queryset()
+        if self.dataset:
+            # add some specific json field queries (postgres)
+            search_param = self.request.query_params.get('search')
+            if search_param is not None:
+                field_info = {
+                    'data': self.dataset.schema.field_names,
+                    'source_info': ['file_name', 'row']
+                }
+
+                queryset = search_json_fields(queryset, field_info, search_param)
+
+            ordering_param = self.request.query_params.get('ordering')
+            if ordering_param is not None:
+                queryset = order_by_json_field(queryset, 'data', self.dataset.schema.field_names, ordering_param)
+                queryset = order_by_json_field(queryset, 'source_info', ['file_name', 'row'], ordering_param)
+
+        return queryset
 
     def initial(self, request, *args, **kwargs):
         result = super(RecordViewSet, self).initial(request, *args, **kwargs)
