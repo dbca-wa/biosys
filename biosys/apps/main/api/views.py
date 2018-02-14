@@ -194,7 +194,6 @@ class SiteViewSet(viewsets.ModelViewSet):
 class DatasetViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     serializer_class = serializers.DatasetSerializer
-    filter_fields = ('id', 'name', 'code', 'project__name', 'project__code', 'project__id')
 
     def get_queryset(self):
         queryset = models.Dataset.objects.all()
@@ -353,6 +352,7 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
     def get_queryset(self):
         queryset = super(RecordViewSet, self).get_queryset()
         if self.dataset:
+            # add some specific json field queries (postgres)
             search_param = self.request.query_params.get('search')
             if search_param is not None:
                 field_info = {
