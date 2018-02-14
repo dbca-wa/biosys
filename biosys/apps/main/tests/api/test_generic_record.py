@@ -739,7 +739,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         url = reverse('api:record-list')
 
         # search Serge in dataset1
-        resp = client.get(url, {'search': 'Serge', "dataset__id": dataset1.pk})
+        resp = client.get(url, {'search': 'Serge', 'dataset__id': dataset1.pk})
         self.assertEquals(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
         self.assertEquals(len(records), 1)
@@ -748,7 +748,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         self.assertEquals(sorted(list(record['data'].values())), expected_data)
 
         # search serge in dataset2 case insensitive
-        resp = client.get(url, {'search': 'Serge', "dataset__id": dataset2.pk})
+        resp = client.get(url, {'search': 'Serge', 'dataset__id': dataset2.pk})
         self.assertEquals(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
         self.assertEquals(len(records), 1)
@@ -775,7 +775,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
 
         # order by What asc
         ordering = 'What'
-        resp = client.get(url, {'ordering': ordering, "dataset__id": dataset.pk})
+        resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
         self.assertEquals(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
         self.assertEquals(len(records), 4)
@@ -784,7 +784,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
 
         # order by What desc
         ordering = '-What'
-        resp = client.get(url, {'ordering': ordering, "dataset__id": dataset.pk})
+        resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
         self.assertEquals(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
         self.assertEquals(len(records), 4)
@@ -793,12 +793,57 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
 
         # test that the ordering is case sensitive
         ordering = 'what'
-        resp = client.get(url, {'ordering': ordering, "dataset__id": dataset.pk})
+        resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
         self.assertEquals(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
         self.assertEquals(len(records), 4)
         expected_whats = sorted(['Alligator', 'Canis lupus', 'Chubby bat', 'Zebra'])
         self.assertNotEquals([r['data']['What'] for r in records], expected_whats)
+
+    def test_server_side_ordering_row_number(self):
+        """
+        Test that we can order by the source_info['row'] (row number in the csv or xlsx) and that the
+        sort in numeric based not char based (10 is after 9)
+        """
+        # create 11 records (data not important)
+        rows = [
+            ['When', 'Species', 'How Many', 'Latitude', 'Longitude', 'Comments'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-10', 'Unknown', 2, -32.0, 115.75, 'Canis?'],
+            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-10', 'Unknown', 2, -32.0, 115.75, 'Canis?'],
+            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-10', 'Unknown', 2, -32.0, 115.75, 'Canis?'],
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
+        client = self.custodian_1_client
+        url = reverse('api:record-list')
+        ordering = 'row'
+        resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        json_response = resp.json()
+        self.assertEquals(len(json_response), 11)
+
+        # row start at 2
+        sorted_rows = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+        record_rows = [record['source_info']['row'] for record in json_response]
+        self.assertEqual(record_rows, sorted_rows)
+
+        # check is request ordered by family in descending order is ordered by family in reverse alphabetical order
+        ordering = '-row'
+        resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        json_response = resp.json()
+        self.assertEquals(len(json_response), 11)
+
+        record_rows = [record['source_info']['row'] for record in json_response]
+        self.assertEqual(record_rows, list(reversed(sorted_rows)))
 
     # Because all fields are currently stored as string in the json field, we expect the next test to fail.
     # When the feature is implemented just remove the decorator below.
@@ -822,7 +867,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         url = reverse('api:record-list')
 
         ordering = 'How Many'
-        resp = client.get(url, {'ordering': ordering, "dataset__id": dataset.pk})
+        resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
         self.assertEquals(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
         self.assertEquals(len(records), 4)
