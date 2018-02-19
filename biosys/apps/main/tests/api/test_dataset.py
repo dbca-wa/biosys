@@ -287,39 +287,10 @@ class TestPermissions(TestCase):
         self.assertEquals(expected, choices)
 
 
-class TestDataPackageValidation(TestCase):
+class TestDataPackageValidation(helpers.BaseUserTestCase):
     """
     Test that when create/update the datapackage validation is called
     """
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-    ]
-
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
-    def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Site1").first()
-        self.ds_1 = Dataset.objects.filter(name="Bats1", project=self.project_1).first()
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
 
     def test_generic_create_happy_path(self):
         data_package = clone(GENERIC_DATA_PACKAGE)
@@ -396,10 +367,10 @@ class TestDataPackageValidation(TestCase):
         data package cannot be None
         :return:
         """
-        ds = self.ds_1
-        url = reverse('api:dataset-detail', kwargs={"pk": ds.pk})
         project = self.project_1
         client = self.custodian_1_client
+        ds = self._create_dataset_with_schema(project, client, helpers.GENERIC_SCHEMA)
+        url = reverse('api:dataset-detail', kwargs={"pk": ds.pk})
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_GENERIC,
@@ -437,10 +408,10 @@ class TestDataPackageValidation(TestCase):
         data package cannot be empty
         :return:
         """
-        ds = self.ds_1
-        url = reverse('api:dataset-detail', kwargs={"pk": ds.pk})
         project = self.project_1
         client = self.custodian_1_client
+        ds = self._create_dataset_with_schema(project, client, helpers.GENERIC_SCHEMA)
+        url = reverse('api:dataset-detail', kwargs={"pk": ds.pk})
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_GENERIC,
@@ -468,6 +439,50 @@ class TestDataPackageValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
+
+    def test_easting_northing_no_zone(self):
+        """
+        In the case of a Easting/Northing only schema the zone is mandatory if the project datum is not a projected one
+        (e.g: WSG84)
+        """
+        from main.constants import is_projected_srid
+
+        project = self.project_1
+        # project datum is not a Zone one
+        self.assertFalse(is_projected_srid(project.datum))
+
+        fields = [
+        {
+            "name": "Observation Date",
+            "type": "date",
+            "format": "any",
+            "constraints": {
+                "required": True,
+            }
+        },
+        {
+            "name": "Northing",
+            "type": "number",
+            "format": "default",
+            "constraints": {
+                "required": True,
+            },
+            "biosys": {
+                "type": "latitude"
+            }
+        },
+        {
+            "name": "Easting",
+            "type": "number",
+            "format": "default",
+            "constraints": {
+                "required": True,
+            },
+            "biosys": {
+                "type": "longitude"
+            }
+        }
+    ]
 
 
 class TestRecordsView(helpers.BaseUserTestCase):
