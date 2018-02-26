@@ -51,15 +51,18 @@ class DatasetSerializer(serializers.ModelSerializer):
 
     class DataPackageValidator:
         def __init__(self):
+            # the next variables are set in the set_context method.
             self.dataset_type = Dataset.TYPE_GENERIC
+            self.project = None
 
         def __call__(self, value):
-            Dataset.validate_data_package(value, self.dataset_type)
+            Dataset.validate_data_package(value, self.dataset_type, self.project)
 
         def set_context(self, serializer_field):
             if 'request' in serializer_field.parent.context:
                 data = serializer_field.parent.context['request'].data
                 self.dataset_type = data.get('type')
+                self.project = Project.objects.filter(pk=data.get('project')).first()
 
     data_package = serializers.JSONField(
         validators=[

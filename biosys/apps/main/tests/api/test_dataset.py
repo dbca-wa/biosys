@@ -449,40 +449,126 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
 
         project = self.project_1
         # project datum is not a Zone one
+        self.assertEquals(project.datum, 4326)
+        self.assertFalse(is_projected_srid(project.datum))
+
+        fields_no_zone = [
+            {
+                "name": "Observation Date",
+                "type": "date",
+                "format": "any",
+                "constraints": {
+                    "required": True,
+                }
+            },
+            {
+                "name": "Northing",
+                "type": "number",
+                "format": "default",
+                "constraints": {
+                    "required": True,
+                },
+            },
+            {
+                "name": "Easting",
+                "type": "number",
+                "format": "default",
+                "constraints": {
+                    "required": True,
+                },
+            }
+        ]
+        url = reverse('api:dataset-list')
+        client = self.custodian_1_client
+        data = {
+            "name": "New for Unit test",
+            "type": Dataset.TYPE_OBSERVATION,
+            "project": project.pk,
+            'data_package': helpers.create_data_package_from_fields(fields_no_zone)
+        }
+        resp = client.post(url, data, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        # check error message
+        resp_data = resp.json()
+        errors = resp_data.get('data_package')
+        self.assertEquals(len(errors), 1)
+        self.assertIn('Northing/easting coordinates require a zone', errors[0])
+
+        # change the project datum
+        project.datum = 28350  # 'GDA94 / MGA zone 50'
+        project.save()
+        resp = client.post(url, data, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+    def test_easting_northing_zone_not_required(self):
+        """
+        In the case of a Easting/Northing only schema the zone is mandatory if the project datum is not a projected one
+        (e.g: WSG84)
+        """
+        from main.constants import is_projected_srid
+
+        project = self.project_1
+        # project datum is not a Zone one
+        self.assertEquals(project.datum, 4326)
         self.assertFalse(is_projected_srid(project.datum))
 
         fields = [
-        {
-            "name": "Observation Date",
-            "type": "date",
-            "format": "any",
-            "constraints": {
-                "required": True,
-            }
-        },
-        {
-            "name": "Northing",
-            "type": "number",
-            "format": "default",
-            "constraints": {
-                "required": True,
+            {
+                "name": "Observation Date",
+                "type": "date",
+                "format": "any",
+                "constraints": {
+                    "required": True,
+                }
             },
-            "biosys": {
-                "type": "latitude"
-            }
-        },
-        {
-            "name": "Easting",
-            "type": "number",
-            "format": "default",
-            "constraints": {
-                "required": True,
+            {
+                "name": "Northing",
+                "type": "number",
+                "format": "default",
+                "constraints": {
+                    "required": True,
+                },
             },
-            "biosys": {
-                "type": "longitude"
+            {
+                "name": "Easting",
+                "type": "number",
+                "format": "default",
+                "constraints": {
+                    "required": True,
+                },
+            },
+            {
+                "name": "Zone",
+                "type": "number",
+                "format": "default",
             }
+        ]
+        url = reverse('api:dataset-list')
+        client = self.custodian_1_client
+        data = {
+            "name": "New for Unit test",
+            "type": Dataset.TYPE_OBSERVATION,
+            "project": project.pk,
+            'data_package': helpers.create_data_package_from_fields(fields)
         }
-    ]
+        resp = client.post(url, data, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        # check error message
+        resp_data = resp.json()
+        errors = resp_data.get('data_package')
+        self.assertEquals(len(errors), 1)
+        self.assertIn('Northing/easting coordinates require a zone', errors[0])
+
+        # add required constraints
+        fields[3]['constraints'] = {'required': True}
+        data = {
+            "name": "New for Unit test",
+            "type": Dataset.TYPE_OBSERVATION,
+            "project": project.pk,
+            'data_package': helpers.create_data_package_from_fields(fields)
+        }
+        resp = client.post(url, data, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
 
 class TestRecordsView(helpers.BaseUserTestCase):
@@ -640,7 +726,7 @@ class TestDatasetRecordsSearchAndOrdering(helpers.BaseUserTestCase):
         # The search should search on all the columns
         search = 'Canis'
         expected_number_of_records = 3  # 2 records with canis in the species and one in comments
-        resp = self.client.get(url + '?search='+search, format='json')
+        resp = self.client.get(url + '?search=' + search, format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
         self.assertEqual(len(resp.json()), expected_number_of_records)

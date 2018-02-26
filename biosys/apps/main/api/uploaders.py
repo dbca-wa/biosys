@@ -470,10 +470,14 @@ class DataPackageBuilder:
                     datum_field = self.get_fields_by_name(geo_parser.datum_field.name)[0]
                     self.set_type('string', datum_field)
                     self.set_biosys_type(datum_field, BiosysSchema.DATUM_TYPE_NAME)
+                    if not geo_parser.has_zone:
+                        self.set_required(datum_field)
                 if geo_parser.has_zone:
                     zone_field = self.get_fields_by_name(geo_parser.zone_field.name)[0]
                     self.set_type('integer', zone_field)
                     self.set_biosys_type(zone_field, BiosysSchema.ZONE_TYPE_NAME)
+                    if not geo_parser.has_datum:
+                        self.set_required(zone_field)
                 success = True
         except Exception as e:
             self.errors.append(str(e))
