@@ -176,8 +176,8 @@ class TestSchemaConstraints(TestCase):
         """
         None or empty is accepted
         """
-        self.assertEquals({}, SchemaConstraints(None).data)
-        self.assertEquals({}, SchemaConstraints({}).data)
+        self.assertEquals({}, SchemaConstraints(None).descriptor)
+        self.assertEquals({}, SchemaConstraints({}).descriptor)
 
     def test_required_property(self):
         # no constraints -> require = False
@@ -278,14 +278,44 @@ class TestSchemaFieldCast(TestCase):
     def setUp(self):
         self.base_field_descriptor = clone(BASE_FIELD)
 
-    def test_boolean(self):
-        true_values = [True, 'True', 'true', 'YES', 'yes', 'y', 't', '1', 1]
-        false_values = [False, 'FALSE', 'false', 'NO', 'no', 'n', 'f', '0', 0]
-        wrong_values = [2, 3, 'FLSE', 'flse', 'NON', 'oui', 'maybe', 'not sure']
+    def test_boolean_default_values(self):
+        """
+        Test possible values for a boolean
+        Since TableSchema V1.0 the default true values are [ "true", "True", "TRUE", "1" ]
+        We want to be sure that 'yes' and 'no' (and variations) are included by default.
+        """
+        true_values = ['True', 'true', 'True', 'YES', 'yes', 'y', 'Y', 'Yes']
+        false_values = ['FALSE', 'false', 'False', 'NO', 'no', 'n', 'N', 'No']
+        wrong_values = [2, 3, 'FLSE', 'flse', 'NON', 'oui', 'maybe', 'not sure', 't', '1', 1, '0', 0]
         descriptor = self.base_field_descriptor
         descriptor['type'] = 'boolean'
         # only 'default' format
         descriptor['format'] = 'default'
+        f = SchemaField(descriptor)
+        for v in true_values:
+            self.assertTrue(f.cast(v))
+        for v in false_values:
+            self.assertFalse(f.cast(v))
+        for v in wrong_values:
+            with self.assertRaises(Exception):
+                f.cast(v)
+
+    def test_boolean_custom_values(self):
+        """
+        The schema specifications allows to override the true and false values with 'trueValues' and 'falseValues'
+        (see https://frictionlessdata.io/specs/table-schema/)
+        We want only 'yes' and 'no'
+        """
+        true_values = ['YES', 'yes', 'Yes']
+        false_values = ['NO', 'no', 'No']
+        wrong_values = ['true', 'false', 'True', 'False', 'y', 'n', 'Y', 'N', 't', '1', 1, '0', 0]
+        descriptor = self.base_field_descriptor
+        descriptor['type'] = 'boolean'
+        # only 'default' format
+        descriptor['format'] = 'default'
+        descriptor['trueValues'] = true_values
+        descriptor['falseValues'] = false_values
+
         f = SchemaField(descriptor)
         for v in true_values:
             self.assertTrue(f.cast(v))
@@ -335,7 +365,7 @@ class TestSchemaFieldCast(TestCase):
                 f.cast(v)
 
     def test_date_custom_format(self):
-        format_ = 'fmt:%d %b %y'  # ex 30 Nov 14
+        format_ = '%d %b %y'  # ex 30 Nov 14
         descriptor = {
             'name': 'Date with fmt',
             'type': 'date',
@@ -345,7 +375,7 @@ class TestSchemaFieldCast(TestCase):
         value = '30 Nov 14'
         self.assertEqual(field.cast(value), datetime.date(2014, 11, 30))
 
-        format_ = 'fmt:%Y_%m_%d'
+        format_ = '%Y_%m_%d'
         descriptor = {
             'name': 'Date with fmt',
             'type': 'date',
@@ -356,8 +386,8 @@ class TestSchemaFieldCast(TestCase):
         self.assertEqual(field.cast(value), datetime.date(2012, 3, 5))
 
     def test_string(self):
-        # test that a blank string '' is not accepted when the field is required
-        null_values = ['null', 'none', 'nil', 'nan', '-', '']
+        # test that a blank string '' or '  ' is not accepted when the field is required
+        null_values = ['', '   ']
         desc = clone(BASE_FIELD)
         desc['type'] = 'string'
         desc['constraints'] = clone(REQUIRED_CONSTRAINTS)
@@ -376,389 +406,6 @@ class TestGenericSchemaValidation(TestCase):
     def setUp(self):
         self.descriptor = clone(GENERIC_SCHEMA)
         self.sch = GenericSchema(self.descriptor)
-
-
-class TestObservationDateParser(TestCase):
-    def setUp(self):
-        self.descriptor = clone(GENERIC_SCHEMA)
-
-    def test_no_date_field(self):
-        """
-        A schema without date should not be an error, just no date field
-        """
-        descriptor = self.descriptor
-        parser = ObservationDateParser(descriptor)
-        self.assertTrue(parser.is_valid())
-        self.assertTrue(len(parser.errors) == 0)
-        self.assertIsNone(parser.observation_date_field)
-        # casting anything should return none
-        for dt in ['20/12/2017', None, 'kdjhj', '']:
-            self.assertIsNone(parser.cast_date({
-                'Date': dt,
-                'Another Column': dt
-            }))
-
-    def test_one_date_field_with_required(self):
-        """
-        One single field of type date should be pick-up as the observation date
-        """
-        descriptor = self.descriptor
-        descriptor['fields'].append(
-            {
-                "name": "Date Field",
-                "type": "date",
-                "format": "any",
-                "constraints": REQUIRED_CONSTRAINTS
-            }
-        )
-        parser = ObservationDateParser(descriptor)
-        self.assertTrue(parser.is_valid())
-        self.assertTrue(len(parser.errors) == 0)
-        self.assertIsNotNone(parser.observation_date_field)
-        self.assertEqual(parser.observation_date_field.name, 'Date Field')
-        # try casting dates
-        expected_date = datetime.date(2017, 6, 1)
-        for dt in ['01/06/2017', '2017-06-01']:
-            self.assertEqual(parser.cast_date({
-                'Date Field': dt,
-            }), expected_date)
-        for dt in ['', None]:
-            self.assertIsNone(parser.cast_date({
-                'Date Field': dt,
-            }))
-        for dt in ['blah blah']:
-            with self.assertRaises(InvalidDateType):
-                parser.cast_date({
-                    'Date Field': dt
-                })
-
-    def test_one_date_field_without_required(self):
-        """
-        The require constraint is not mandatory
-        """
-        descriptor = self.descriptor
-        descriptor['fields'].append(
-            {
-                "name": "Expected Date Field",
-                "type": "date",
-                "format": "any",
-                "constraints": NOT_REQUIRED_CONSTRAINTS
-            }
-        )
-        parser = ObservationDateParser(descriptor)
-        self.assertTrue(parser.is_valid())
-        self.assertTrue(len(parser.errors) == 0)
-        self.assertIsNotNone(parser.observation_date_field)
-        self.assertEqual(parser.observation_date_field.name, 'Expected Date Field')
-        # try casting dates
-        expected_date = datetime.date(2017, 6, 1)
-        for dt in ['01/06/2017', '2017-06-01']:
-            self.assertEqual(parser.cast_date({
-                'Expected Date Field': dt,
-                'Another Date Field': '12/12/2017'
-            }), expected_date)
-        for dt in ['', None]:
-            self.assertIsNone(parser.cast_date({
-                'Expected Date Field': dt,
-            }))
-        for dt in ['blah blah']:
-            with self.assertRaises(InvalidDateType):
-                parser.cast_date({
-                    'Expected Date Field': dt
-                })
-
-    def test_two_date_fields(self):
-        """
-        Two date field without more information is like no observation date
-        :return:
-        """
-        descriptor = self.descriptor
-        descriptor['fields'].append(
-            {
-                "name": "Date Field #1",
-                "type": "date",
-                "format": "any",
-                "constraints": REQUIRED_CONSTRAINTS
-            }
-        )
-        descriptor['fields'].append(
-            {
-                "name": "Date Field #2",
-                "type": "date",
-                "format": "any",
-                "constraints": REQUIRED_CONSTRAINTS
-            }
-        )
-        descriptor = self.descriptor
-        parser = ObservationDateParser(descriptor)
-        self.assertTrue(parser.is_valid())
-        self.assertTrue(len(parser.errors) == 0)
-        self.assertIsNone(parser.observation_date_field)
-        # casting anything should return none
-        for dt in ['20/12/2017', None, 'kdjhj', '']:
-            self.assertIsNone(parser.cast_date({
-                'Date': dt,
-                'Another Column': dt
-            }))
-
-    def test_two_date_fields_one_with_biosys_type(self):
-        """
-        Test that if we provide two date field but one is tagged as an observationDate,
-        it is the tagged one that is picked-up
-        """
-        descriptor = self.descriptor
-        descriptor['fields'].append(
-            {
-                "name": "Date Field #1",
-                "type": "date",
-                "format": "any",
-                "constraints": REQUIRED_CONSTRAINTS
-            }
-        )
-        descriptor['fields'].append(
-            {
-                "name": "Biosys Observation Date",
-                "type": "date",
-                "format": "any",
-                "constraints": REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": "observationDate"
-                }
-            }
-        )
-        parser = ObservationDateParser(descriptor)
-        self.assertTrue(parser.is_valid())
-        self.assertTrue(len(parser.errors) == 0)
-        self.assertIsNotNone(parser.observation_date_field)
-        self.assertEqual(parser.observation_date_field.name, 'Biosys Observation Date')
-        # try casting dates
-        expected_date = datetime.date(2017, 6, 1)
-        for dt in ['01/06/2017', '2017-06-01']:
-            self.assertEqual(parser.cast_date({
-                'Biosys Observation Date': dt,
-                'Date Field #1': '12/12/2017'
-            }), expected_date)
-        for dt in ['', None]:
-            self.assertIsNone(parser.cast_date({
-                'Biosys Observation Date': dt,
-                'Date Field #1': '12/12/2017',
-            }))
-        for dt in ['blah blah']:
-            with self.assertRaises(InvalidDateType):
-                parser.cast_date({
-                    'Biosys Observation Date': dt
-                })
-
-    def test_two_date_fields_one_with_biosys_type_not_required(self):
-        """
-        Same as above
-        The required constraint is not mandatory even for a tagged field
-        """
-        descriptor = self.descriptor
-        descriptor['fields'].append(
-            {
-                "name": "Date Field #1",
-                "type": "date",
-                "format": "any",
-                "constraints": REQUIRED_CONSTRAINTS
-            }
-        )
-        descriptor['fields'].append(
-            {
-                "name": "Biosys Observation Date",
-                "type": "date",
-                "format": "any",
-                "constraints": NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": "observationDate"
-                }
-            }
-        )
-        parser = ObservationDateParser(descriptor)
-        self.assertTrue(parser.is_valid())
-        self.assertTrue(len(parser.errors) == 0)
-        self.assertIsNotNone(parser.observation_date_field)
-        self.assertEqual(parser.observation_date_field.name, 'Biosys Observation Date')
-        # try casting dates
-        expected_date = datetime.date(2017, 6, 1)
-        for dt in ['01/06/2017', '2017-06-01']:
-            self.assertEqual(parser.cast_date({
-                'Biosys Observation Date': dt,
-                'Date Field #1': '12/12/2017'
-            }), expected_date)
-        for dt in ['', None]:
-            self.assertIsNone(parser.cast_date({
-                'Biosys Observation Date': dt,
-                'Date Field #1': '12/12/2017',
-            }))
-        for dt in ['blah blah']:
-            with self.assertRaises(InvalidDateType):
-                parser.cast_date({
-                    'Biosys Observation Date': dt
-                })
-
-    def test_two_biosys_observation_date(self):
-        """
-        Two fields tagged as observationDate should result in an error and no date field
-        """
-        descriptor = self.descriptor
-        descriptor['fields'].append(
-            {
-                "name": "Date Field #1",
-                "type": "date",
-                "format": "any",
-                "constraints": REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": "observationDate"
-                }
-            }
-        )
-        descriptor['fields'].append(
-            {
-                "name": "Date field2",
-                "type": "date",
-                "format": "any",
-                "constraints": REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": "observationDate"
-                }
-            }
-        )
-        parser = ObservationDateParser(descriptor)
-        self.assertFalse(parser.is_valid())
-        self.assertTrue(len(parser.errors) == 1)
-        expected_message = "More than one Biosys type observationDate field found: ['Date Field #1', 'Date field2']"
-        self.assertEqual(parser.errors[0], expected_message)
-        self.assertIsNone(parser.observation_date_field)
-        # the cast should return none even if we pass date
-        for dt in ['01/06/2017', '2017-06-01', '', None, 'Blah Blah']:
-            self.assertIsNone(parser.cast_date({
-                'Date Field #1': dt,
-                'Date Field #2': '12/12/2017'
-            }))
-
-    def test_two_date_one_with_correct_name(self):
-        # happy path: two dates but one correctly named 'Observation Date'
-        descriptor = self.descriptor
-        descriptor['fields'].append(
-            {
-                "name": ObservationSchema.OBSERVATION_DATE_FIELD_NAME,
-                "type": "date",
-                "format": "any",
-            }
-        )
-        descriptor['fields'].append(
-            {
-                "name": "Date field2",
-                "type": "date",
-                "format": "any",
-            }
-        )
-        parser = ObservationDateParser(descriptor)
-        self.assertTrue(parser.is_valid())
-        self.assertTrue(len(parser.errors) == 0)
-        self.assertIsNotNone(parser.observation_date_field)
-        self.assertEqual(parser.observation_date_field.name, ObservationSchema.OBSERVATION_DATE_FIELD_NAME)
-        # try casting dates
-        expected_date = datetime.date(2017, 6, 1)
-        for dt in ['01/06/2017', '2017-06-01']:
-            self.assertEqual(parser.cast_date({
-                ObservationSchema.OBSERVATION_DATE_FIELD_NAME: dt,
-                'Date Field #1': '12/12/2017'
-            }), expected_date)
-        for dt in ['', None]:
-            self.assertIsNone(parser.cast_date({
-                ObservationSchema.OBSERVATION_DATE_FIELD_NAME: dt,
-                'Date Field #1': '12/12/2017',
-            }))
-        for dt in ['blah blah']:
-            with self.assertRaises(InvalidDateType):
-                parser.cast_date({
-                    ObservationSchema.OBSERVATION_DATE_FIELD_NAME: dt
-                })
-
-    def test_two_date_with_correct_name(self):
-        """
-        Sad path: two column named ObservationSchema.OBSERVATION_DATE_FIELD_NAME.
-        Should result with a parser error and the date casting returning None
-        """
-        descriptor = self.descriptor
-        descriptor['fields'].append(
-            {
-                "name": ObservationSchema.OBSERVATION_DATE_FIELD_NAME,
-                "type": "date",
-                "format": "any",
-                "constraints": REQUIRED_CONSTRAINTS,
-            }
-        )
-        descriptor['fields'].append(
-            {
-                "name": ObservationSchema.OBSERVATION_DATE_FIELD_NAME,
-                "type": "date",
-                "format": "any",
-                "constraints": REQUIRED_CONSTRAINTS,
-            }
-        )
-        parser = ObservationDateParser(descriptor)
-        self.assertFalse(parser.is_valid())
-        self.assertTrue(len(parser.errors) == 1)
-        expected_message = "More than one field named Observation Date found."
-        self.assertEqual(parser.errors[0], expected_message)
-        self.assertIsNone(parser.observation_date_field)
-        # the cast should return none even if we pass date
-        for dt in ['01/06/2017', '2017-06-01', '', None, 'Blah Blah']:
-            self.assertIsNone(parser.cast_date({
-                ObservationSchema.OBSERVATION_DATE_FIELD_NAME: dt,
-            }))
-
-    def test_two_date_one_biosys_one_correct_name(self):
-        """
-        Two date fields one named 'Observation Date' the other tagged as biosys observationDate.
-        Test that the Biosys field has precedence
-        :return:
-        """
-        descriptor = self.descriptor
-        descriptor['fields'].append(
-            {
-                "name": ObservationSchema.OBSERVATION_DATE_FIELD_NAME,
-                "type": "date",
-                "format": "any",
-                "constraints": REQUIRED_CONSTRAINTS,
-            }
-        )
-        descriptor['fields'].append(
-            {
-                "name": "The expected date",
-                "type": "date",
-                "format": "any",
-                "constraints": REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": "observationDate"
-                }
-            }
-        )
-        parser = ObservationDateParser(descriptor)
-        self.assertTrue(parser.is_valid())
-        self.assertTrue(len(parser.errors) == 0)
-        self.assertIsNotNone(parser.observation_date_field)
-        self.assertEqual(parser.observation_date_field.name, "The expected date")
-        # try casting dates
-        expected_date = datetime.date(2017, 6, 1)
-        for dt in ['01/06/2017', '2017-06-01']:
-            self.assertEqual(parser.cast_date({
-                "The expected date": dt,
-                ObservationSchema.OBSERVATION_DATE_FIELD_NAME: '12/12/2017'
-            }), expected_date)
-        for dt in ['', None]:
-            self.assertIsNone(parser.cast_date({
-                "The expected date": dt,
-                ObservationSchema.OBSERVATION_DATE_FIELD_NAME: '12/12/2017',
-            }))
-        for dt in ['blah blah']:
-            with self.assertRaises(InvalidDateType):
-                parser.cast_date({
-                    "The expected date": dt
-                })
 
 
 class TestObservationSchemaCast(TestCase):
@@ -953,192 +600,6 @@ class TestObservationSchemaCast(TestCase):
         record.refresh_from_db()
         self.assertEqual(MODEL_SRID, record.geometry.get_srid())
         self.assertEqual((116, -31), (int(record.geometry.x), int(record.geometry.y)))
-
-
-class TestSpeciesObservationSchema(TestCase):
-    def test_happy_path_column_name(self):
-        """
-        Happy path: One field named Species Name and required
-        :return:
-        """
-        field_desc = {
-            "name": "Species Name",
-            "type": "string",
-            "constraints": {
-                'required': True
-            }
-        }
-        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
-        descriptor['fields'].append(field_desc)
-        try:
-            field = SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
-            self.assertEqual(field.name, field_desc['name'])
-        except Exception as e:
-            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
-
-    def test_happy_path_biosys_type(self):
-        """
-        Happy path: columns not name Species Name but tagged as biosys type = longitude
-        :return:
-        """
-        field_desc = {
-            "name": "Species",
-            "type": "string",
-            "constraints": {
-                'required': True
-            }
-        }
-        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
-        descriptor['fields'].append(field_desc)
-        # as it is it should throw an exception
-        with self.assertRaises(SpeciesObservationSchemaError):
-            SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
-
-        # add biosys type
-        field_desc['biosys'] = {
-            'type': 'speciesName'
-        }
-        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
-        descriptor['fields'].append(field_desc)
-        try:
-            field = SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
-            self.assertEqual(field.name, field_desc['name'])
-        except Exception as e:
-            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
-
-    def test_must_be_required1(self):
-        """
-        The Species Name field must be set as required
-        """
-        field_desc = {
-            "name": "Species Name",
-            "type": "string",
-            "constraints": {
-                'required': True
-            }
-        }
-        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
-        descriptor['fields'].append(field_desc)
-
-        try:
-            self.assertEqual(SpeciesObservationSchema.find_species_name_field_or_throws(descriptor).name,
-                             field_desc['name'])
-        except Exception as e:
-            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
-
-        # set the required to False
-        field_desc['constraints']['required'] = False
-        with self.assertRaises(SpeciesObservationSchemaError):
-            SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
-
-    def test_must_be_required2(self):
-        """
-        The biosys speciesName field must be set as required
-        """
-        field_desc = {
-            "name": "Species",
-            "type": "string",
-            "constraints": {
-                'required': True
-            },
-            "biosys": {
-                "type": "speciesName"
-            }
-        }
-        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
-        descriptor['fields'].append(field_desc)
-        try:
-            self.assertEqual(SpeciesObservationSchema.find_species_name_field_or_throws(descriptor).name,
-                             field_desc['name'])
-        except Exception as e:
-            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
-
-        # set the required to False
-        field_desc['constraints']['required'] = False
-        with self.assertRaises(SpeciesObservationSchemaError):
-            SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
-
-    def test_biosys_type_has_precedence(self):
-        """
-        Two fields one name 'Species Name' and another one tagged as biosys type speciesName
-        The biosys one is chosen
-        :return:
-        """
-        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
-        descriptor['fields'].append({
-            "name": "The Real Species Name",
-            "type": "string",
-            "constraints": {
-                'required': True
-            },
-            "biosys": {
-                "type": "speciesName"
-            }
-        })
-        descriptor['fields'].append({
-            "name": "Species Name",
-            "type": "string",
-            "constraints": {
-                'required': True
-            },
-        })
-        try:
-            field = SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
-            self.assertEqual(field.name, "The Real Species Name")
-        except Exception as e:
-            self.fail("Should not raise an exception!: {}: '{}'".format(e.__class__, e))
-
-    def test_two_biosys_type_throws(self):
-        """
-        Two fields tagged as biosys type speciesName should throw
-        :return:
-        """
-        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
-        descriptor['fields'].append({
-            "name": "The Real Species Name",
-            "type": "string",
-            "constraints": {
-                'required': True
-            },
-            "biosys": {
-                "type": "speciesName"
-            }
-        })
-        descriptor['fields'].append({
-            "name": "Species Name",
-            "type": "string",
-            "constraints": {
-                'required': True
-            },
-            "biosys": {
-                "type": "speciesName"
-            }
-        })
-        with self.assertRaises(SpeciesObservationSchemaError):
-            SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
-
-    def test_two_species_name_column_throws(self):
-        """
-        Two fields named Species Name (no biosys) should throw
-        :return:
-        """
-        descriptor = clone(LAT_LONG_OBSERVATION_SCHEMA)
-        descriptor['fields'].append({
-            "name": "Species Name",
-            "type": "string",
-            "constraints": {
-                'required': True
-            },
-        })
-        descriptor['fields'].append({
-            "name": "Species Name",
-            "type": "string",
-            "constraints": {
-                'required': True
-            },
-        })
-        with self.assertRaises(SpeciesObservationSchemaError):
-            SpeciesObservationSchema.find_species_name_field_or_throws(descriptor)
 
 
 class TestSpeciesObservationSchemaCast(TestCase):

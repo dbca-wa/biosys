@@ -3,8 +3,10 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 import logging
 from os import path
 
-import datapackage
-import jsontableschema
+from datapackage import validate as datapackage_validate
+from datapackage import exceptions as datapackage_exceptions
+from tableschema import validate as tableschema_validate
+from tableschema import exceptions as tableschema_exceptions
 from django.conf import settings
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import JSONField
@@ -214,13 +216,12 @@ class Dataset(models.Model):
     project = models.ForeignKey('Project', null=False, blank=False, related_name='projects',
                                 related_query_name='project')
     name = models.CharField(max_length=200, null=False, blank=False)
+    code = models.CharField(max_length=50, blank=True)
     type = models.CharField(max_length=100, null=False, blank=False, choices=TYPE_CHOICES, default=TYPE_GENERIC)
     #  data_package should follow the Tabular Data Package format described at:
-    #  http://data.okfn.org/doc/tabular-data-package
-    #  also in:
-    #  http://dataprotocols.org/data-packages/
+    #  https://frictionlessdata.io/specs/data-package/
     #  The schema inside the 'resources' must follow the JSON Table Schema defined at:
-    #  http://dataprotocols.org/json-table-schema/
+    #  https://frictionlessdata.io/specs/table-schema/
     # IMPORTANT! The data_package should contain only one resources
     data_package = JSONField()
     description = models.TextField(null=True, blank=True,
@@ -272,19 +273,19 @@ class Dataset(models.Model):
         return self.data_package.get('resources', [])
 
     @staticmethod
-    def validate_data_package(data_package, dataset_type):
+    def validate_data_package(data_package, dataset_type, project=None):
         """
         Will throw a validation error if any problem
         :param data_package:
         :param dataset_type:
+        :param project:
         :return:
         """
-        validator = datapackage.DataPackage(data_package)
         try:
-            validator.validate()
-        except Exception:
+            datapackage_validate(data_package)
+        except datapackage_exceptions.ValidationError as exception:
             raise ValidationError('Data package errors:<br>{}'.format(
-                "<br>".join([e.message for e in validator.iter_errors()])
+                "<br>".join([str(e) for e in exception.errors])
             ))
         # Check that there is at least one resources defined (not required by the standard)
         resources = data_package.get('resources', [])
@@ -300,22 +301,22 @@ class Dataset(models.Model):
             schema = resource.get('schema', {})
             try:
                 # use frictionless validator
-                jsontableschema.validate(schema)
-            except Exception:
+                tableschema_validate(schema)
+            except tableschema_exceptions.ValidationError as exception:
                 raise ValidationError(
                     'Schema errors for resource "{}":<br>{}'.format(
                         resource.get('name'),
-                        "<br>".join([e.message for e in jsontableschema.validator.iter_errors(schema)])
+                        "<br>".join([str(e) for e in exception.errors])
                     ))
             try:
                 # use our own schema class to validate.
                 # The constructor should raise an exception if error
                 if dataset_type == Dataset.TYPE_SPECIES_OBSERVATION:
-                    SpeciesObservationSchema(schema)
+                    SpeciesObservationSchema(schema, project)
                 elif dataset_type == Dataset.TYPE_OBSERVATION:
-                    ObservationSchema(schema)
+                    ObservationSchema(schema, project)
                 else:
-                    GenericSchema(schema)
+                    GenericSchema(schema, project)
             except Exception as e:
                 raise ValidationError(
                     'Schema errors for resource "{}": {}'.format(

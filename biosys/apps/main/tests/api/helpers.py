@@ -27,17 +27,25 @@ if 'rest_framework.authentication.SessionAuthentication' \
         .append('rest_framework.authentication.SessionAuthentication')
 
 
-def to_xlsx_file(rows):
-    h, f = tempfile.mkstemp(suffix='.xlsx')
+def rows_to_workbook(rows, sheet_title=None):
     wb = Workbook(write_only=True)
-    ws = wb.create_sheet()
+    ws = wb.create_sheet(title=sheet_title)
     for row in rows:
         ws.append(row)
+    return wb
+
+
+def workbook_to_xlsx_file(wb):
+    h, f = tempfile.mkstemp(suffix='.xlsx')
     wb.save(f)
     return f
 
 
-def to_csv_file(rows):
+def rows_to_xlsx_file(rows):
+    return workbook_to_xlsx_file(rows_to_workbook(rows))
+
+
+def rows_to_csv_file(rows):
     h, f = tempfile.mkstemp(text=True, suffix='.csv')
     with open(f, 'wt') as csvfile:
         writer = csv.writer(csvfile)
@@ -46,19 +54,41 @@ def to_csv_file(rows):
     return f
 
 
+class LightSpeciesFacade(SpeciesFacade):
+    def name_id_by_species_name(self):
+        """
+        :return: a dict where key is species_name and the value is name_id
+        """
+        return SOME_SPECIES_NAME_NAME_ID_MAP
+
+    def get_all_species(self, properties=None):
+        """
+        :param properties: a sequence of Property, e.g [PROPERTY_SPECIES_NAME, PROPERTY_NAME_ID] or None for all
+        attributes
+        :return: Return a list of species properties (see structure above) but with only the specified attributes.
+        NOTE: limiting the number of properties speed-up the request.
+        """
+        return []
+
+
 class BaseUserTestCase(TestCase):
     """
     A test case that provides some users and authenticated clients.
+    This class also set the species facade to be the test one (not real herbie).
     Also provide some high level API utility function
     """
     fixtures = [
         'test-users',
         'test-projects'
     ]
+    species_facade_class = LightSpeciesFacade
 
     @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
                        REST_FRAMEWORK_TEST_SETTINGS=REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
+        from main.api.views import SpeciesMixin
+        SpeciesMixin.species_facade_class = self.species_facade_class
+
         password = 'password'
         user_model = get_user_model()
         self.admin_user = user_model.objects.filter(username="admin").first()
@@ -127,22 +157,63 @@ class BaseUserTestCase(TestCase):
         self.assertIsNotNone(record)
         return record
 
+    def _create_dataset_from_rows(self, rows):
+        """
+        Use the infer end-point and create the dataset
+        :param rows: list of lists e.g: [['What', 'When'], ['A bird', '2018-01-24'],...]
+        :return: the dataset object
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        infer_url = reverse('api:infer-dataset')
+        file_ = rows_to_xlsx_file(rows)
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp,
+            }
+            resp = client.post(infer_url, data=payload, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            # create the dataset. We should have to just add the project id from the returned data
+            payload = resp.json()
+            payload['project'] = project.pk
+            resp = client.post(
+                reverse('api:dataset-list'),
+                data=payload,
+                format='json')
+            self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+            dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
+            self.assertIsNotNone(dataset)
+            return dataset
 
-class LightSpeciesFacade(SpeciesFacade):
-    def name_id_by_species_name(self):
+    def _upload_records_from_rows(self, rows, dataset_pk, strict=True):
         """
-        :return: a dict where key is species_name and the value is name_id
+        Use the the upload end-point
+        :param rows same format as _create_dataset_from_rows
+        :param dataset_pk:
+        :return: the response
         """
-        return SOME_SPECIES_NAME_NAME_ID_MAP
+        file_ = rows_to_xlsx_file(rows)
+        client = self.custodian_1_client
+        with open(file_, 'rb') as fp:
+            url = reverse('api:dataset-upload', kwargs={'pk': dataset_pk})
+            payload = {
+                'file': fp,
+            }
+            if strict:
+                payload['strict'] = True
+            resp = client.post(url, data=payload, format='multipart')
+            return resp
 
-    def get_all_species(self, properties=None):
+    def _create_dataset_and_records_from_rows(self, rows):
         """
-        :param properties: a sequence of Property, e.g [PROPERTY_SPECIES_NAME, PROPERTY_NAME_ID] or None for all
-        attributes
-        :return: Return a list of species properties (see structure above) but with only the specified attributes.
-        NOTE: limiting the number of properties speed-up the request.
+        Combine _create_dataset_from_rows and _create_records_from_rows
+        :param rows: see _create_dataset_from_rows
+        :return: the dataset object
         """
-        return []
+        dataset = self._create_dataset_from_rows(rows)
+        resp = self._upload_records_from_rows(rows, dataset.pk)
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        return dataset
 
 
 def set_site(record_data, dataset, site):
@@ -306,3 +377,6 @@ def add_foreign_key_to_schema(schema, options):
 def set_strict_mode(url):
     return url + '?strict'
 
+
+def url_post_record_strict():
+    return set_strict_mode(reverse('api:record-list'))

@@ -52,14 +52,20 @@
                   "type": "string",
                   "description": "",
                   "name": "Genus",
-                  "title": ""
+                  "title": "",
+                  "constraints": {
+                    "required": true
+                  }
                 },
                 {
                   "format": "default",
                   "type": "string",
                   "description": "",
                   "name": "Species",
-                  "title": ""
+                  "title": "",
+                  "constraints": {
+                    "required": true
+                  }
                 },
                 {
                   "biosys": {
@@ -184,7 +190,7 @@
               ]
             },
             "name": "ki-bats",
-            "url": ""
+            "path": ""
           }
         ],
         "name": "ki"
@@ -376,7 +382,7 @@
               ]
             },
             "name": "ki-bats",
-            "url": ""
+            "path": ""
           }
         ],
         "name": "ki"
@@ -568,7 +574,7 @@
               ]
             },
             "name": "ki-bats",
-            "url": ""
+            "path": ""
           }
         ],
         "name": "generic1"
@@ -760,7 +766,7 @@
               ]
             },
             "name": "ki-bats",
-            "url": ""
+            "path": ""
           }
         ],
         "name": "generic2"
@@ -952,7 +958,7 @@
               ]
             },
             "name": "ki-bats",
-            "url": ""
+            "path": ""
           }
         ],
         "name": "observation1"
@@ -1144,7 +1150,7 @@
               ]
             },
             "name": "ki-bats",
-            "url": ""
+            "path": ""
           }
         ],
         "name": "observation2"

@@ -1,15 +1,9 @@
 import json
-import re
-from os import path
-
-from openpyxl import load_workbook
 
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
-from django.utils import six
-
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -362,7 +356,7 @@ class TestSiteUpload(TestCase):
                     [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
                 )
 
-        csv_file = helpers.to_csv_file([
+        csv_file = helpers.rows_to_csv_file([
             ['Site Code'],
             ['C1']
         ])
@@ -380,7 +374,7 @@ class TestSiteUpload(TestCase):
             ['C1', 'Site 1', 'Description1', -32, 116, '', 'attr11', 'attr12'],
             ['C2', 'Site 2', 'Description2', -31, 117, '', 'attr21', 'attr22']
         ]
-        csv_file = helpers.to_csv_file(csv_data)
+        csv_file = helpers.rows_to_csv_file(csv_data)
         project = self.project_1
         client = self.custodian_1_client
         url = reverse('api:upload-sites', kwargs={'pk': project.pk})
@@ -417,7 +411,7 @@ class TestSiteUpload(TestCase):
             ['C1', 'Site 1', 'Description1', -32, 116, '', 'attr11', 'attr12'],
             ['C2', 'Site 2', 'Description2', -31, 117, '', 'attr21', 'attr22']
         ]
-        xlsx_file = helpers.to_xlsx_file(csv_data)
+        xlsx_file = helpers.rows_to_xlsx_file(csv_data)
         project = self.project_1
         client = self.custodian_1_client
         url = reverse('api:upload-sites', kwargs={'pk': project.pk})
@@ -453,7 +447,7 @@ class TestSiteUpload(TestCase):
             ['Code', 'Name', 'Description', 'Easting', 'Northing', 'Datum', 'Zone', 'Attribute1', 'Attribute2'],
             ['C1', 'Site 1', 'Description1', '405542.537', '6459127.469', 'GDA94', '50', 'attr11', 'attr12'],
         ]
-        xlsx_file = helpers.to_xlsx_file(csv_data)
+        xlsx_file = helpers.rows_to_xlsx_file(csv_data)
         project = self.project_1
         client = self.custodian_1_client
         url = reverse('api:upload-sites', kwargs={'pk': project.pk})
@@ -483,6 +477,30 @@ class TestSiteUpload(TestCase):
                 'Attribute2': 'attr12'}
 
             self.assertEquals(expected_attributes, site.attributes)
+
+    def test_site_code_column_name(self):
+        """
+        Test that a column named 'site_code' can be used to extract the site code
+        """
+        csv_data = [
+            ['site_code', 'Site Name', 'Description', 'Latitude', 'Longitude', 'Datum', 'Attribute1', 'Attribute2'],
+            ['C1', 'Site 1', 'Description1', -32, 116, '', 'attr11', 'attr12'],
+            ['C2', 'Site 2', 'Description2', -31, 117, '', 'attr21', 'attr22']
+        ]
+        csv_file = helpers.rows_to_csv_file(csv_data)
+        project = self.project_1
+        client = self.custodian_1_client
+        url = reverse('api:upload-sites', kwargs={'pk': project.pk})
+        self.assertEquals(0, Site.objects.filter(project=project).count())
+        with open(csv_file) as fp:
+            data = {
+                'file': fp
+            }
+            resp = client.post(url, data=data, format='multipart')
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            qs = Site.objects.filter(project=project)
+            self.assertEquals(len(csv_data) - 1, qs.count())
+            self.assertEquals(['C1', 'C2'], [s.code for s in qs.order_by('code')])
 
 
 class TestSerialization(helpers.BaseUserTestCase):

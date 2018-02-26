@@ -529,6 +529,9 @@ class TestProjectSiteBulk(TestCase):
         self.assertEqual(sdb_2.attributes, site_2['attributes'])
 
     def test_bulk_delete_happy_path(self):
+        """
+        Test the delete with an array of ids in the payload
+        """
         project = self.project_1
         client = self.custodian_1_client
         url = reverse('api:project-sites', kwargs={'pk': project.pk})
@@ -541,6 +544,23 @@ class TestProjectSiteBulk(TestCase):
         self.assertEqual(sites.count(), len(all_sites_ids) - len(to_delete))
         for pk in to_delete:
             self.assertIsNone(Site.objects.filter(pk=pk).first())
+
+    def test_delete_all(self):
+        """
+        Test that is the request payload as 'all' all the sites for the project are deleted
+        """
+        project = self.project_1
+        client = self.custodian_1_client
+        url = reverse('api:project-sites', kwargs={'pk': project.pk})
+        self.assertTrue(Site.objects.filter(project=project).count() > 0)
+        # test that we will not delete sites from project 2
+        previous_project2_sites_count = Site.objects.filter(project=self.project_2).count()
+        self.assertTrue(previous_project2_sites_count > 0)
+        payload = 'all'
+        resp = client.delete(url, payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEquals(Site.objects.filter(project=project).count(), 0)
+        self.assertEquals(Site.objects.filter(project=self.project_2).count(), previous_project2_sites_count)
 
 
 class TestProjectCustodians(TestCase):

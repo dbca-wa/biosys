@@ -1553,7 +1553,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             ['what_1', '01/01/2017', site_1_code],
             ['what_2', '02/02/2017', site_2_code]
         ]
-        file_ = helpers.to_xlsx_file(csv_data)
+        file_ = helpers.rows_to_xlsx_file(csv_data)
         self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
         url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
         with open(file_, 'rb') as fp:
@@ -1595,7 +1595,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             ['what_1', '01/01/2017', site_1_code],
             ['what_2', '02/02/2017', site_2_code]
         ]
-        file_ = helpers.to_xlsx_file(csv_data)
+        file_ = helpers.rows_to_xlsx_file(csv_data)
         self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
         url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
         with open(file_, 'rb') as fp:
@@ -1638,7 +1638,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             ['what_1', '01/01/2017', site_1_code],
             ['what_2', '02/02/2017', site_2_code]
         ]
-        file_ = helpers.to_xlsx_file(csv_data)
+        file_ = helpers.rows_to_xlsx_file(csv_data)
         self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
         url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
         with open(file_, 'rb') as fp:
