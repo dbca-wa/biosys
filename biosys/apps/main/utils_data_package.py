@@ -429,12 +429,13 @@ class GenericSchema(object):
     Will throw an exception if the schema is not valid
     """
 
-    def __init__(self, descriptor):
+    def __init__(self, descriptor, project=None):
         self.descriptor = descriptor
         self.schema_model = TableSchema(descriptor, strict=True)
         self.fields = [SchemaField(f.descriptor) for f in self.schema_model.fields]
         self.foreign_keys = [SchemaForeignKey(fk) for fk in
                              self.schema_model.foreign_keys] if self.schema_model.foreign_keys else []
+        self.project = project
 
     # implement some dict like methods
     def __getitem__(self, item):
@@ -569,8 +570,8 @@ class ObservationSchema(GenericSchema):
         ]
      """
 
-    def __init__(self, descriptor):
-        super(ObservationSchema, self).__init__(descriptor)
+    def __init__(self, descriptor, project=None):
+        super(ObservationSchema, self).__init__(descriptor, project)
         self.errors = []
 
         # date parser
@@ -578,7 +579,7 @@ class ObservationSchema(GenericSchema):
         self.errors += self.date_parser.errors
 
         # geometry parser
-        self.geometry_parser = GeometryParser(self)
+        self.geometry_parser = GeometryParser(self, self.project)
         self.errors += self.geometry_parser.errors
 
         if self.errors:
@@ -641,12 +642,12 @@ class SpeciesObservationSchema(ObservationSchema):
     INFRA_SPECIFIC_NAME_FIELD_NAME = 'Infraspecific Name'
     SPECIES_NAME_ID_FIELD_NAME = 'Name Id'
 
-    def __init__(self, descriptor):
+    def __init__(self, descriptor, project=None):
         """
         An ObservationSchema with a field for species name or species nameid
         :param descriptor:
         """
-        super(SpeciesObservationSchema, self).__init__(descriptor)
+        super(SpeciesObservationSchema, self).__init__(descriptor, project)
         self.species_name_parser = SpeciesNameParser(self)
         self.errors += self.species_name_parser.errors
         if self.errors:
@@ -725,10 +726,11 @@ class GeometryParser(object):
     A utility class to extract the geometry from data given a schema.
     """
 
-    def __init__(self, schema):
+    def __init__(self, schema, project=None):
         if not isinstance(schema, GenericSchema):
             schema = GenericSchema(schema)
         self.schema = schema
+        self.project = project
         self.errors = []
 
         # Site Code
@@ -827,6 +829,25 @@ class GeometryParser(object):
                 self.errors.append(format_required_message(self.easting_field))
             if not self.northing_field.required:
                 self.errors.append(format_required_message(self.northing_field))
+            if not self.datum_field and (not self.zone_field or not self.zone_field.required):
+                # Zone is mandatory if the project datum is not one with zone (projected).
+                if self.project:
+                    datum, zone = get_datum_and_zone(project.datum)
+                    if zone is None:
+                        if not self.zone_field:
+                            msg = "Northing/easting coordinates require a zone," \
+                                  " but none has been supplied and the default datum for this project ({datum})" \
+                                  " does not include a zone. " \
+                                  "Either provide a zone in your data or " \
+                                  "change the default datum in the project to include a zone.".format(datum=datum)
+                        else:
+                            # zone field not set as required
+                            msg = "Northing/easting coordinates require a zone, " \
+                                  "but your zone field is not set as required and the default datum " \
+                                  "for this project ({datum}) does not include a zone. " \
+                                  "Either set the field as required or " \
+                                  "change the default datum in the project to include a zone.".format(datum=datum)
+                        self.errors.append(msg)
 
     def is_valid(self):
         return not bool(self.errors)

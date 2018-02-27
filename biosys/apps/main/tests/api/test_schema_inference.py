@@ -459,7 +459,7 @@ class TestObservationSchema(InferTestBase):
          And the type of Easting and Northing should be 'number'
          And Easting and Northing should be set as required
          And they should be tagged with the appropriate biosys tag
-         And Datum should be of type string and not required.
+         And Datum should be of type string and required.
         """
         columns = ['What', 'Easting', 'Northing', 'Datum', 'Comments']
         rows = [
@@ -505,7 +505,7 @@ class TestObservationSchema(InferTestBase):
             datum_field = schema.get_field_by_name('Datum')
             self.assertIsNotNone(datum_field)
             self.assertEquals(datum_field.type, 'string')
-            self.assertFalse(datum_field.required)
+            self.assertTrue(datum_field.required)
             biosys = datum_field.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
@@ -522,7 +522,7 @@ class TestObservationSchema(InferTestBase):
          And the type of Easting and Northing should be 'number'
          And Easting and Northing should be set as required
          And they should be tagged with the appropriate biosys tag
-         And Zone should be of type string and not required.
+         And Zone should be of type integer and required.
         """
         columns = ['What', 'Easting', 'Northing', 'Zone', 'Comments']
         rows = [
@@ -568,7 +568,7 @@ class TestObservationSchema(InferTestBase):
             zone_field = schema.get_field_by_name('Zone')
             self.assertIsNotNone(zone_field)
             self.assertEquals(zone_field.type, 'integer')
-            self.assertFalse(zone_field.required)
+            self.assertTrue(zone_field.required)
             biosys = zone_field.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')

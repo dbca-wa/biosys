@@ -273,11 +273,12 @@ class Dataset(models.Model):
         return self.data_package.get('resources', [])
 
     @staticmethod
-    def validate_data_package(data_package, dataset_type):
+    def validate_data_package(data_package, dataset_type, project=None):
         """
         Will throw a validation error if any problem
         :param data_package:
         :param dataset_type:
+        :param project:
         :return:
         """
         try:
@@ -311,11 +312,11 @@ class Dataset(models.Model):
                 # use our own schema class to validate.
                 # The constructor should raise an exception if error
                 if dataset_type == Dataset.TYPE_SPECIES_OBSERVATION:
-                    SpeciesObservationSchema(schema)
+                    SpeciesObservationSchema(schema, project)
                 elif dataset_type == Dataset.TYPE_OBSERVATION:
-                    ObservationSchema(schema)
+                    ObservationSchema(schema, project)
                 else:
-                    GenericSchema(schema)
+                    GenericSchema(schema, project)
             except Exception as e:
                 raise ValidationError(
                     'Schema errors for resource "{}": {}'.format(
