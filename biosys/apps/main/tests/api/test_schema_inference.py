@@ -12,6 +12,10 @@ from main import utils_data_package
 from main.models import Dataset
 from main.tests.api import helpers
 from main.utils_data_package import BiosysSchema
+from rest_framework.authtoken.models import Token
+from rest_framework.test import APIRequestFactory
+from main.api.views import InferDatasetView
+from rest_framework.test import force_authenticate
 
 
 class InferTestBase(helpers.BaseUserTestCase):
@@ -267,13 +271,6 @@ class TestGenericSchema(InferTestBase):
         Often on Windows a csv file comes with an excel content-type (e.g: 'application/vnd.ms-excel')
         Test that we handle the case.
         """
-        # In order to hack the Content-Type of the multipart form data we need to use the APIRequestFactory and work
-        # with the view directly. Can't use the classic API client.
-        from rest_framework.authtoken.models import Token
-        from rest_framework.test import APIRequestFactory
-        from main.api.views import InferDatasetView
-        from rest_framework.test import force_authenticate
-
         view = InferDatasetView.as_view()
         columns = ['Name', 'Age', 'Weight', 'Comments']
         rows = [
@@ -287,6 +284,8 @@ class TestGenericSchema(InferTestBase):
             payload = {
                 'file': fp,
             }
+            # In order to hack the Content-Type of the multipart form data we need to use the APIRequestFactory and work
+            # with the view directly. Can't use the classic API client.
             # hack the content-type of the request.
             data, content_type = factory._encode_data(payload, format='multipart')
             if six.PY3:
