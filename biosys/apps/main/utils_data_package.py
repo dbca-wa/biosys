@@ -730,7 +730,7 @@ class GeometryParser(object):
         if not isinstance(schema, GenericSchema):
             schema = GenericSchema(schema)
         self.schema = schema
-        self.project=project
+        self.project = project
         self.errors = []
 
         # Site Code

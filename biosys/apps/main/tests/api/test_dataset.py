@@ -497,6 +497,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         # change the project datum
         project.datum = 28350  # 'GDA94 / MGA zone 50'
         project.save()
+        self.assertTrue(is_projected_srid(project.datum))
         resp = client.post(url, data, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
