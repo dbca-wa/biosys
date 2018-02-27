@@ -81,11 +81,12 @@ class FileReader(object):
         file_name = uploaded_file.name
         content_type = uploaded_file.content_type
         extension = path.splitext(file_name)[1].lower()
-        result = FileReader.NOT_SUPPORTED_FORMAT
         if extension == '.csv' or content_type in FileReader.CSV_TYPES:
             result = FileReader.CSV_FORMAT
         elif extension == '.xlsx' or content_type in FileReader.XLSX_FORMAT:
             result = FileReader.XLSX_FORMAT
+        else:
+            result = FileReader.NOT_SUPPORTED_FORMAT
         return result
 
     def __init__(self, file_):
