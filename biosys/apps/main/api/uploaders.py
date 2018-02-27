@@ -65,7 +65,7 @@ class FileReader(object):
 
     CSV_FORMAT = 'csv'
     XLSX_FORMAT = 'xlsx'
-    NOT_SUPPORTED_FORMAT = 'Not supported'
+    NOT_SUPPORTED_FORMAT = 'not supported'
 
     @staticmethod
     def get_uploaded_file_format(uploaded_file):
