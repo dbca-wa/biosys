@@ -644,12 +644,11 @@ class InferDatasetView(APIView):
                     'errors': 'Missing file'
                 }
                 return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
-
-            if file_obj.content_type not in FileReader.SUPPORTED_TYPES:
+            file_format = FileReader.get_uploaded_file_format(file_obj)
+            if file_format == FileReader.NOT_SUPPORTED_FORMAT:
                 msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type,
-                                                                        SiteUploader.SUPPORTED_TYPES)
-                return Response(msg, status=status.HTTP_501_NOT_IMPLEMENTED)
-            file_format = 'csv' if file_obj.content_type in FileReader.CSV_TYPES else 'xlsx'
+                                                                        FileReader.SUPPORTED_TYPES)
+                return Response(msg, status=status.HTTP_400_BAD_REQUEST)
             dataset_name = path.splitext(file_obj.name)[0]
             builder = DataPackageBuilder.infer_from_file(
                 file_obj.temporary_file_path(),

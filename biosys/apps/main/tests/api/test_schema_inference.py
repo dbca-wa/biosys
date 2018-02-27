@@ -1,9 +1,11 @@
 import datetime as dt
 from os import path
+import json
 
 from datapackage import Package
 from django.core.exceptions import ValidationError
 from django.shortcuts import reverse
+from django.utils import six
 from rest_framework import status
 
 from main import utils_data_package
@@ -259,6 +261,90 @@ class TestGenericSchema(InferTestBase):
             schema = utils_data_package.GenericSchema(schema_descriptor)
             field = schema.get_field_by_name('How Many')
             self.assertEquals(field.type, 'integer')
+
+    def test_csv_with_excel_content_type(self):
+        """
+        Often on Windows a csv file comes with an excel content-type (e.g: 'application/vnd.ms-excel')
+        Test that we handle the case.
+        """
+        # In order to hack the Content-Type of the multipart form data we need to use the APIRequestFactory and work
+        # with the view directly. Can't use the classic API client.
+        from rest_framework.authtoken.models import Token
+        from rest_framework.test import APIRequestFactory
+        from main.api.views import InferDatasetView
+        from rest_framework.test import force_authenticate
+
+        view = InferDatasetView.as_view()
+        columns = ['Name', 'Age', 'Weight', 'Comments']
+        rows = [
+            columns,
+            ['Frederic', '56', '80.5', 'a comment'],
+            ['Hilda', '24', '56', '']
+        ]
+        file_ = helpers.rows_to_csv_file(rows)
+        factory = APIRequestFactory()
+        with open(file_, 'rb') as fp:
+            payload = {
+                'file': fp,
+            }
+            # hack the content-type of the request.
+            data, content_type = factory._encode_data(payload, format='multipart')
+            if six.PY3:
+                data = data.decode('utf-8')
+            data = data.replace('Content-Type: text/csv', 'Content-Type: application/vnd.ms-excel')
+            if six.PY3:
+                data = data.encode('utf-8')
+            request = factory.generic('POST', self.url, data, content_type=content_type)
+            user = self.custodian_1_user
+            token, _ = Token.objects.get_or_create(user=user)
+            force_authenticate(request, user=self.custodian_1_user, token=token)
+            resp = view(request).render()
+            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            # should be json
+            self.assertEqual(resp.get('content-type'), 'application/json')
+            if six.PY3:
+                content = resp.content.decode('utf-8')
+            else:
+                content = resp.content
+            received = json.loads(content)
+
+            # name should be set with the file name
+            self.assertIn('name', received)
+            file_name = path.splitext(path.basename(fp.name))[0]
+            self.assertEquals(file_name, received.get('name'))
+            # type should be 'generic'
+            self.assertIn('type', received)
+            self.assertEquals('generic', received.get('type'))
+
+            # data_package verification
+            self.assertIn('data_package', received)
+            self.verify_inferred_data(received)
+
+            # verify schema
+            schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
+            schema = utils_data_package.GenericSchema(schema_descriptor)
+            self.assertEquals(len(schema.fields), len(columns))
+            self.assertEquals(schema.field_names, columns)
+
+            field = schema.get_field_by_name('Name')
+            self.assertEquals(field.type, 'string')
+            self.assertFalse(field.required)
+            self.assertEquals(field.format, 'default')
+
+            field = schema.get_field_by_name('Age')
+            self.assertEquals(field.type, 'integer')
+            self.assertFalse(field.required)
+            self.assertEquals(field.format, 'default')
+
+            field = schema.get_field_by_name('Weight')
+            self.assertEquals(field.type, 'number')
+            self.assertFalse(field.required)
+            self.assertEquals(field.format, 'default')
+
+            field = schema.get_field_by_name('Comments')
+            self.assertEquals(field.type, 'string')
+            self.assertFalse(field.required)
+            self.assertEquals(field.format, 'default')
 
 
 class TestObservationSchema(InferTestBase):

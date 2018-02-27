@@ -63,17 +63,41 @@ class FileReader(object):
     ]
     SUPPORTED_TYPES = CSV_TYPES + XLSX_TYPES
 
-    def __init__(self, file_):
-        if file_.content_type not in self.SUPPORTED_TYPES:
-            msg = "Wrong file type {}. Should be one of: {}".format(file_.content_type, self.SUPPORTED_TYPES)
-            raise Exception(msg)
+    CSV_FORMAT = 'csv'
+    XLSX_FORMAT = 'xlsx'
+    NOT_SUPPORTED_FORMAT = 'not supported'
 
+    @staticmethod
+    def get_uploaded_file_format(uploaded_file):
+        """
+        Return 'csv', 'xlsx' or 'not supported'
+        :param uploaded_file: a Django uploaded file
+        :return:
+        """
+        if not hasattr(uploaded_file, 'name') or not hasattr(uploaded_file, 'content_type'):
+            raise Exception("The given file is not a django managed uploaded file: {}".format(uploaded_file))
+        # check extension first
+        # Note: on Windows the content-type for a csv file can be sent with an excel mime type.
+        file_name = uploaded_file.name
+        content_type = uploaded_file.content_type
+        extension = path.splitext(file_name)[1].lower()
+        if extension == '.csv' or content_type in FileReader.CSV_TYPES:
+            result = FileReader.CSV_FORMAT
+        elif extension == '.xlsx' or content_type in FileReader.XLSX_FORMAT:
+            result = FileReader.XLSX_FORMAT
+        else:
+            result = FileReader.NOT_SUPPORTED_FORMAT
+        return result
+
+    def __init__(self, file_):
         self.file = file_
         if hasattr(file_, 'name'):
             self.file_name = file_.name
-        extension = path.splitext(file_.name)[1].lower() if file_.name else ''
-        # On windows a .csv file can be send with an excel mime type.
-        if file_.content_type in self.XLSX_TYPES and extension != '.csv':
+        file_format = self.get_uploaded_file_format(self.file)
+        if file_format == self.NOT_SUPPORTED_FORMAT:
+            msg = "Wrong file type {}. Should be one of: {}".format(file_.content_type, self.SUPPORTED_TYPES)
+            raise Exception(msg)
+        if file_format == self.XLSX_FORMAT:
             self.file = xlsx_to_csv(file_)
             self.reader = csv.DictReader(self.file)
         else:
