@@ -252,6 +252,7 @@ class RecordCreator:
             counter += 1
             yield self._create_record(data, counter)
 
+    # TODO: Save the numeric fields (number and integer) as JSON number (not string). It will allow proper ordering.
     def _create_record(self, row, counter):
         """
         :param row:

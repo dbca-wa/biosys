@@ -1,3 +1,4 @@
+# TODO: Django 1.11 (some libs need update)
 Django>=1.10,<1.11
 psycopg2>=2.7,<2.8
 django-confy==1.0.4

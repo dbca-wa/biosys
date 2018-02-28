@@ -155,3 +155,5 @@ class HerbieFacade(SpeciesFacade):
 class NoSpeciesFacade(SpeciesFacade):
     def get_all_species(self, properties=None):
         return []
+
+# TODO: implement a cached version of Herbie (memory/disk or db?). Cache renewal policy?

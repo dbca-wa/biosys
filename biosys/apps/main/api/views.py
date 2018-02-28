@@ -325,6 +325,7 @@ class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesM
 
 
 class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
+    # TODO: implement a patch for the data JSON field. Ability to partially update some of the data properties.
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Record.objects.all()
     serializer_class = serializers.RecordSerializer
