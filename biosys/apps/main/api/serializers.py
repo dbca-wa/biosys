@@ -51,14 +51,18 @@ class DatasetSerializer(serializers.ModelSerializer):
 
     class DataPackageValidator:
         def __init__(self):
+            # the next variables are set in the set_context method.
             self.dataset_type = Dataset.TYPE_GENERIC
+            self.project = None
 
         def __call__(self, value):
-            Dataset.validate_data_package(value, self.dataset_type)
+            Dataset.validate_data_package(value, self.dataset_type, self.project)
 
         def set_context(self, serializer_field):
-            data = serializer_field.parent.context['request'].data
-            self.dataset_type = data.get('type')
+            if 'request' in serializer_field.parent.context:
+                data = serializer_field.parent.context['request'].data
+                self.dataset_type = data.get('type')
+                self.project = Project.objects.filter(pk=data.get('project')).first()
 
     data_package = serializers.JSONField(
         validators=[
@@ -86,6 +90,13 @@ class DatasetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dataset
         fields = '__all__'
+        validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=Dataset.objects.all(),
+                fields=('name', 'project'),
+                message='A dataset with this name already exists in the project.'
+            )
+        ]
 
 
 class SchemaValidator:
@@ -114,14 +125,27 @@ class SchemaValidator:
 
 
 class RecordSerializer(serializers.ModelSerializer):
+    # TODO: Split the serializer in 3 subclasses. One for every type of dataset.
     def __init__(self, instance=None, **kwargs):
         super(RecordSerializer, self).__init__(instance, **kwargs)
         ctx = kwargs.get('context', {})
-        strict = ctx.get('strict', False)
-        species_mapping = ctx.get('species_mapping')
-        schema_validator = SchemaValidator(strict=strict, species_mapping=species_mapping)
-        self.fields['data'].validators = [schema_validator]
-        self.dataset = kwargs.get('context', {}).get('dataset', None)
+        self.dataset = ctx.get('dataset')
+        self.strict_schema_validation = ctx.get('strict', False)
+        # species naming service
+        self.species_naming_facade_class = ctx.get('species_naming_facade_class')
+        # the next object will hold a cached version of the 'species_name' -> name_id obtained
+        # from the species_naming_facade above.
+        self.species_name_id_mapping_cached = None
+
+        # dynamic fields
+        request = ctx.get('request')
+        if request:
+            expected_fields = request.query_params.getlist('fields', [])
+            if expected_fields:
+                existing_fields = self.fields.keys()
+                excluded_fields = set(existing_fields) - set(expected_fields)
+                for field in excluded_fields:
+                    self.fields.pop(field)
 
     @staticmethod
     def get_site(dataset, data, force_create=False):
@@ -193,25 +217,34 @@ class RecordSerializer(serializers.ModelSerializer):
         # either a species name or a nameId
         species_name = schema.cast_species_name(schema_data)
         name_id = schema.cast_species_name_id(schema_data)
-        species_mapping = self.context.get('species_mapping')
+        species_mapping = self.get_species_name_id_mapping()
         if species_mapping:
             # name id takes precedence
-            if name_id:
+            if name_id and name_id != -1:
                 species_name = get_key_for_value(species_mapping, int(name_id), None)
                 if not species_name:
                     raise Exception("Cannot find a species with nameId={}".format(name_id))
             elif species_name:
                 name_id = int(species_mapping.get(species_name, -1))
             else:
-                raise Exception('Missing Species Name or Species NameId')
+                raise Exception('Missing Species Name or Species Name Id')
         else:
-            # what to do if we don't have an species mapping (herbie down?)
+            # TODO: what to do if we don't have a species mapping?
             name_id = name_id or -1
         instance.species_name = species_name
         instance.name_id = name_id
         if commit:
             instance.save()
         return instance
+
+    def get_species_name_id_mapping(self):
+        if all([
+            self.species_name_id_mapping_cached is None,
+            self.species_naming_facade_class is not None,
+            callable(getattr(self.species_naming_facade_class, 'name_id_by_species_name'))
+        ]):
+            self.species_name_id_mapping_cached = self.species_naming_facade_class().name_id_by_species_name()
+        return self.species_name_id_mapping_cached
 
     def set_fields_from_data(self, instance, validated_data):
         try:
@@ -223,6 +256,20 @@ class RecordSerializer(serializers.ModelSerializer):
             return instance
         except Exception as e:
             raise serializers.ValidationError(e)
+
+    def validate_data(self, data):
+        """
+        Validate the Record.data JSONField.
+        We add a schema validator.
+        :param data:
+        :return:
+        """
+        schema_validator = SchemaValidator(strict=self.strict_schema_validation)
+        schema_validator.dataset = self.dataset
+        if self.dataset and self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
+            schema_validator.kwargs['species_name_id_mapping'] = self.get_species_name_id_mapping()
+        schema_validator(data)
+        return data
 
     def create(self, validated_data):
         """

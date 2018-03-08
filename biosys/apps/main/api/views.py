@@ -2,8 +2,10 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 
 import datetime
 from collections import OrderedDict
+from os import path
 
 from django.contrib.auth import get_user_model, logout
+from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from dry_rest_permissions.generics import DRYPermissions
@@ -15,13 +17,14 @@ from rest_framework.views import APIView, Response
 from main import models, constants
 from main.api import serializers
 from main.api.helpers import to_bool
-from main.api.uploaders import SiteUploader, FileReader, RecordCreator
+from main.api.uploaders import SiteUploader, FileReader, RecordCreator, DataPackageBuilder
 from main.api.validators import get_record_validator_for_dataset
 from main.models import Project, Site, Dataset, Record
 from main.utils_auth import is_admin
 from main.utils_data_package import Exporter
 from main.utils_http import WorkbookResponse
 from main.utils_species import HerbieFacade
+from main.utils_misc import search_json_fields, order_by_json_field
 
 
 class UserPermission(BasePermission):
@@ -68,7 +71,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
-    filter_fields = ('id', 'name', 'custodians')
+    filter_fields = ('id', 'name', 'custodians', 'code')
 
 
 class ProjectPermission(BasePermission):
@@ -111,9 +114,13 @@ class ProjectSitesView(generics.ListCreateAPIView, generics.DestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         site_ids = request.data
-        if not site_ids and not isinstance(site_ids, list):
-            return Response("A list of site ids must be provided", status=status.HTTP_400_BAD_REQUEST)
-        Site.objects.filter(project=self.project, id__in=site_ids).delete()
+        if isinstance(site_ids, list):
+            qs = Site.objects.filter(project=self.project, id__in=site_ids)
+        elif site_ids == 'all':
+            qs = Site.objects.filter(project=self.project)
+        else:
+            return Response("A list of site ids must be provided or 'all'", status=status.HTTP_400_BAD_REQUEST)
+        qs.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -164,8 +171,7 @@ class SiteViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Site.objects.all()
     serializer_class = serializers.SiteSerializer
-    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
-    filter_fields = ('id', 'name', 'code')
+    filter_fields = ('id', 'name', 'code', 'project__name', 'project__code', 'project__id')
 
     def perform_update(self, serializer):
         """
@@ -268,12 +274,31 @@ class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesM
         ctx = super(DatasetRecordsView, self).get_serializer_context()
         if self.dataset:
             ctx['dataset'] = self.dataset
-            if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION and 'species_mapping' not in ctx:
-                ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
+            if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION and 'species_naming_facade_class' not in ctx:
+                ctx['species_naming_facade_class'] = self.species_facade_class
         return ctx
 
     def get_queryset(self):
-        return self.dataset.record_queryset if self.dataset else Dataset.objects.none()
+        if self.dataset:
+            queryset = self.dataset.record_queryset
+
+            search_param = self.request.query_params.get('search')
+            if search_param is not None:
+                field_info = {
+                    'data': self.dataset.schema.field_names,
+                    'source_info': ['file_name', 'row']
+                }
+
+                queryset = search_json_fields(queryset, field_info, search_param)
+
+            ordering_param = self.request.query_params.get('ordering')
+            if ordering_param is not None:
+                queryset = order_by_json_field(queryset, 'data', self.dataset.schema.field_names, ordering_param)
+                queryset = order_by_json_field(queryset, 'source_info', ['file_name', 'row'], ordering_param)
+
+            return queryset
+        else:
+            return Dataset.objects.none()
 
     def get(self, request, *args, **kwargs):
         """
@@ -300,6 +325,7 @@ class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesM
 
 
 class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
+    # TODO: implement a patch for the data JSON field. Ability to partially update some of the data properties.
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Record.objects.all()
     serializer_class = serializers.RecordSerializer
@@ -324,6 +350,26 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
                 ds = get_object_or_404(Dataset, name=name)
         return ds
 
+    def get_queryset(self):
+        queryset = super(RecordViewSet, self).get_queryset()
+        if self.dataset:
+            # add some specific json field queries (postgres)
+            search_param = self.request.query_params.get('search')
+            if search_param is not None:
+                field_info = {
+                    'data': self.dataset.schema.field_names,
+                    'source_info': ['file_name', 'row']
+                }
+
+                queryset = search_json_fields(queryset, field_info, search_param)
+
+            ordering_param = self.request.query_params.get('ordering')
+            if ordering_param is not None:
+                queryset = order_by_json_field(queryset, 'data', self.dataset.schema.field_names, ordering_param)
+                queryset = order_by_json_field(queryset, 'source_info', ['file_name', 'row'], ordering_param)
+
+        return queryset
+
     def initial(self, request, *args, **kwargs):
         result = super(RecordViewSet, self).initial(request, *args, **kwargs)
         self.dataset = self.get_dataset(request, *args, **kwargs)
@@ -335,9 +381,7 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
         ctx['dataset'] = self.dataset
         ctx['strict'] = self.strict
         if self.dataset and self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
-            # set the species map for name id lookup
-            if 'species_mapping' not in ctx:
-                ctx['species_mapping'] = self.species_facade_class().name_id_by_species_name()
+            ctx['species_naming_facade_class'] = self.species_facade_class
         return ctx
 
     def list(self, request, *args, **kwargs):
@@ -582,3 +626,51 @@ class GeoConvertView(generics.GenericAPIView):
                                 .format(self.output, [self.OUTPUT_DATA, self.OUTPUT_GEOMETRY]),
                                 status=status.HTTP_400_BAD_REQUEST)
 
+
+class InferDatasetView(APIView):
+    """
+    Accept a xlsx or csv file and return a datapackage with schema inferred
+    """
+    permission_classes = (IsAuthenticated,)
+    parser_classes = (FormParser, MultiPartParser)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            # we want the uploaded file to be physically saved on disk (no InMemoryFileUploaded) so we force the file
+            # upload handlers of the request.
+            request.upload_handlers = [TemporaryFileUploadHandler(request)]
+            file_obj = request.data.get('file')
+            if file_obj is None:
+                response_data = {
+                    'errors': 'Missing file'
+                }
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+            file_format = FileReader.get_uploaded_file_format(file_obj)
+            if file_format == FileReader.NOT_SUPPORTED_FORMAT:
+                msg = "Wrong file type {}. Should be one of: {}".format(file_obj.content_type,
+                                                                        FileReader.SUPPORTED_TYPES)
+                return Response(msg, status=status.HTTP_400_BAD_REQUEST)
+            dataset_name = path.splitext(file_obj.name)[0]
+            builder = DataPackageBuilder.infer_from_file(
+                file_obj.temporary_file_path(),
+                name=dataset_name,
+                format_=file_format
+            )
+            if builder.valid:
+                response_data = {
+                    'name': builder.title,  # use the data-package title instead of name (name is a slug)
+                    'type': builder.infer_biosys_type(),
+                    'data_package': builder.descriptor
+                }
+                return Response(response_data, status=status.HTTP_200_OK)
+            else:
+                errors = [str(e) for e in builder.errors]
+                response_data = {
+                    'errors': errors
+                }
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            response_data = {
+                'errors': str(e)
+            }
+            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)

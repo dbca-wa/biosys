@@ -287,39 +287,10 @@ class TestPermissions(TestCase):
         self.assertEquals(expected, choices)
 
 
-class TestDataPackageValidation(TestCase):
+class TestDataPackageValidation(helpers.BaseUserTestCase):
     """
     Test that when create/update the datapackage validation is called
     """
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-    ]
-
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
-    def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Site1").first()
-        self.ds_1 = Dataset.objects.filter(name="Bats1", project=self.project_1).first()
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
 
     def test_generic_create_happy_path(self):
         data_package = clone(GENERIC_DATA_PACKAGE)
@@ -396,10 +367,10 @@ class TestDataPackageValidation(TestCase):
         data package cannot be None
         :return:
         """
-        ds = self.ds_1
-        url = reverse('api:dataset-detail', kwargs={"pk": ds.pk})
         project = self.project_1
         client = self.custodian_1_client
+        ds = self._create_dataset_with_schema(project, client, helpers.GENERIC_SCHEMA)
+        url = reverse('api:dataset-detail', kwargs={"pk": ds.pk})
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_GENERIC,
@@ -437,10 +408,10 @@ class TestDataPackageValidation(TestCase):
         data package cannot be empty
         :return:
         """
-        ds = self.ds_1
-        url = reverse('api:dataset-detail', kwargs={"pk": ds.pk})
         project = self.project_1
         client = self.custodian_1_client
+        ds = self._create_dataset_with_schema(project, client, helpers.GENERIC_SCHEMA)
+        url = reverse('api:dataset-detail', kwargs={"pk": ds.pk})
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_GENERIC,
@@ -468,6 +439,137 @@ class TestDataPackageValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
+
+    def test_easting_northing_no_zone(self):
+        """
+        In the case of a Easting/Northing only schema the zone is mandatory if the project datum is not a projected one
+        (e.g: WSG84)
+        """
+        from main.constants import is_projected_srid
+
+        project = self.project_1
+        # project datum is not a Zone one
+        self.assertEquals(project.datum, 4326)
+        self.assertFalse(is_projected_srid(project.datum))
+
+        fields_no_zone = [
+            {
+                "name": "Observation Date",
+                "type": "date",
+                "format": "any",
+                "constraints": {
+                    "required": True,
+                }
+            },
+            {
+                "name": "Northing",
+                "type": "number",
+                "format": "default",
+                "constraints": {
+                    "required": True,
+                },
+            },
+            {
+                "name": "Easting",
+                "type": "number",
+                "format": "default",
+                "constraints": {
+                    "required": True,
+                },
+            }
+        ]
+        url = reverse('api:dataset-list')
+        client = self.custodian_1_client
+        data = {
+            "name": "New for Unit test",
+            "type": Dataset.TYPE_OBSERVATION,
+            "project": project.pk,
+            'data_package': helpers.create_data_package_from_fields(fields_no_zone)
+        }
+        resp = client.post(url, data, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        # check error message
+        resp_data = resp.json()
+        errors = resp_data.get('data_package')
+        self.assertEquals(len(errors), 1)
+        self.assertIn('Northing/easting coordinates require a zone', errors[0])
+
+        # change the project datum
+        project.datum = 28350  # 'GDA94 / MGA zone 50'
+        project.save()
+        self.assertTrue(is_projected_srid(project.datum))
+        resp = client.post(url, data, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+    def test_easting_northing_zone_not_required(self):
+        """
+        In the case of a Easting/Northing only schema the zone is mandatory if the project datum is not a projected one
+        (e.g: WSG84)
+        """
+        from main.constants import is_projected_srid
+
+        project = self.project_1
+        # project datum is not a Zone one
+        self.assertEquals(project.datum, 4326)
+        self.assertFalse(is_projected_srid(project.datum))
+
+        fields = [
+            {
+                "name": "Observation Date",
+                "type": "date",
+                "format": "any",
+                "constraints": {
+                    "required": True,
+                }
+            },
+            {
+                "name": "Northing",
+                "type": "number",
+                "format": "default",
+                "constraints": {
+                    "required": True,
+                },
+            },
+            {
+                "name": "Easting",
+                "type": "number",
+                "format": "default",
+                "constraints": {
+                    "required": True,
+                },
+            },
+            {
+                "name": "Zone",
+                "type": "number",
+                "format": "default",
+            }
+        ]
+        url = reverse('api:dataset-list')
+        client = self.custodian_1_client
+        data = {
+            "name": "New for Unit test",
+            "type": Dataset.TYPE_OBSERVATION,
+            "project": project.pk,
+            'data_package': helpers.create_data_package_from_fields(fields)
+        }
+        resp = client.post(url, data, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        # check error message
+        resp_data = resp.json()
+        errors = resp_data.get('data_package')
+        self.assertEquals(len(errors), 1)
+        self.assertIn('Northing/easting coordinates require a zone', errors[0])
+
+        # add required constraints
+        fields[3]['constraints'] = {'required': True}
+        data = {
+            "name": "New for Unit test",
+            "type": Dataset.TYPE_OBSERVATION,
+            "project": project.pk,
+            'data_package': helpers.create_data_package_from_fields(fields)
+        }
+        resp = client.post(url, data, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
 
 class TestRecordsView(helpers.BaseUserTestCase):
@@ -597,3 +699,124 @@ class TestRecordsView(helpers.BaseUserTestCase):
         resp = self.client.get(self.url, data=None, format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(len(resp.json()), 0)
+
+
+class TestDatasetRecordsSearchAndOrdering(helpers.BaseUserTestCase):
+
+    def _more_setup(self):
+        self.client = self.custodian_1_client
+
+    def test_server_side_search(self):
+        rows = [
+            ['When', 'Species', 'How Many', 'Latitude', 'Longitude', 'Comments'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
+            ['2018-02-10', 'Unknown', 3, -32.0, 115.75, 'Canis?'],
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
+
+        url = reverse('api:dataset-records', kwargs={'pk': dataset.pk})
+
+        # test fetch all records for dataset
+        resp = self.client.get(url, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.json()), 4)
+
+        # test fetching records in dataset using specific search term specific term.
+        # The search should search on all the columns
+        search = 'Canis'
+        expected_number_of_records = 3  # 2 records with canis in the species and one in comments
+        resp = self.client.get(url + '?search=' + search, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(len(resp.json()), expected_number_of_records)
+
+    def test_server_side_ordering_string(self):
+        rows = [
+            ['When', 'Species', 'How Many', 'Latitude', 'Longitude', 'Comments'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-10', 'Unknown', 2, -32.0, 115.75, 'Canis?'],
+            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
+
+        url = reverse('api:dataset-records', kwargs={'pk': dataset.pk})
+
+        # check unordered request is not ordered by family
+        resp = self.client.get(url, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        json_response = resp.json()
+        self.assertEqual(len(resp.json()), 4)
+
+        species = [row[1] for row in rows[1:]]
+        sorted_species = sorted(species)
+        self.assertNotEqual(species, sorted_species)
+
+        record_species = [record['data']['Species'] for record in json_response]
+        self.assertNotEqual(record_species, sorted_species)
+
+        # check is request ordered by family is ordered by family in alphabetical order
+        resp = self.client.get(url + '?ordering=Species', format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        json_response = resp.json()
+        self.assertEqual(len(json_response), 4)
+
+        record_species = [record['data']['Species'] for record in json_response]
+        self.assertEqual(record_species, sorted_species)
+
+        # check is request ordered by family in descending order is ordered by family in reverse alphabetical order
+        resp = self.client.get(url + '?ordering=-Species', format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        json_response = resp.json()
+        self.assertEqual(len(json_response), 4)
+
+        record_species = [record['data']['Species'] for record in json_response]
+        self.assertEqual(record_species, list(reversed(sorted_species)))
+
+    def test_server_side_ordering_row_number(self):
+        """
+        Test that we can order by the source_info['row'] (row number in the csv or xlsx) and that the
+        sort in numeric based not char based (10 is after 9)
+        """
+        # create 11 records (data not important)
+        rows = [
+            ['When', 'Species', 'How Many', 'Latitude', 'Longitude', 'Comments'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-10', 'Unknown', 2, -32.0, 115.75, 'Canis?'],
+            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-10', 'Unknown', 2, -32.0, 115.75, 'Canis?'],
+            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-10', 'Unknown', 2, -32.0, 115.75, 'Canis?'],
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
+
+        url = reverse('api:dataset-records', kwargs={'pk': dataset.pk})
+
+        resp = self.client.get(url + '?ordering=row', format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        json_response = resp.json()
+        self.assertEquals(len(json_response), 11)
+
+        # row start at 2
+        sorted_rows = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+        record_rows = [record['source_info']['row'] for record in json_response]
+        self.assertEqual(record_rows, sorted_rows)
+
+        # check is request ordered by family in descending order is ordered by family in reverse alphabetical order
+        resp = self.client.get(url + '?ordering=-row', format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        json_response = resp.json()
+        self.assertEquals(len(json_response), 11)
+
+        record_rows = [record['source_info']['row'] for record in json_response]
+        self.assertEqual(record_rows, list(reversed(sorted_rows)))
