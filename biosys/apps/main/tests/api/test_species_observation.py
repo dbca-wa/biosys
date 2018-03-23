@@ -62,7 +62,8 @@ class TestPermissions(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_species_name()
-        self.ds_1 = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        self.ds_1 = self._create_dataset_with_schema(project, client, schema,
+                                                     dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
         self.record_1 = self._create_default_record()
 
     def _create_default_record(self):
@@ -310,7 +311,8 @@ class TestDataValidation(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_species_name()
-        self.ds_1 = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        self.ds_1 = self._create_dataset_with_schema(project, client, schema,
+                                                     dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
 
     def _create_default_record(self):
         ds = self.ds_1
@@ -1700,3 +1702,75 @@ class TestCompositeSpeciesName(helpers.BaseUserTestCase):
         # should be "Species::msg"
         pattern = re.compile(r"^Species::(.+)$")
         self.assertTrue(pattern.match(error))
+
+    def test_genus_required_error(self):
+        """
+        If genus is set to be required and not provided it should not throw an exception
+        but return a 400 with a field error message
+        see https://decbugs.com/view.php?id=6907 for details
+        """
+        schema = self.schema_with_2_columns_genus()
+        dataset = self.assert_create_dataset(schema)
+        # Genus is required
+        self.assertTrue(dataset.schema.get_field_by_name('Genus').required)
+
+        # provides 3 records with no Genus (row=2,3,4)
+        records = [
+            ['Genus', 'Species', 'When', 'Latitude', 'Longitude'],
+            [None, 'lupus', '2018-01-25', -32.0, 115.75],
+            ['', 'lupus', '2018-01-25', -32.0, 115.75],
+            ['  ', 'lupus', '2018-01-25', -32.0, 115.75]
+        ]
+        resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk, strict=False)
+        self.assertEquals(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        received = resp.json()
+        # expected: array of report by row
+        self.assertIsInstance(received, list)
+        self.assertEquals(len(received), 3)
+        # this what an report should look like
+        expected_row_report = {
+            'row': 3,
+            'errors': {'Genus': 'Field "Genus" has constraint "required" which is not satisfied for value "None"'},
+            'warnings': {}}
+        for row_report in received:
+            self.assertIn('errors', row_report)
+            errors = row_report.get('errors')
+            self.assertIn('Genus', errors)
+            msg = errors.get('Genus')
+            self.assertEquals(msg, expected_row_report['errors']['Genus'])
+
+    def test_species_required_error(self):
+        """
+        If species (with genus) is set to be required and not provided it should not throw an exception
+        but return a 400 with a field error message
+        see https://decbugs.com/view.php?id=6907 for details
+        """
+        schema = self.schema_with_2_columns_genus()
+        dataset = self.assert_create_dataset(schema)
+        # Genus is required
+        self.assertTrue(dataset.schema.get_field_by_name('Genus').required)
+
+        # provides 3 records with no Species (row=2,3,4)
+        records = [
+            ['Genus', 'Species', 'When', 'Latitude', 'Longitude'],
+            ['Canis', '', '2018-01-25', -32.0, 115.75],
+            ['Canis', None, '2018-01-25', -32.0, 115.75],
+            ['Canis', '   ', '2018-01-25', -32.0, 115.75]
+        ]
+        resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk, strict=False)
+        self.assertEquals(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        received = resp.json()
+        # expected: array of report by row
+        self.assertIsInstance(received, list)
+        self.assertEquals(len(received), 3)
+        # this what an report should look like
+        expected_row_report = {
+            'row': 3,
+            'errors': {'Species': 'Field "Species" has constraint "required" which is not satisfied for value "None"'},
+            'warnings': {}}
+        for row_report in received:
+            self.assertIn('errors', row_report)
+            errors = row_report.get('errors')
+            self.assertIn('Species', errors)
+            msg = errors.get('Species')
+            self.assertEquals(msg, expected_row_report['errors']['Species'])
