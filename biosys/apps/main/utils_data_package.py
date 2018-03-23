@@ -720,6 +720,10 @@ class ObservationDateParser(object):
                 return self.observation_date_field.cast(value)
         return None
 
+    def get_active_fields(self):
+        all_possibles_fields = [self.observation_date_field]
+        return [f for f in all_possibles_fields if f is not None]
+
 
 class GeometryParser(object):
     """
@@ -895,6 +899,15 @@ class GeometryParser(object):
     @property
     def has_zone(self):
         return self.zone_field is not None
+
+    def get_active_fields(self):
+        all_possibles_fields = [
+            self.site_code_field,
+            self.datum_field,
+            self.zone_field, self.easting_field, self.northing_field,
+            self.latitude_field, self.longitude_field
+        ]
+        return [f for f in all_possibles_fields if f is not None]
 
     def get_site_code(self, record):
         return record.get(self.site_code_field.name) if self.site_code_field else None
@@ -1127,6 +1140,14 @@ class SpeciesNameParser(object):
     @property
     def has_name_id(self):
         return self.name_id_field
+
+    def get_active_fields(self):
+        all_possibles_fields = [
+            self.species_name_field,
+            self.genus_field, self.species_field, self.infra_name_field, self.infra_rank_field,
+            self.name_id_field
+        ]
+        return [f for f in all_possibles_fields if f is not None]
 
     def cast_species_name_id(self, record):
         field = self.name_id_field
