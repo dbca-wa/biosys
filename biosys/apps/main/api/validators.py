@@ -102,22 +102,21 @@ class ObservationValidator(GenericRecordValidator):
         self.lat_col = self.schema.latitude_field.name if self.schema.latitude_field else None
         self.lon_col = self.schema.longitude_field.name if self.schema.longitude_field else None
         self.site_col = self.schema.site_code_field.name if self.schema.site_code_field else None
+        self.geometry_parser = self.schema.geometry_parser
+        self.date_parser = self.schema.date_parser
 
     def validate(self, data):
         result = super(ObservationValidator, self).validate(data)
-        # Every warnings on date or lat/long becomes error
-        if self.date_col and self.date_col in result.warnings:
-            result.add_column_error(self.date_col, result.warnings[self.date_col])
-            del result.warnings[self.date_col]
-        if self.lat_col and self.lat_col in result.warnings:
-            result.add_column_error(self.lat_col, result.warnings[self.lat_col])
-            del result.warnings[self.lat_col]
-        if self.lon_col and self.lon_col in result.warnings:
-            result.add_column_error(self.lon_col, result.warnings[self.lon_col])
-            del result.warnings[self.lon_col]
-        if self.site_col and self.site_col in result.warnings:
-            result.add_column_error(self.site_col, result.warnings[self.site_col])
-            del result.warnings[self.site_col]
+        # every schema validation warnings become errors if they concern geometry or date stuff.
+        for field in self.geometry_parser.get_active_fields():
+            if field.name in result.warnings:
+                result.add_column_error(field.name, result.warnings[field.name])
+                del result.warnings[field.name]
+
+        for field in self.date_parser.get_active_fields():
+            if field.name in result.warnings:
+                result.add_column_error(field.name, result.warnings[field.name])
+                del result.warnings[field.name]
 
         # validate the date and the geometry values. To be done only if there's no schema error
         if not result.has_errors:
@@ -141,16 +140,11 @@ class ObservationValidator(GenericRecordValidator):
             self.schema.cast_geometry(data, default_srid=self.default_srid or MODEL_SRID)
         except Exception as e:
             msg = str(e)
-            # the fields involved in the geometry error depends of the schema fields.
-            # It could come from a site without geometry
-            lat_field = self.schema.latitude_field
-            long_field = self.schema.longitude_field
-            site_code_field = self.schema.site_code_field
-            if lat_field and long_field:
-                result.add_column_error(lat_field.name, msg)
-                result.add_column_error(long_field.name, msg)
-            if site_code_field:
-                result.add_column_error(site_code_field.name, msg)
+            # the fields involved in the geometry can be many.
+            # put the error on every field
+            # TODO: extract the field from the error message
+            for field in self.geometry_parser.get_active_fields():
+                result.add_column_error(field.name, msg)
         return result
 
 
@@ -158,18 +152,15 @@ class SpeciesObservationValidator(ObservationValidator):
     def __init__(self, dataset, schema_error_as_warning=True, **kwargs):
         super(SpeciesObservationValidator, self).__init__(dataset, schema_error_as_warning)
         self.parser = self.schema.species_name_parser
-        self.species_name_col = self.parser.species_name_field.name if self.parser.species_name_field else None
-        self.species_name_id_col = self.parser.name_id_field.name if self.parser.name_id_field else None
         self.species_name_id_mapping = kwargs.get('species_name_id_mapping')
 
     def validate(self, data, schema_error_as_warning=True):
         result = super(SpeciesObservationValidator, self).validate(data)
-        if self.species_name_col and self.species_name_col in result.warnings:
-            result.add_column_error(self.species_name_col, result.warnings[self.species_name_col])
-            del result.warnings[self.species_name_col]
-        if self.species_name_id_col and self.species_name_id_col in result.warnings:
-            result.add_column_error(self.species_name_id_col, result.warnings[self.species_name_id_col])
-            del result.warnings[self.species_name_id_col]
+        # every schema validation warnings become errors if they concern species stuff.
+        for field in self.parser.get_active_fields():
+            if field.name in result.warnings:
+                result.add_column_error(field.name, result.warnings[field.name])
+                del result.warnings[field.name]
 
         # validate the species. To be done only if there's no schema error
         if not result.has_errors:
@@ -178,9 +169,10 @@ class SpeciesObservationValidator(ObservationValidator):
 
     def validate_species(self, data):
         result = RecordValidatorResult()
-        name_id = self.schema.cast_species_name_id(data)
-        if name_id and self.species_name_id_mapping is not None:
-            if name_id not in self.species_name_id_mapping.values():
-                message = "Cannot find a species with nameId={}".format(name_id)
-                result.add_column_error(self.species_name_id_col, message)
+        if self.parser.has_name_id:
+            name_id = self.parser.cast_species_name_id(data)
+            if name_id and self.species_name_id_mapping is not None:
+                if name_id not in self.species_name_id_mapping.values():
+                    message = "Cannot find a species with nameId={}".format(name_id)
+                    result.add_column_error(self.parser.name_id_field.name, message)
         return result

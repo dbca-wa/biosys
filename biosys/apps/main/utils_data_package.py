@@ -240,8 +240,12 @@ class SchemaField:
         return self.descriptor['aliases'] if 'aliases' in self.descriptor else []
 
     @property
-    def is_datetime_type(self):
+    def is_datetime_types(self):
         return self.type in self.DATETIME_TYPES
+
+    @property
+    def is_date_type(self):
+        return self.type == 'date'
 
     @property
     def format(self):
@@ -282,8 +286,8 @@ class SchemaField:
                 # the ensure only unicode
                 value = six.u(value).strip()
         # date or datetime with format='any
-        if self.is_datetime_type and self.format == 'any':
-            return cast_date_any_format(value)
+        if self.is_datetime_types and self.format == 'any' and value:
+            return cast_date_any_format(value) if self.is_date_type else cast_datetime_any_format(value)
         # delegates to tableschema.Field.cast_value
         return self.tableschema_field.cast_value(value, constraints=True)
 
@@ -691,7 +695,7 @@ class ObservationDateParser(object):
         if errors:
             self.errors += errors
         # verify type
-        if self.observation_date_field and not self.observation_date_field.is_datetime_type:
+        if self.observation_date_field and not self.observation_date_field.is_datetime_types:
             msg = "Wrong type for the observation date field: '{field}' should be one of: {types}".format(
                 field=self.observation_date_field.name,
                 types=[SchemaField.DATETIME_TYPES]
@@ -701,7 +705,7 @@ class ObservationDateParser(object):
 
         if not self.observation_date_field:
             # fall back. Look for a single date/time type field
-            dt_fields = [f for f in self.schema.fields if f.is_datetime_type]
+            dt_fields = [f for f in self.schema.fields if f.is_datetime_types]
             if len(dt_fields) == 1:
                 self.observation_date_field = dt_fields[0]
 
@@ -719,6 +723,10 @@ class ObservationDateParser(object):
             if value:
                 return self.observation_date_field.cast(value)
         return None
+
+    def get_active_fields(self):
+        all_possibles_fields = [self.observation_date_field]
+        return [f for f in all_possibles_fields if f is not None]
 
 
 class GeometryParser(object):
@@ -895,6 +903,15 @@ class GeometryParser(object):
     @property
     def has_zone(self):
         return self.zone_field is not None
+
+    def get_active_fields(self):
+        all_possibles_fields = [
+            self.site_code_field,
+            self.datum_field,
+            self.zone_field, self.easting_field, self.northing_field,
+            self.latitude_field, self.longitude_field
+        ]
+        return [f for f in all_possibles_fields if f is not None]
 
     def get_site_code(self, record):
         return record.get(self.site_code_field.name) if self.site_code_field else None
@@ -1127,6 +1144,14 @@ class SpeciesNameParser(object):
     @property
     def has_name_id(self):
         return self.name_id_field
+
+    def get_active_fields(self):
+        all_possibles_fields = [
+            self.species_name_field,
+            self.genus_field, self.species_field, self.infra_name_field, self.infra_rank_field,
+            self.name_id_field
+        ]
+        return [f for f in all_possibles_fields if f is not None]
 
     def cast_species_name_id(self, record):
         field = self.name_id_field
