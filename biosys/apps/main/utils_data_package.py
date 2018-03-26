@@ -240,8 +240,12 @@ class SchemaField:
         return self.descriptor['aliases'] if 'aliases' in self.descriptor else []
 
     @property
-    def is_datetime_type(self):
+    def is_datetime_types(self):
         return self.type in self.DATETIME_TYPES
+
+    @property
+    def is_date_type(self):
+        return self.type == 'date'
 
     @property
     def format(self):
@@ -282,8 +286,8 @@ class SchemaField:
                 # the ensure only unicode
                 value = six.u(value).strip()
         # date or datetime with format='any
-        if self.is_datetime_type and self.format == 'any':
-            return cast_date_any_format(value)
+        if self.is_datetime_types and self.format == 'any' and value:
+            return cast_date_any_format(value) if self.is_date_type else cast_datetime_any_format(value)
         # delegates to tableschema.Field.cast_value
         return self.tableschema_field.cast_value(value, constraints=True)
 
@@ -691,7 +695,7 @@ class ObservationDateParser(object):
         if errors:
             self.errors += errors
         # verify type
-        if self.observation_date_field and not self.observation_date_field.is_datetime_type:
+        if self.observation_date_field and not self.observation_date_field.is_datetime_types:
             msg = "Wrong type for the observation date field: '{field}' should be one of: {types}".format(
                 field=self.observation_date_field.name,
                 types=[SchemaField.DATETIME_TYPES]
@@ -701,7 +705,7 @@ class ObservationDateParser(object):
 
         if not self.observation_date_field:
             # fall back. Look for a single date/time type field
-            dt_fields = [f for f in self.schema.fields if f.is_datetime_type]
+            dt_fields = [f for f in self.schema.fields if f.is_datetime_types]
             if len(dt_fields) == 1:
                 self.observation_date_field = dt_fields[0]
 

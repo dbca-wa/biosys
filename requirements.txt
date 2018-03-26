@@ -1,6 +1,6 @@
 # TODO: Django 1.11 (some libs need update)
 Django>=1.10,<1.11
-psycopg2==2.7.4
+psycopg2-binary==2.7.4
 django-confy==1.0.4
 django-bootstrap3==6.2.2
 django-auth-ldap==1.2.8
@@ -17,7 +17,7 @@ unicodecsv==0.14.1
 
 # frictionless datapackage and tableschema
 datapackage==1.1.5
-tableschema==1.0.11
+tableschema==1.0.12
 
 # rest API
 djangorestframework==3.5.3
