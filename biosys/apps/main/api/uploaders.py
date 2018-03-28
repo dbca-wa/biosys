@@ -260,49 +260,54 @@ class RecordCreator:
         """
         validator_result = self.validator.validate(row)
         record = None
-        if validator_result.is_valid:
-            site = self._get_or_create_site(row)
-            record = self.record_model(
-                site=site,
-                dataset=self.dataset,
-                data=row,
-                source_info={
-                    'file_name': self.file_name,
-                    'row': counter + 1  # add one to match excel/csv row id
-                }
-            )
-            # specific fields
-            if self.dataset.type == Dataset.TYPE_OBSERVATION or self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
-                observation_date = self.schema.cast_record_observation_date(row)
-                if observation_date:
-                    # convert to datetime with timezone awareness
-                    if isinstance(observation_date, datetime.date):
-                        observation_date = datetime.datetime.combine(observation_date, datetime.time.min)
-                    tz = self.dataset.project.timezone or timezone.get_current_timezone()
-                    record.datetime = timezone.make_aware(observation_date, tz)
+        try:
+            if validator_result.is_valid:
+                site = self._get_or_create_site(row)
+                record = self.record_model(
+                    site=site,
+                    dataset=self.dataset,
+                    data=row,
+                    source_info={
+                        'file_name': self.file_name,
+                        'row': counter + 1  # add one to match excel/csv row id
+                    }
+                )
+                # specific fields
+                if self.dataset.type == Dataset.TYPE_OBSERVATION or self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
+                    observation_date = self.schema.cast_record_observation_date(row)
+                    if observation_date:
+                        # convert to datetime with timezone awareness
+                        if isinstance(observation_date, datetime.date):
+                            observation_date = datetime.datetime.combine(observation_date, datetime.time.min)
+                        tz = self.dataset.project.timezone or timezone.get_current_timezone()
+                        record.datetime = timezone.make_aware(observation_date, tz)
 
-                # geometry
-                geometry = self.schema.cast_geometry(row, default_srid=self.dataset.project.datum or MODEL_SRID)
-                record.geometry = geometry
-                if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
-                    # species stuff. Lookup for species match in herbie.
-                    # either a species name or a nameId
-                    species_name = self.schema.cast_species_name(row)
-                    name_id = self.schema.cast_species_name_id(row)
-                    # name id takes precedence
-                    if name_id:
-                        species_name = get_key_for_value(self.species_id_by_name, int(name_id), None)
-                        if not species_name:
-                            column_name = self.schema.species_name_parser.name_id_field.name
-                            message = "Cannot find a species with nameId={}".format(name_id)
-                            validator_result.add_column_error(column_name, message)
-                            return record, validator_result
-                    elif species_name:
-                        name_id = int(self.species_id_by_name.get(species_name, -1))
-                    record.species_name = species_name
-                    record.name_id = name_id
-            if self.commit:
-                record.save()
+                    # geometry
+                    geometry = self.schema.cast_geometry(row, default_srid=self.dataset.project.datum or MODEL_SRID)
+                    record.geometry = geometry
+                    if self.dataset.type == Dataset.TYPE_SPECIES_OBSERVATION:
+                        # species stuff. Lookup for species match in herbie.
+                        # either a species name or a nameId
+                        species_name = self.schema.cast_species_name(row)
+                        name_id = self.schema.cast_species_name_id(row)
+                        # name id takes precedence
+                        if name_id:
+                            species_name = get_key_for_value(self.species_id_by_name, int(name_id), None)
+                            if not species_name:
+                                column_name = self.schema.species_name_parser.name_id_field.name
+                                message = "Cannot find a species with nameId={}".format(name_id)
+                                validator_result.add_column_error(column_name, message)
+                                return record, validator_result
+                        elif species_name:
+                            name_id = int(self.species_id_by_name.get(species_name, -1))
+                        record.species_name = species_name
+                        record.name_id = name_id
+                if self.commit:
+                    record.save()
+        except Exception as e:
+            # catch all errors
+            message = str(e)
+            validator_result.add_column_error('unknown', message)
         return record, validator_result
 
     def _get_or_create_site(self, row):

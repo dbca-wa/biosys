@@ -873,3 +873,102 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         self.assertEquals(len(records), 4)
         expected = [('Zebra', 1), ('Canis lupus', 7), ('Chubby bat', 9), ('Alligator', 10)]
         self.assertEquals([(r['data']['What'], r['data']['How Many']) for r in records], expected)
+
+
+class TestSchemaValidation(helpers.BaseUserTestCase):
+
+    def assert_create_dataset(self, schema):
+        try:
+            return self._create_dataset_with_schema(
+                self.project_1,
+                self.custodian_1_client,
+                schema,
+                dataset_type=Dataset.TYPE_GENERIC
+            )
+        except Exception as e:
+            self.fail('Species Observation dataset creation failed for schema {schema}'.format(
+                schema=schema
+            ))
+
+    def test_not_required_date_with_format_any(self):
+        """
+        field of type date, not required with format any should not raise an error when received a empty string
+        see https://decbugs.com/view.php?id=6928
+        """
+        schema_fields = [
+            {
+                "name": "DateAny",
+                "type": "date",
+                "format": "any",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "DateTimeAny",
+                "type": "datetime",
+                "format": "any",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "DateDefault",
+                "type": "date",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "DateTimeDefault",
+                "type": "datetime",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            }
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        dataset = self.assert_create_dataset(schema)
+        records = [
+            ['DateAny', 'DateTimeAny', 'DateDefault', 'DateTimeDefault'],
+            [None, None, None, None],
+            ['', '', '', ''],
+            ['  ', '   ', '  ', '  '],
+        ]
+        resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk, strict=True)
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+
+    def test_required_date_with_format_any(self):
+        """
+        field of type date, required with format should
+        """
+        schema_fields = [
+            {
+                "name": "DateAny",
+                "type": "date",
+                "format": "any",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "What",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            }
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        dataset = self.assert_create_dataset(schema)
+        records = [
+            ['DateAny', 'What'],
+            [None, 'something'],
+            ['', 'something'],
+            ['   ', 'something'],
+        ]
+        resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk, strict=True)
+        self.assertEquals(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        received = resp.json()
+        self.assertIsInstance(received, list)
+        self.assertEquals(len(received), 3)
+        # this what an report should look like
+        expected_row_report = {
+            'row': 3,
+            'errors': {'DateAny': 'Field "DateAny" has constraint "required" which is not satisfied for value "None"'},
+            'warnings': {}}
+        for row_report in received:
+            self.assertIn('errors', row_report)
+            errors = row_report.get('errors')
+            self.assertIn('DateAny', errors)
+            msg = errors.get('DateAny')
+            self.assertEquals(msg, expected_row_report['errors']['DateAny'])
+
