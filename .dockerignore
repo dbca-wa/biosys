@@ -1,0 +1,7 @@
+.git/
+logs/
+media/
+.coveragerc
+.jshintrc
+.travis.yml
+fabfile.py

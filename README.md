@@ -14,6 +14,29 @@ Biosys is built on Django, the Python web framework and also requires a PostgreS
 It is recommended that the system is run in a Python virtual environment to allow the dependent
 libraries to be installed without possible collisions with other versions of the same libraries.
 
+### Using Docker to run the app
+
+Using [Docker](http://docker.com/) can help you get up and running quicker. To use this method, you'll need both Docker and [docker-compose](https://docs.docker.com/compose/) installed.
+
+First, we need to build the Docker image of the biosys app:
+```bash
+docker build -t dbca-wa/biosys .
+```
+
+Then we can start a stack that includes the app and a database:
+```bash
+docker-compose up
+```
+
+We need to wait ~15 seconds while the database schema is created and a superuser is created for us. Once that's done, you'll be able to access the UI at [http://localhost:8080/]() and login with username=`admin` and password=`admin`.
+
+To clean up, you need to stop the running docker-compose stack using `<ctrl>+c`. Beware that the next step will **permanently delete** any data you created in the app. Then we can delete the stopped containers with:
+```bash
+docker-compose rm -f
+```
+
+**A note about postgres race condition**: Starting the docker-compose stack starts the database (postgres) and the app at the same time. Postgres needs to perform some startup steps before it's ready for a connection and we need the app to wait for this. At the moment it's done (badly) with a `sleep`. If you find that postgres starts slowly on your machine, edit the `docker-compose.yml` file and uncomment the `services.biosys.command` line and increase seconds if necessary.
+
 ## Requirements
 
 ### Supporting Applications / Packages:
