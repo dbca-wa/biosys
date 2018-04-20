@@ -10,7 +10,6 @@ RUN apt-get update && \
       python3-pip \
       python3-dev \
       gcc && \
-    pip3 install django-redis==4.8.0 && \
     pip3 install -r requirements.txt && \
     bash -c 'echo DJANGO_SETTINGS_MODULE="biosys.settings"                 > /app/.env' && \
     bash -c 'echo DEBUG=True                                              >> /app/.env' && \
@@ -24,7 +23,7 @@ RUN apt-get update && \
     bash -c 'echo "echo waiting \$3 seconds for postgres to start"     >> /app/entrypoint.sh' && \
     # TODO a better wait for PG method https://stackoverflow.com/a/42225536/1410035
     bash -c 'echo "sleep \$3"                                          >> /app/entrypoint.sh' && \
-    bash -c 'echo "/usr/bin/python3 manage.py migrate"                 >> /app/entrypoint.sh' && \
+    bash -c 'echo "/usr/bin/python3 manage.py migrate --noinput"       >> /app/entrypoint.sh' && \
     bash -c 'echo "if [ ! -f .user-created ] ; then"                   >> /app/entrypoint.sh' && \
     bash -c 'echo "  cat create-user.py | python3 manage.py shell"     >> /app/entrypoint.sh' && \
     bash -c 'echo "  touch .user-created"                              >> /app/entrypoint.sh' && \

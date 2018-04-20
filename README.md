@@ -14,9 +14,11 @@ Biosys is built on Django, the Python web framework and also requires a PostgreS
 It is recommended that the system is run in a Python virtual environment to allow the dependent
 libraries to be installed without possible collisions with other versions of the same libraries.
 
-### Using Docker to run the app
+### Using Docker to take the app for a test-drive
 
-Using [Docker](http://docker.com/) can help you get up and running quicker. To use this method, you'll need both Docker and [docker-compose](https://docs.docker.com/compose/) installed.
+**Note**: this Docker configuration is not production-ready. It is a super-quick way to get hands on with Biosys though.
+
+Using [Docker](http://docker.com/) can help you get up and running quicker. To use this method, you'll need both [Docker](https://docs.docker.com/install/) and [docker-compose](https://docs.docker.com/compose/) installed.
 
 First, we need to build the Docker image of the biosys app:
 ```bash
