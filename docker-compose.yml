@@ -1,0 +1,15 @@
+version: '3'
+services:
+  biosys:
+    image: dbca-wa/biosys
+    depends_on:
+      - pg
+    # command: '0 0 15' # change 15 if you need to wait longer (in seconds) for postgres to start
+    ports:
+      - '8080:8080'
+    environment:
+      DATABASE_URL: postgis://postgres:pass@pg:5432/postgres
+  pg:
+    image: mdillon/postgis
+    environment:
+      POSTGRES_PASSWORD: pass
