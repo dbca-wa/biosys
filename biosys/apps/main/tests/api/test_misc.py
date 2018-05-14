@@ -16,9 +16,9 @@ class TestWhoAmI(TestCase):
     def test_get(self):
         anonymous = APIClient()
         client = anonymous
-        self.assertIn(
+        self.assertEqual(
             client.get(self.url).status_code,
-            [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+            status.HTTP_200_OK
         )
 
         user = G(get_user_model())
@@ -159,9 +159,9 @@ class TestSpecies(TestCase):
     def test_get(self):
         anonymous = APIClient()
         client = anonymous
-        self.assertIn(
+        self.assertEqual(
             client.get(self.url).status_code,
-            [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+            status.HTTP_200_OK
         )
 
         user = G(get_user_model())

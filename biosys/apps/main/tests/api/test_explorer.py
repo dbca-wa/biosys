@@ -47,8 +47,3 @@ class TestView(TestCase):
         url = reverse('api:explorer')
         resp = self.readonly_client.get(url, follow=True)
         self.assertEquals(resp.status_code, status.HTTP_200_OK)
-
-    def test_anonymous_forbidden(self):
-        url = reverse('api:explorer')
-        resp = self.anonymous_client.get(url, follow=True)
-        self.assertIn(resp.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
