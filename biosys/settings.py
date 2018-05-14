@@ -122,8 +122,7 @@ REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
     'DEFAULT_PERMISSION_CLASSES': [
-        # 'rest_framework.permissions.DjangoModelPermissions' # this permission breaks the explorer.
-        'rest_framework.permissions.IsAuthenticated',
+        env('REST_FRAMEWORK_DEFAULT_PERMISSION_CLASS', 'rest_framework.permissions.AllowAny'),
     ],
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
@@ -148,7 +147,7 @@ SWAGGER_SETTINGS = {
             'name': 'Authorization'
         }
     },
-    'USE_SESSION_AUTH': True,
+    'USE_SESSION_AUTH': env('SWAGGER_USE_SESSION_AUTH', False),
     'APIS_SORTER': 'alpha',
 }
 
