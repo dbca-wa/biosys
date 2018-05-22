@@ -521,5 +521,5 @@ class TestSerialization(helpers.BaseUserTestCase):
         data = resp.json()
         self.assertTrue('centroid' in data)
         centroid = GEOSGeometry(json.dumps(data['centroid']))
-        self.assertEqual(centroid, site.geometry.centroid)
+        self.assertEqual(centroid.geojson, site.geometry.centroid.geojson)
 

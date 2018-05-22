@@ -36,7 +36,7 @@ if not DEBUG:
 # Application definition
 # The variables below are added to all responses in biosys/context_processors.py
 SITE_TITLE = 'BioSys - WA Biological Survey Database'
-APPLICATION_VERSION_NO = '4.0.0'
+APPLICATION_VERSION_NO = '5.0.0'
 
 INSTALLED_APPS = (
     'grappelli',  # Must be before django.contrib.admin
@@ -50,11 +50,12 @@ INSTALLED_APPS = (
     'django.contrib.postgres',
 
     'rest_framework',
-    'rest_framework_swagger',
     'rest_framework.authtoken',
     'dry_rest_permissions',
     'rest_framework_gis',
+    'django_filters',
     'corsheaders',
+    'drf_yasg',
 
     'django_extensions',
     'reversion',
@@ -129,7 +130,7 @@ REST_FRAMEWORK = {
         # 'rest_framework.renderers.BrowsableAPIRenderer', # commented because we use the swagger explorer
     ),
     'DEFAULT_FILTER_BACKENDS': [
-        'rest_framework.filters.DjangoFilterBackend',
+        'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.OrderingFilter'
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
