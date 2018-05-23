@@ -9,7 +9,7 @@ from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from dry_rest_permissions.generics import DRYPermissions
-from rest_framework import viewsets, filters, generics, status
+from rest_framework import viewsets, generics, status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
 from rest_framework.views import APIView, Response
@@ -62,7 +62,6 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, UserPermission,)
     queryset = get_user_model().objects.all()
     serializer_class = serializers.UserSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
     filter_fields = ('username', 'first_name', 'last_name', 'email')
 
 
@@ -70,7 +69,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
-    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_fields = ('id', 'name', 'custodians', 'code')
 
 
@@ -329,7 +327,6 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Record.objects.all()
     serializer_class = serializers.RecordSerializer
-    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_fields = ('id', 'site', 'dataset__id', 'dataset__name', 'dataset__project__id', 'dataset__project__name',
                      'datetime', 'species_name', 'name_id')
 

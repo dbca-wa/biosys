@@ -44,6 +44,6 @@ class TestView(TestCase):
         self.anonymous_client = APIClient()
 
     def test_logged_in_happy_path(self):
-        url = reverse('api:explorer')
+        url = reverse('doc-swagger')
         resp = self.readonly_client.get(url, follow=True)
         self.assertEquals(resp.status_code, status.HTTP_200_OK)

@@ -1471,7 +1471,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         record = Record.objects.filter(id=resp.json().get('id')).first()
         self.assertIsNotNone(record)
         self.assertEqual(record.site, site)
-        self.assertEqual(record.geometry, observation_geometry)
+        self.assertEqual(record.geometry.geojson, observation_geometry.geojson)
 
         # lat/long no site
         record_data = {
@@ -1491,7 +1491,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         record = Record.objects.filter(id=resp.json().get('id')).first()
         self.assertIsNotNone(record)
         self.assertIsNone(record.site)
-        self.assertEqual(record.geometry, observation_geometry)
+        self.assertEqual(record.geometry.geojson, observation_geometry.geojson)
 
         # site without lat/long
         record_data = {
@@ -1511,7 +1511,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         record = Record.objects.filter(id=resp.json().get('id')).first()
         self.assertIsNotNone(record)
         self.assertEqual(record.site, site)
-        self.assertEqual(record.geometry, site_geometry)
+        self.assertEqual(record.geometry.geojson, site_geometry.geojson)
 
         # no lat/long no site -> error
         record_data = {
@@ -1668,10 +1668,10 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             self.assertEqual(resp.status_code, 200)
             # check that the record has been updated
             record_1.refresh_from_db()
-            self.assertEqual(record_1.geometry, new_geometry)
+            self.assertEqual(record_1.geometry.geojson, new_geometry.geojson)
             # site_2 record should be untouched
             record_2.refresh_from_db()
-            self.assertEqual(record_2.geometry, site_2_geometry)
+            self.assertEqual(record_2.geometry.geojson, site_2_geometry.geojson)
 
             # Use case: the record geometry should be updated ONLY if it matches exactly the site geometry
             # new geometry for record_1
@@ -1681,14 +1681,14 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             self.assertNotEqual(new_record_geometry, new_site_geometry)
             record_1.geometry = new_record_geometry
             record_1.save()
-            self.assertNotEqual(record_1.geometry, record_1.site.geometry)
+            self.assertNotEqual(record_1.geometry.geojson, record_1.site.geometry.geojson)
             site = record_1.site
             site.geometry = new_site_geometry
             site.save()
             # check record not changed
             record_1.refresh_from_db()
             self.assertEqual(record_1.geometry, new_record_geometry)
-            self.assertNotEqual(record_1.geometry, record_1.site.geometry)
+            self.assertNotEqual(record_1.geometry.geojson, record_1.site.geometry.geojson)
 
 
 class TestMultipleGeometrySource(helpers.BaseUserTestCase):
