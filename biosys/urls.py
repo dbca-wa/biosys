@@ -68,7 +68,6 @@ schema_view = get_schema_view(
         default_version='v1',
         description="Biosys API Documentation",
     ),
-    validators=['flex', 'ssv'],
     public=True,
     patterns=api_urls
 )
