@@ -924,30 +924,40 @@ class GeometryParser(object):
         :param default_srid:
         :return:
         """
-        result = default_srid
+        # parse datum and zone
+        datum_val = None
+        zone_val = None
         if self.datum_field:
             datum_val = record.get(self.datum_field.name)
-            if not datum_val:
-                return default_srid
-            if self.zone_field:
-                zone_val = record.get(self.zone_field.name)
-                if not zone_val:
-                    return default_srid
+        if self.zone_field:
+            zone_val = record.get(self.zone_field.name)
+            if zone_val:
                 try:
                     int(zone_val)
                 except ValueError:
                     msg = "Invalid Zone '{}'. Should be an integer.".format(zone_val)
                     raise InvalidDatumError(msg)
-                try:
-                    result = get_australian_zone_srid(datum_val, zone_val)
-                except Exception as e:
-                    raise InvalidDatumError(e)
+        # get the srid from values
+        if datum_val and zone_val:
+            # projected. Only Australia is supported.
+            try:
+                result = get_australian_zone_srid(datum_val, zone_val)
+            except Exception as e:
+                msg = "Invalid Datum/Zone '{datum}/{zone}: {error}'.".format(
+                    datum=datum_val,
+                    zone=zone_val,
+                    error=e
+                )
+                raise InvalidDatumError(msg)
+        elif datum_val:
+            if not is_supported_datum(datum_val):
+                msg = "Invalid Datum '{}'. Should be one of: {}".format(datum_val, SUPPORTED_DATUMS)
+                raise InvalidDatumError(msg)
             else:
-                if not is_supported_datum(datum_val):
-                    msg = "Invalid Datum '{}'. Should be one of: {}".format(datum_val, SUPPORTED_DATUMS)
-                    raise InvalidDatumError(msg)
-                else:
-                    result = get_datum_srid(datum_val)
+                result = get_datum_srid(datum_val)
+        else:
+            # no datum
+            result = default_srid
         return result
 
     def cast_geometry(self, record, default_srid=MODEL_SRID):
