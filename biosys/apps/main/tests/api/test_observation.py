@@ -1909,7 +1909,7 @@ class TestGeometryConversion(helpers.BaseUserTestCase):
         Use case:
         Use case:
          - Project datum set to be a projected one, e.g GDA/Zone 56.
-         - Schema has a latitude/longitude ,datum, zone. easting/northing fields (the all shebang)
+         - Schema has a latitude/longitude ,datum, zone. easting/northing fields (the whole shebang)
          - Post a record with lat=-32.0 long=115.75 and Datum=WGS84
         Success if record.geometry is Point(115.75, -32.0)
         """
