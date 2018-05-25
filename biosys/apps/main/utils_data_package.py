@@ -248,6 +248,10 @@ class SchemaField:
         return self.type == 'date'
 
     @property
+    def is_numeric(self):
+        return self.type in ['number', 'integer']
+
+    @property
     def format(self):
         return self.descriptor['format']
 
@@ -460,6 +464,10 @@ class GenericSchema(object):
     def required_fields(self):
         return [f for f in self.fields if f.required]
 
+    @property
+    def numeric_fields(self):
+        return [f for f in self.fields if f.is_numeric]
+
     def get_field_by_name(self, name):
         for f in self.fields:
             if f.name == name:
@@ -497,6 +505,24 @@ class GenericSchema(object):
                 'error': error
             }
         return result
+
+    def cast_numbers(self, row, raise_error=False):
+        """
+        Replace the numeric fields value by a number
+        :param row: a dict of (field_name, value)
+        :param raise_error: if True any casting error will raise an exception
+        :return:  in place replacement {field_name: value} where the numeric fields are casted into python numbers
+        """
+        for field in self.numeric_fields:
+            if field.name in row:
+                value = row[field.name]
+                try:
+                    row[field.name] = field.cast(value)
+                except Exception as e:
+                    if raise_error:
+                        raise e
+                    pass
+        return row
 
     def rows_validator(self, rows):
         for row in rows:

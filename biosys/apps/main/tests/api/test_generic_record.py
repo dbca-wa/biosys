@@ -847,7 +847,6 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
 
     # Because all fields are currently stored as string in the json field, we expect the next test to fail.
     # When the feature is implemented just remove the decorator below.
-    @unittest.expectedFailure
     def test_numeric_ordering_in_json_data(self):
         """
         Assuming we have a schema that contains a numeric field (integer or number types).

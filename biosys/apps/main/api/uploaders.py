@@ -255,11 +255,12 @@ class RecordCreator:
     # TODO: Save the numeric fields (number and integer) as JSON number (not string). It will allow proper ordering.
     def _create_record(self, row, counter):
         """
-        :param row:
+        :param row: a {column(string): value(string)} dictionary
         :return: record, RecordValidatorResult
         """
         validator_result = self.validator.validate(row)
         record = None
+        row = self.schema.cast_numbers(row)
         try:
             if validator_result.is_valid:
                 site = self._get_or_create_site(row)
