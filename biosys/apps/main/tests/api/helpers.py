@@ -83,6 +83,83 @@ class BaseUserTestCase(TestCase):
     ]
     species_facade_class = LightSpeciesFacade
 
+    @staticmethod
+    def observation_schema_with_with_all_possible_geometry_fields():
+        schema_fields = [
+            {
+                "name": "What",
+                "type": "string",
+                "constraints": NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": 'latitude'
+                }
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": 'longitude'
+                }
+            },
+            {
+                "name": "Site Code",
+                "type": "string",
+                "constraints": NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": "siteCode"
+                }
+            },
+            {
+                "name": "Easting",
+                "type": "number",
+                "constraints": NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": 'easting'
+                }
+            },
+            {
+                "name": "Northing",
+                "type": "number",
+                "constraints": NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": 'northing'
+                }
+            },
+            {
+                "name": "Datum",
+                "type": "string",
+                "constraints": NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": 'datum'
+                }
+            },
+            {
+                "name": "Zone",
+                "type": "integer",
+                "constraints": NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": 'zone'
+                }
+            },
+        ]
+        schema = create_schema_from_fields(schema_fields)
+        return schema
+
     @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
                        REST_FRAMEWORK_TEST_SETTINGS=REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):

@@ -7,6 +7,7 @@ from django.contrib.gis.geos import Point
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
 from django.utils import timezone, six
+# TODO: replace all the use of G by a factory from factory-boy
 from django_dynamic_fixture import G
 from openpyxl import load_workbook
 from rest_framework import status
@@ -17,6 +18,7 @@ from main.models import Project, Site, Dataset, Record
 from main.tests.api import helpers
 from main.tests.test_data_package import clone
 from main.utils_auth import is_admin
+from main.tests import factories
 
 
 class TestPermissions(TestCase):
@@ -1692,82 +1694,6 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
 
 
 class TestMultipleGeometrySource(helpers.BaseUserTestCase):
-    @staticmethod
-    def schema_with_with_all_possible_geometry_field():
-        schema_fields = [
-            {
-                "name": "What",
-                "type": "string",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
-            },
-            {
-                "name": "When",
-                "type": "date",
-                "constraints": helpers.REQUIRED_CONSTRAINTS,
-                "format": "any",
-                "biosys": {
-                    'type': 'observationDate'
-                }
-            },
-            {
-                "name": "Latitude",
-                "type": "number",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": 'latitude'
-                }
-            },
-            {
-                "name": "Longitude",
-                "type": "number",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": 'longitude'
-                }
-            },
-            {
-                "name": "Site Code",
-                "type": "string",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": "siteCode"
-                }
-            },
-            {
-                "name": "Easting",
-                "type": "number",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": 'easting'
-                }
-            },
-            {
-                "name": "Northing",
-                "type": "number",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": 'northing'
-                }
-            },
-            {
-                "name": "Datum",
-                "type": "string",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": 'datum'
-                }
-            },
-            {
-                "name": "Zone",
-                "type": "integer",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": 'zone'
-                }
-            },
-        ]
-        schema = helpers.create_schema_from_fields(schema_fields)
-        return schema
 
     def test_geometry_easting_northing_precedence(self):
         """
@@ -1775,7 +1701,7 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         """
         project = self.project_1
         client = self.custodian_1_client
-        schema = self.schema_with_with_all_possible_geometry_field()
+        schema = self.observation_schema_with_with_all_possible_geometry_fields()
         dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
@@ -1833,7 +1759,7 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         """
         project = self.project_1
         client = self.custodian_1_client
-        schema = self.schema_with_with_all_possible_geometry_field()
+        schema = self.observation_schema_with_with_all_possible_geometry_fields()
         dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
@@ -1887,7 +1813,7 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         """
         project = self.project_1
         client = self.custodian_1_client
-        schema = self.schema_with_with_all_possible_geometry_field()
+        schema = self.observation_schema_with_with_all_possible_geometry_fields()
         dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
@@ -1936,7 +1862,7 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
     def test_site_only(self):
         project = self.project_1
         client = self.custodian_1_client
-        schema = self.schema_with_with_all_possible_geometry_field()
+        schema = self.observation_schema_with_with_all_possible_geometry_fields()
         dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
@@ -1973,6 +1899,72 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         # it should be the easting/northing geometry
         self.assertAlmostEqual(geometry.x, site_geometry.x, places=4)
         self.assertAlmostEqual(geometry.y, site_geometry.y, places=4)
+
+
+class TestGeometryConversion(helpers.BaseUserTestCase):
+
+    def test_lat_long_with_projected_project_datum(self):
+        """
+        see: https://youtrack.gaiaresources.com.au/youtrack/issue/BIOSYS-152
+        Use case:
+        Use case:
+         - Project datum set to be a projected one, e.g GDA/Zone 56.
+         - Schema has a latitude/longitude ,datum, zone. easting/northing fields (the whole shebang)
+         - Post a record with lat=-32.0 long=115.75 and Datum=WGS84
+        Success if record.geometry is Point(115.75, -32.0)
+        """
+        # Create project with projected datum
+        datum_srid = constants.get_datum_srid('GDA94 / MGA zone 56')
+        project = factories.ProjectFactory.create(
+            datum=datum_srid
+        )
+        self.assertTrue(constants.is_projected_srid(project.datum))
+        project.custodians.add(self.custodian_1_user)
+        self.assertTrue(project.is_custodian(self.custodian_1_user))
+
+        # Dataset and records in lat/long
+        schema = self.observation_schema_with_with_all_possible_geometry_fields()
+        client = self.custodian_1_client
+        dataset = self._create_dataset_with_schema(
+            project,
+            client,
+            schema,
+            dataset_type=Dataset.TYPE_OBSERVATION
+        )
+        # post record
+        record_data = {
+            'When': "2018-05-25",
+            'Datum': 'WGS84',
+            'Latitude': -32.0,
+            'Longitude': 115.75
+        }
+        record = self._create_record(
+            client,
+            dataset,
+            record_data
+        )
+        self.assertIsNotNone(record)
+        self.assertIsNotNone(record.geometry)
+        self.assertEquals(record.geometry.x, 115.75)
+        self.assertEquals(record.geometry.y, -32.0)
+
+        # try with the upload end-point
+        dataset.record_set.all().delete()
+        rows = [
+            ['When', 'Datum', 'Latitude', 'Longitude'],
+            ['2018-05-25', 'WGS84', -32.0, 115.75]
+        ]
+        response = self._upload_records_from_rows(
+            rows,
+            dataset.pk,
+            strict=True
+        )
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        record = dataset.record_set.last()
+        self.assertIsNotNone(record)
+        self.assertIsNotNone(record.geometry)
+        self.assertEquals(record.geometry.x, 115.75)
+        self.assertEquals(record.geometry.y, -32.0)
 
 
 class TestSerialization(TestCase):
