@@ -1907,9 +1907,8 @@ class TestGeometryConversion(helpers.BaseUserTestCase):
         """
         see: https://youtrack.gaiaresources.com.au/youtrack/issue/BIOSYS-152
         Use case:
-        Use case:
          - Project datum set to be a projected one, e.g GDA/Zone 56.
-         - Schema has a latitude/longitude ,datum, zone. easting/northing fields (the whole shebang)
+         - Schema has a latitude, longitude, datum, zone, easting and northing field (the whole shebang)
          - Post a record with lat=-32.0 long=115.75 and Datum=WGS84
         Success if record.geometry is Point(115.75, -32.0)
         """
