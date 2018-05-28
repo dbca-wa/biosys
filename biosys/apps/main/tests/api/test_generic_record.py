@@ -754,7 +754,8 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         self.assertEquals(len(records), 1)
         record = records[0]
         expected_data = sorted(['Chubby Serge', '2017-05-18', '-34.4', '116.78'])
-        self.assertEquals(sorted(list(record['data'].values())), expected_data)
+        record_values_as_string = [str(v) for v in record['data'].values()]
+        self.assertEquals(sorted(list(record_values_as_string)), expected_data)
 
     def test_string_ordering_in_json_data(self):
         """
@@ -845,12 +846,11 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         record_rows = [record['source_info']['row'] for record in json_response]
         self.assertEqual(record_rows, list(reversed(sorted_rows)))
 
-    # Because all fields are currently stored as string in the json field, we expect the next test to fail.
-    # When the feature is implemented just remove the decorator below.
-    def test_numeric_ordering_in_json_data(self):
+    def test_numeric_ordering_in_json_data_from_upload_end_point(self):
         """
         Assuming we have a schema that contains a numeric field (integer or number types).
         Querying an order on this field should return a numerical order not string (10, after 9)
+        This test uses the upload end_point
         """
         dataset = self._create_dataset_and_records_from_rows([
             ['What', 'How Many'],
@@ -872,6 +872,71 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         self.assertEquals(len(records), 4)
         expected = [('Zebra', 1), ('Canis lupus', 7), ('Chubby bat', 9), ('Alligator', 10)]
         self.assertEquals([(r['data']['What'], r['data']['How Many']) for r in records], expected)
+
+    def test_numeric_ordering_in_json_data_from_post_end_point(self):
+        """
+        Assuming we have a schema that contains a numeric field (integer or number types).
+        Querying an order on this field should return a numerical order not string (10, after 9)
+        This test uses the api POST record/ end_point.
+        """
+        weights = [23.6, 123.4, 2.6, 203.4]
+        # sorted float list should return [2.6, 23.6, 123.4, 203.4]
+        # while a string sorted should return ['123.4', '2.6', '203.4', '23.6']
+        float_sorted = sorted(weights)
+        string_sorted = sorted([str(w) for w in weights])
+        self.assertNotEquals(float_sorted, [float(s) for s in string_sorted])
+
+        dataset = self._create_dataset_from_rows([
+            ['What', 'Weight'],
+            ['Canis lupus', weights[0]],
+            ['Zebra', weights[1]],
+            ['Chubby bat', weights[2]],
+            ['Alligator', weights[3]]
+        ])
+        # check that we have a field of type integer
+        self.assertEquals(dataset.schema.get_field_by_name('Weight').type, 'number')
+        # post some records
+        records_data = [
+            {
+                'What': 'Canis lupus',
+                'Weight': weights[0]
+            },
+            {
+                'What': 'Zebra',
+                'Weight': weights[1]
+            },
+            {
+                'What': 'Chubby bat',
+                'Weight': weights[2]
+            },
+            {
+                'What': 'Alligator',
+                'Weight': weights[3]
+            },
+        ]
+        records = []
+        for record_data in records_data:
+            records.append(self._create_record(self.custodian_1_client, dataset, record_data))
+        client = self.custodian_1_client
+        url = reverse('api:record-list')
+
+        ordering = 'Weight'
+        resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEquals(len(records), 4)
+        expected = [('Chubby bat', 2.6), ('Canis lupus', 23.6), ('Zebra', 123.4), ('Alligator', 203.4)]
+        self.assertEquals([(r['data']['What'], r['data']['Weight']) for r in records], expected)
+
+        # revert ordering
+        ordering = '-Weight'
+        resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
+        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEquals(len(records), 4)
+        # reverse expected
+        expected = expected[::-1]
+        self.assertEquals([(r['data']['What'], r['data']['Weight']) for r in records], expected)
 
 
 class TestSchemaValidation(helpers.BaseUserTestCase):

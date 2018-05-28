@@ -4,6 +4,7 @@ import json
 import logging
 import re
 import datetime
+import decimal
 
 from dateutil.parser import parse as date_parse
 from django.contrib.gis.geos import Point
@@ -508,7 +509,7 @@ class GenericSchema(object):
 
     def cast_numbers(self, row, raise_error=False):
         """
-        Replace the numeric fields value by a number
+        Replace the numeric fields value by a json serializable python number. An int or float
         :param row: a dict of (field_name, value)
         :param raise_error: if True any casting error will raise an exception
         :return:  in place replacement {field_name: value} where the numeric fields are casted into python numbers
@@ -517,7 +518,12 @@ class GenericSchema(object):
             if field.name in row:
                 value = row[field.name]
                 try:
-                    row[field.name] = field.cast(value)
+                    python_value = field.cast(value)
+                    # The frictionless cast will cast a number to a python Decimal(), which is not json serializable
+                    # by default. Cast it to a float.
+                    if isinstance(python_value, decimal.Decimal):
+                        python_value = float(python_value)
+                    row[field.name] = python_value
                 except Exception as e:
                     if raise_error:
                         raise e
