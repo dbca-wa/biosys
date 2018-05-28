@@ -1,7 +1,18 @@
+import re
+from os import path
+
+from openpyxl import load_workbook
+
 from django.shortcuts import reverse
+from django.utils import six
 from rest_framework import status
 
 from main.tests.api import helpers
+# TODO: remove when python3
+if six.PY2:
+    import unicodecsv as csv
+else:
+    import csv
 
 
 class TestFieldSelection(helpers.BaseUserTestCase):
@@ -137,4 +148,88 @@ class TestFieldSelection(helpers.BaseUserTestCase):
         for record in records:
             self.assertIsInstance(record, dict)
             self.assertEquals(sorted(list(record.keys())), sorted(expected_fields))
+
+
+class TestExcelFormat(helpers.BaseUserTestCase):
+
+    def test_happy_path(self):
+        expected_rows = [
+            ['What', 'When', 'Latitude', 'Longitude'],
+            ['a big bird in Cottesloe', '20018-01-24', -32.0, 115.75],
+            ['a chubby bat somewhere', '20017-12-24', -33.6, 116.678],
+            ['something in the null island', '2018-05-25', 0, 0]
+        ]
+        dataset = self._create_dataset_and_records_from_rows(expected_rows)
+        client = self.custodian_1_client
+        # ask for all records
+        output = 'xlsx'
+        url = reverse('api:record-list')
+        query_params = {
+            'dataset__id': dataset.pk,
+            'output': output
+        }
+        resp = client.get(url, query_params)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.get('content-type'),
+                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        content_disposition = resp.get('content-disposition')
+        # should be something like:
+        # 'attachment; filename=something.xlsx
+        match = re.match('attachment; filename=(.+)', content_disposition)
+        self.assertIsNotNone(match)
+        filename, ext = path.splitext(match.group(1))
+        self.assertEquals(ext, '.xlsx')
+        # read content
+        wb = load_workbook(six.BytesIO(resp.content), read_only=True)
+        # one datasheet named after the dataset
+        expected_sheet_name = dataset.name
+        sheet_names = wb.get_sheet_names()
+        self.assertEquals(1, len(sheet_names))
+        self.assertEquals(sheet_names[0], expected_sheet_name)
+
+        # check rows values
+        ws = wb.get_sheet_by_name(expected_sheet_name)
+        rows = list(ws.rows)
+        # compare rows
+        self.assertEquals(len(rows), len(expected_rows))
+        for (expected_values, xlsx_row) in zip(expected_rows, rows):
+            actual_values = [c.value for c in xlsx_row]
+            self.assertEqual(expected_values, actual_values)
+
+
+class TestCSVFormat(helpers.BaseUserTestCase):
+
+    def test_happy_path(self):
+        expected_rows = [
+            ['What', 'When', 'Latitude', 'Longitude'],
+            ['a big bird in Cottesloe', '20018-01-24', -32, 115.75],  # Note: if you put 32.0 the return will be '-32'
+            ['a chubby bat somewhere', '20017-12-24', -33.6, 116.678],
+            ['something in the null island', '2018-05-25', 0, 0]
+        ]
+        dataset = self._create_dataset_and_records_from_rows(expected_rows)
+        client = self.custodian_1_client
+        # ask for all records
+        output = 'csv'
+        url = reverse('api:record-list')
+        query_params = {
+            'dataset__id': dataset.pk,
+            'output': output
+        }
+        resp = client.get(url, query_params)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.get('content-type'),
+                         'text/csv')
+        content_disposition = resp.get('content-disposition')
+        # should be something like:
+        # 'attachment; filename=something.csv
+        match = re.match('attachment; filename=(.+)', content_disposition)
+        self.assertIsNotNone(match)
+        filename, ext = path.splitext(match.group(1))
+        self.assertEquals(ext, '.csv')
+        # read content
+        reader = csv.reader(six.StringIO(resp.content.decode('utf-8')), dialect='excel')
+        for expected_row, actual_row in zip(expected_rows, reader):
+            expected_row_string = [str(v) for v in expected_row]
+            self.assertEquals(actual_row, expected_row_string)
+
 

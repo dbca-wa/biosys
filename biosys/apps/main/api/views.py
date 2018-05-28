@@ -22,7 +22,7 @@ from main.api.validators import get_record_validator_for_dataset
 from main.models import Project, Site, Dataset, Record
 from main.utils_auth import is_admin
 from main.utils_data_package import Exporter
-from main.utils_http import WorkbookResponse
+from main.utils_http import WorkbookResponse, CSVFileResponse
 from main.utils_species import HerbieFacade
 from main.utils_misc import search_json_fields, order_by_json_field
 
@@ -383,15 +383,23 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
 
     def list(self, request, *args, **kwargs):
         # don't use 'format' param as it's kind of reserved by DRF
-        if self.request.query_params.get('output') == 'xlsx':
+        output = self.request.query_params.get('output')
+        if output in ['xlsx', 'csv']:
             if not self.dataset:
                 return Response(status=status.HTTP_400_BAD_REQUEST, data="No dataset specified")
             qs = self.filter_queryset(self.get_queryset())
             exporter = Exporter(self.dataset, qs)
-            wb = exporter.to_workbook()
             now = datetime.datetime.now()
-            file_name = self.dataset.name + '_' + now.strftime('%Y-%m-%d-%H%M%S') + '.xlsx'
-            response = WorkbookResponse(wb, file_name)
+            file_name = self.dataset.name + '_' + now.strftime('%Y-%m-%d-%H%M%S')
+            if output == 'xlsx':
+                file_name += '.xlsx'
+                wb = exporter.to_workbook()
+                response = WorkbookResponse(wb, file_name)
+            else:
+                # csv
+                file_name += '.csv'
+                response = CSVFileResponse(file_name=file_name)
+                exporter.to_csv(response)
             return response
         else:
             return super(RecordViewSet, self).list(request, *args, **kwargs)

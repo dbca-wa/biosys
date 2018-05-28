@@ -1367,3 +1367,15 @@ class Exporter:
         ws = wb.create_sheet()
         self._to_worksheet(ws)
         return wb
+
+    def to_csv(self, output):
+        # TODO: remove when python3
+        if six.PY2:
+            import unicodecsv as csv
+        else:
+            import csv
+
+        output = output or six.StringIO()
+        writer = csv.writer(output, dialect='excel')
+        for row in self.csv_it():
+            writer.writerow(row)
