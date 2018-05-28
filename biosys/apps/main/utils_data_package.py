@@ -520,9 +520,13 @@ class GenericSchema(object):
                 try:
                     python_value = field.cast(value)
                     # The frictionless cast will cast a number to a python Decimal(), which is not json serializable
-                    # by default. Cast it to a float.
+                    # by default. Cast it to a float or int. We want to keep it as entered as possible. E.g if entered
+                    # 0 we don't want 0.0 or vice versa
                     if isinstance(python_value, decimal.Decimal):
-                        python_value = float(python_value)
+                        if str(value).find('.') > 0:
+                            python_value = float(python_value)
+                        else:
+                            python_value = int(python_value)
                     row[field.name] = python_value
                 except Exception as e:
                     if raise_error:
@@ -1006,10 +1010,10 @@ class GeometryParser(object):
         if self.is_easting_northing:
             x = record.get(self.easting_field.name)
             y = record.get(self.northing_field.name)
-        if (not x or not y) and self.is_lat_long:
+        if (is_blank_value(x) or is_blank_value(y)) and self.is_lat_long:
             x = record.get(self.longitude_field.name)
             y = record.get(self.latitude_field.name)
-        if x and y:
+        if not is_blank_value(x) and not is_blank_value(y):
             srid = self.cast_srid(record, default_srid=default_srid)
             geometry = Point(x=float(x), y=float(y), srid=srid)
         if geometry is None and self.site_code_field is not None:
@@ -1024,7 +1028,7 @@ class GeometryParser(object):
             return geometry
         else:
             # problem
-            raise Exception('No lat/long eating/northing or site code found!')
+            raise Exception('No Latitude/Longitude Easting/Northing or Site Code found!')
 
     def from_record_to_geometry(self, record, default_srid=MODEL_SRID):
         return self.cast_geometry(record, default_srid=default_srid)
