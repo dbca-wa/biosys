@@ -877,7 +877,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         """
         Assuming we have a schema that contains a numeric field (integer or number types).
         Querying an order on this field should return a numerical order not string (10, after 9)
-        This test uses the api POST record/ end_point.
+        This test uses the api POST record/ end_point with floats instead of integers.
         """
         weights = [23.6, 123.4, 2.6, 203.4]
         # sorted float list should return [2.6, 23.6, 123.4, 203.4]
