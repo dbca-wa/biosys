@@ -31,7 +31,7 @@ drf-yasg==1.7.4
 
 
 # dbca for SSO login
-https://static.dbca.wa.gov.au/static/py/dpaw-utils/dist/dpaw-utils-0.3a9.tar.gz
+git+https://github.com/dbca-wa/dpaw-utils.git@0.4.1
 
 # TODO: to get rid of
 django-grappelli==2.8.2

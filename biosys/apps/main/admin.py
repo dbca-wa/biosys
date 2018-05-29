@@ -54,5 +54,5 @@ class DatasetAdmin(MainAppAdmin):
 @admin.register(Record)
 class RecordAdmin(MainAppAdmin):
     list_display = ['dataset', 'data']
-    list_filter = ['dataset']
+    list_filter = ['dataset', 'published', 'consumed']
     readonly_fields = ['data']
