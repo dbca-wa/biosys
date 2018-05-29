@@ -4,7 +4,7 @@ from main import models
 
 
 class RecordFilterSet(filters.FilterSet):
-
+    # TODO: Add custom filter field for JSONField
     class Meta:
         model = models.Record
         fields = {
