@@ -24,14 +24,15 @@ CSRF_COOKIE_SECURE = env('CSRF_COOKIE_SECURE', False)
 SESSION_COOKIE_SECURE = env('SESSION_COOKIE_SECURE', False)
 if not DEBUG:
     # Localhost, UAT and Production hosts
-    ALLOWED_HOSTS = [
+    ALLOWED_HOSTS = env('ALLOWED_HOSTS',
+    [
         'localhost',
         '127.0.0.1',
         'biosys.dbca.wa.gov.au',
         'biosys.dbca.wa.gov.au.',
         'biosys-uat.dbca.wa.gov.au',
         'biosys-uat.dbca.wa.gov.au.',
-    ]
+    ])
 
 # Application definition
 # The variables below are added to all responses in biosys/context_processors.py
@@ -70,7 +71,7 @@ PROJECT_APPS = (
 
 INSTALLED_APPS += PROJECT_APPS
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -80,9 +81,14 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.gzip.GZipMiddleware',
-    'dpaw_utils.middleware.SSOLoginMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-)
+]
+
+EXTRA_MIDDLEWARE = env('EXTRA_MIDDLEWARE', [
+    'dpaw_utils.middleware.SSOLoginMiddleware'
+])
+
+MIDDLEWARE += EXTRA_MIDDLEWARE
 
 ROOT_URLCONF = 'biosys.urls'
 

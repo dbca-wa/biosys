@@ -16,6 +16,7 @@ from rest_framework.views import APIView, Response
 
 from main import models, constants
 from main.api import serializers
+from main.api import filters
 from main.api.helpers import to_bool
 from main.api.uploaders import SiteUploader, FileReader, RecordCreator, DataPackageBuilder
 from main.api.validators import get_record_validator_for_dataset
@@ -327,8 +328,7 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Record.objects.all()
     serializer_class = serializers.RecordSerializer
-    filter_fields = ('id', 'site', 'dataset__id', 'dataset__name', 'dataset__project__id', 'dataset__project__name',
-                     'datetime', 'species_name', 'name_id')
+    filter_class = filters.RecordFilterSet
 
     def __init__(self, **kwargs):
         super(RecordViewSet, self).__init__(**kwargs)

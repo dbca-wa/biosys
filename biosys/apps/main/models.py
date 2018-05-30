@@ -403,6 +403,11 @@ class Record(models.Model):
                                   verbose_name="Name ID", help_text="The unique ID from the species database")
     # to store information about the source of the record, like excel filename, row number in file etc...
     source_info = JSONField(null=True, blank=True)
+
+    # flags about publishing status
+    published = models.BooleanField(default=False)
+    consumed = models.BooleanField(default=False)
+
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
 
