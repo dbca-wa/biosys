@@ -1,9 +1,10 @@
 import requests
+from confy import env
 from django.contrib.auth import get_user_model
 
 UserModel = get_user_model()
 
-ASMS_LOGIN_URL = "https://environment.nsw.gov.au/asmslightprofileapp/account/login"
+ASMS_LOGIN_URL = env('ASMS_LOGIN_URL', "https://environment.nsw.gov.au/asmslightprofileapp/account/login")
 
 
 class OEHBackend(object):
