@@ -120,12 +120,16 @@ LOGIN_URL = '/login/'
 LOGOUT_URL = '/logout/'
 LOGIN_REDIRECT_URL = '/'
 
+AUTHENTICATION_BACKENDS = env('AUTHENTICATION_BACKENDS', [
+    'django.contrib.auth.backends.ModelBackend',
+])
+
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
+    'DEFAULT_AUTHENTICATION_CLASSES': env('REST_FRAMEWORK_DEFAULT_AUTHENTICATION_CLASSES', [
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.BasicAuthentication',
         'main.api.authentication.NoCsrfSessionAuthentication',
-    ],
+    ]),
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
     'DEFAULT_PERMISSION_CLASSES': [
@@ -301,10 +305,6 @@ LOGGING = {
         }
     }
 }
-
-AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
-)
 
 # Grappelli settings
 GRAPPELLI_ADMIN_TITLE = SITE_TITLE + ' administration'
