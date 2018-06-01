@@ -282,7 +282,10 @@ class RecordSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         instance = super(RecordSerializer, self).update(instance, validated_data)
-        return self.set_fields_from_data(instance, validated_data)
+        # if data are sent we need to update the extracted fields
+        if validated_data.get('data') is not None:
+            instance = self.set_fields_from_data(instance, validated_data)
+        return instance
 
     class Meta:
         model = Record

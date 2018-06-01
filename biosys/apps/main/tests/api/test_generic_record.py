@@ -1,6 +1,6 @@
 import re
 from os import path
-import unittest
+import json
 
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
@@ -1036,3 +1036,61 @@ class TestSchemaValidation(helpers.BaseUserTestCase):
             msg = errors.get('DateAny')
             self.assertEquals(msg, expected_row_report['errors']['DateAny'])
 
+
+class TestPatch(helpers.BaseUserTestCase):
+
+    def test_patch_published(self):
+        """
+        Test that we can patch just the 'published' flag
+        :return:
+        """
+        rows = [
+            ['What', 'Comments'],
+            ['Chubby bat', 'It is huge!']
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
+        self.assertEqual(dataset.type, Dataset.TYPE_GENERIC)
+        records = dataset.record_set.all()
+        record = records.last()
+        self.assertIsNotNone(record)
+        self.assertFalse(record.published)
+        previous_data = json.dumps(record.data)
+        # patch
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
+        client = self.custodian_1_client
+        payload = {
+            'published': True
+        }
+        resp = client.patch(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        record.refresh_from_db()
+        self.assertTrue(record.published)
+        self.assertTrue(json.dumps(record.data), previous_data)
+
+    def test_patch_consumed(self):
+        """
+        Test that we can patch just the 'consumed' flag
+        :return:
+        """
+        rows = [
+            ['What', 'Comments'],
+            ['Chubby bat', 'It is huge!']
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
+        self.assertEqual(dataset.type, Dataset.TYPE_GENERIC)
+        records = dataset.record_set.all()
+        record = records.last()
+        self.assertIsNotNone(record)
+        self.assertFalse(record.consumed)
+        previous_data = json.dumps(record.data)
+        # patch
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
+        client = self.custodian_1_client
+        payload = {
+            'consumed': True
+        }
+        resp = client.patch(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        record.refresh_from_db()
+        self.assertTrue(record.consumed)
+        self.assertTrue(json.dumps(record.data), previous_data)
