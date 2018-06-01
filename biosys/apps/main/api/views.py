@@ -193,39 +193,8 @@ class SiteViewSet(viewsets.ModelViewSet):
 class DatasetViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     serializer_class = serializers.DatasetSerializer
-
-    def get_queryset(self):
-        queryset = models.Dataset.objects.all()
-
-        name = self.request.query_params.get('name', None)
-        if name is not None:
-            queryset = queryset.filter(name=name)
-
-        project = self.request.query_params.get('project', None)
-        if project is not None:
-            queryset = queryset.filter(project=project)
-
-        type_ = self.request.query_params.get('type', None)
-        if type_ is not None:
-            queryset = queryset.filter(type=type_)
-
-        datetime_start = self.request.query_params.get('record__datetime__start', None)
-        if datetime_start is not None:
-            queryset = queryset.filter(record__datetime__gte=datetime_start)
-
-        datetime_end = self.request.query_params.get('record__datetime__end', None)
-        if datetime_end is not None:
-            queryset = queryset.filter(record__datetime__lte=datetime_end)
-
-        species_name = self.request.query_params.get('record__species_name', None)
-        if species_name is not None:
-            queryset = queryset.filter(record__species_name=species_name)
-
-        name_id = self.request.query_params.get('record__name_id', None)
-        if name_id is not None:
-            queryset = queryset.filter(record__name_id=name_id)
-
-        return queryset.distinct()
+    filter_class = filters.DatasetFilterSet
+    queryset = models.Dataset.objects.all().distinct()
 
 
 class DatasetRecordsPermission(BasePermission):
