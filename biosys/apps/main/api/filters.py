@@ -23,5 +23,6 @@ class RecordFilterSet(filters.FilterSet):
             'site': ['exact'],
             'site__id': ['exact'],
             'site__code': ['exact'],
-            'site__name': ['exact']
+            'site__name': ['exact'],
+            'client_id': ['exact']
         }
