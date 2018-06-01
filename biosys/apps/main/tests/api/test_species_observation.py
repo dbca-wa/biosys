@@ -1776,6 +1776,7 @@ class TestCompositeSpeciesName(helpers.BaseUserTestCase):
             msg = errors.get('Species')
             self.assertEquals(msg, expected_row_report['errors']['Species'])
 
+
 class TestPatch(helpers.BaseUserTestCase):
 
     def test_patch_published(self):
