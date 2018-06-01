@@ -1,6 +1,7 @@
 import datetime
 import re
 from os import path
+import json
 
 from django.contrib.gis.geos import Point
 from django.core.urlresolvers import reverse
@@ -1774,3 +1775,61 @@ class TestCompositeSpeciesName(helpers.BaseUserTestCase):
             self.assertIn('Species', errors)
             msg = errors.get('Species')
             self.assertEquals(msg, expected_row_report['errors']['Species'])
+
+class TestPatch(helpers.BaseUserTestCase):
+
+    def test_patch_published(self):
+        """
+        Test that we can patch just the 'published' flag
+        :return:
+        """
+        rows = [
+            ['Species Name', 'When', 'Latitude', 'Longitude', 'Comments'],
+            ['Chubby bat', '2018-06-01', -32, 115.75, 'It is huge!']
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
+        self.assertEqual(dataset.type, Dataset.TYPE_SPECIES_OBSERVATION)
+        records = dataset.record_set.all()
+        record = records.last()
+        self.assertIsNotNone(record)
+        self.assertFalse(record.published)
+        previous_data = json.dumps(record.data)
+        # patch
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
+        client = self.custodian_1_client
+        payload = {
+            'published': True
+        }
+        resp = client.patch(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        record.refresh_from_db()
+        self.assertTrue(record.published)
+        self.assertTrue(json.dumps(record.data), previous_data)
+
+    def test_patch_consumed(self):
+        """
+        Test that we can patch just the 'consumed' flag
+        :return:
+        """
+        rows = [
+            ['Species Name', 'When', 'Latitude', 'Longitude', 'Comments'],
+            ['Chubby bat', '2018-06-01', -32, 115.75, 'It is huge!']
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
+        self.assertEqual(dataset.type, Dataset.TYPE_SPECIES_OBSERVATION)
+        records = dataset.record_set.all()
+        record = records.last()
+        self.assertIsNotNone(record)
+        self.assertFalse(record.consumed)
+        previous_data = json.dumps(record.data)
+        # patch
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
+        client = self.custodian_1_client
+        payload = {
+            'consumed': True
+        }
+        resp = client.patch(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        record.refresh_from_db()
+        self.assertTrue(record.consumed)
+        self.assertTrue(json.dumps(record.data), previous_data)
