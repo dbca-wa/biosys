@@ -373,18 +373,6 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
         else:
             return super(RecordViewSet, self).list(request, *args, **kwargs)
 
-    def filter_queryset(self, queryset):
-        # apply the model filters: filter_fields
-        queryset = super(RecordViewSet, self).filter_queryset(queryset)
-        # other filters
-        datetime_start = self.request.query_params.get('datetime__start', None)
-        if datetime_start is not None:
-            queryset = queryset.filter(datetime__gte=datetime_start)
-        datetime_end = self.request.query_params.get('datetime__end', None)
-        if datetime_end is not None:
-            queryset = queryset.filter(datetime__lte=datetime_end)
-        return queryset
-
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         self.dataset = instance.dataset
