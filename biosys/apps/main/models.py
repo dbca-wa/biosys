@@ -408,6 +408,9 @@ class Record(models.Model):
     published = models.BooleanField(default=False)
     consumed = models.BooleanField(default=False)
 
+    # client id
+    client_id = models.CharField(max_length=1024, null=True, blank=True)
+
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
 
