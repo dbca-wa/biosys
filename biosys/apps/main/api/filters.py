@@ -3,6 +3,24 @@ from django_filters import rest_framework as filters
 from main import models
 
 
+class DatasetFilterSet(filters.FilterSet):
+    class Meta:
+        model = models.Dataset
+        fields = {
+            'id': ['exact'],
+            'name': ['exact'],
+            'code': ['exact'],
+            'type': ['exact'],
+            'project': ['exact'],
+            'project__id': ['exact'],
+            'project__name': ['exact'],
+            'project__code': ['exact'],
+            'record__species_name': ['iexact'],
+            'record__name_id': ['exact'],
+            'record__datetime': ['exact', 'gt', 'lt', 'gte', 'lte']
+        }
+
+
 class RecordFilterSet(filters.FilterSet):
     # TODO: Add custom filter field for JSONField
     class Meta:
