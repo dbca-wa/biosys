@@ -1,6 +1,7 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
 import datetime
+import logging
 from collections import OrderedDict
 from os import path
 
@@ -8,11 +9,13 @@ from django.contrib.auth import get_user_model, logout
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.conf import settings
 from dry_rest_permissions.generics import DRYPermissions
 from rest_framework import viewsets, generics, status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
 from rest_framework.views import APIView, Response
+from rest_framework.settings import import_from_string
 
 from main import models, constants
 from main.api import serializers
@@ -24,8 +27,11 @@ from main.models import Project, Site, Dataset, Record
 from main.utils_auth import is_admin
 from main.utils_data_package import Exporter
 from main.utils_http import WorkbookResponse, CSVFileResponse
-from main.utils_species import HerbieFacade
+from main.utils_species import NoSpeciesFacade
 from main.utils_misc import search_json_fields, order_by_json_field
+
+
+logger = logging.getLogger(__name__)
 
 
 class UserPermission(BasePermission):
@@ -207,7 +213,13 @@ class DatasetRecordsPermission(BasePermission):
 
 
 class SpeciesMixin(object):
-    species_facade_class = HerbieFacade
+    species_facade_class = NoSpeciesFacade
+    if settings.SPECIES_FACADE_CLASS:
+        try:
+            species_facade_class = import_from_string(settings.SPECIES_FACADE_CLASS, 'SPECIES_FACADE_CLASS')
+        except Exception as e:
+            msg = "Error while importing the species facade class {}".format(settings.SPECIES_FACADE_CLASS)
+            logger.exception(msg)
 
 
 class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesMixin):

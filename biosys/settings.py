@@ -226,9 +226,10 @@ BOOTSTRAP3 = {
     'set_placeholder': False,
 }
 
-HERBIE_SPECIES_WFS_URL = env('HERBIE_SPECIES_WFS_URL',
-                             'https://kmi.dbca.wa.gov.au/geoserver/ows?service=wfs&version=1.1.0&'
-                             'request=GetFeature&typeNames=public:herbie_hbvspecies_public&outputFormat=application/json')
+# The class that should provide a mapping between the species scientific name and the species name_id.
+# To use the WA Herbarium web service set SPECIES_FACADE_CLASS='main.utils_species.HerbieFacade'
+# in the environment file.
+SPECIES_FACADE_CLASS = env('SPECIES_FACADE_CLASS', None)
 
 # Logging settings
 # Ensure that the logs directory exists:
