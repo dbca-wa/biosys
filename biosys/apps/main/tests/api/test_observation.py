@@ -621,7 +621,7 @@ class TestSiteExtraction(TestCase):
         # need to test if the site belongs to the dataset project or the update won't happen
         self.assertIsNotNone(site)
         self.assertEqual(site.project, record.dataset.project)
-        self.assertNotEquals(record.site, site)
+        self.assertNotEqual(record.site, site)
         # update site value
         schema = record.dataset.schema
         site_column = schema.get_fk_for_model('Site').data_field
@@ -1023,8 +1023,8 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         # convert it back to GAD / zone 50 -> srid = 28350
         geom.transform(28350)
         # compare with 2 decimal place precision. Should be different that of expected
-        self.assertNotAlmostEquals(geom.x, easting, places=2)
-        self.assertNotAlmostEquals(geom.y, northing, places=2)
+        self.assertNotAlmostEqual(geom.x, easting, places=2)
+        self.assertNotAlmostEqual(geom.y, northing, places=2)
 
         # send path to update the zone
         record_data = {

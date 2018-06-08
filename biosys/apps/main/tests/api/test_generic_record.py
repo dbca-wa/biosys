@@ -466,7 +466,7 @@ class TestSiteExtraction(TestCase):
         # need to test if the site belongs to the dataset project or the update won't happen
         self.assertIsNotNone(site)
         self.assertTrue(site.project == record.dataset.project)
-        self.assertNotEquals(record.site, site)
+        self.assertNotEqual(record.site, site)
         # update site value
         schema = record.dataset.schema
         site_column = schema.get_fk_for_model('Site').data_field
@@ -799,7 +799,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         records = resp.json()
         self.assertEqual(len(records), 4)
         expected_whats = sorted(['Alligator', 'Canis lupus', 'Chubby bat', 'Zebra'])
-        self.assertNotEquals([r['data']['What'] for r in records], expected_whats)
+        self.assertNotEqual([r['data']['What'] for r in records], expected_whats)
 
     def test_server_side_ordering_row_number(self):
         """
@@ -884,7 +884,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         # while a string sorted should return ['123.4', '2.6', '203.4', '23.6']
         float_sorted = sorted(weights)
         string_sorted = sorted([str(w) for w in weights])
-        self.assertNotEquals(float_sorted, [float(s) for s in string_sorted])
+        self.assertNotEqual(float_sorted, [float(s) for s in string_sorted])
 
         dataset = self._create_dataset_from_rows([
             ['What', 'Weight'],
