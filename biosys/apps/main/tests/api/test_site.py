@@ -378,22 +378,22 @@ class TestSiteUpload(TestCase):
         project = self.project_1
         client = self.custodian_1_client
         url = reverse('api:upload-sites', kwargs={'pk': project.pk})
-        self.assertEquals(0, Site.objects.filter(project=project).count())
+        self.assertEqual(0, Site.objects.filter(project=project).count())
         with open(csv_file) as fp:
             data = {
                 'file': fp
             }
             resp = client.post(url, data=data, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             qs = Site.objects.filter(project=project)
-            self.assertEquals(len(csv_data) - 1, qs.count())
-            self.assertEquals(['C1', 'C2'], [s.code for s in qs.order_by('code')])
-            self.assertEquals(['Site 1', 'Site 2'], [s.name for s in qs.order_by('name')])
-            self.assertEquals(['Description1', 'Description2'], [s.description for s in qs.order_by('description')])
+            self.assertEqual(len(csv_data) - 1, qs.count())
+            self.assertEqual(['C1', 'C2'], [s.code for s in qs.order_by('code')])
+            self.assertEqual(['Site 1', 'Site 2'], [s.name for s in qs.order_by('name')])
+            self.assertEqual(['Description1', 'Description2'], [s.description for s in qs.order_by('description')])
 
             # test geom and attr
             s = qs.filter(code='C1').first()
-            self.assertEquals((116, -32), (s.geometry.x, s.geometry.y))
+            self.assertEqual((116, -32), (s.geometry.x, s.geometry.y))
             expected_attributes = {
                 'Latitude': '-32',
                 'Longitude': '116',
@@ -401,7 +401,7 @@ class TestSiteUpload(TestCase):
                 'Attribute1': 'attr11',
                 'Attribute2': 'attr12'}
 
-            self.assertEquals(expected_attributes, s.attributes)
+            self.assertEqual(expected_attributes, s.attributes)
 
             self.assertEqual(project.site_count, len(csv_data) - 1)
 
@@ -415,22 +415,22 @@ class TestSiteUpload(TestCase):
         project = self.project_1
         client = self.custodian_1_client
         url = reverse('api:upload-sites', kwargs={'pk': project.pk})
-        self.assertEquals(0, Site.objects.filter(project=project).count())
+        self.assertEqual(0, Site.objects.filter(project=project).count())
         with open(xlsx_file, 'rb') as fp:
             data = {
                 'file': fp
             }
             resp = client.post(url, data=data, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             qs = Site.objects.filter(project=project)
-            self.assertEquals(len(csv_data) - 1, qs.count())
-            self.assertEquals(['C1', 'C2'], [s.code for s in qs.order_by('code')])
-            self.assertEquals(['Site 1', 'Site 2'], [s.name for s in qs.order_by('name')])
-            self.assertEquals(['Description1', 'Description2'], [s.description for s in qs.order_by('description')])
+            self.assertEqual(len(csv_data) - 1, qs.count())
+            self.assertEqual(['C1', 'C2'], [s.code for s in qs.order_by('code')])
+            self.assertEqual(['Site 1', 'Site 2'], [s.name for s in qs.order_by('name')])
+            self.assertEqual(['Description1', 'Description2'], [s.description for s in qs.order_by('description')])
 
             # test geom and attr
             s = qs.filter(code='C1').first()
-            self.assertEquals((116, -32), (s.geometry.x, s.geometry.y))
+            self.assertEqual((116, -32), (s.geometry.x, s.geometry.y))
             expected_attributes = {
                 'Latitude': '-32',
                 'Longitude': '116',
@@ -438,7 +438,7 @@ class TestSiteUpload(TestCase):
                 'Attribute1': 'attr11',
                 'Attribute2': 'attr12'}
 
-            self.assertEquals(expected_attributes, s.attributes)
+            self.assertEqual(expected_attributes, s.attributes)
 
             self.assertEqual(project.site_count, len(csv_data) - 1)
 
@@ -451,19 +451,19 @@ class TestSiteUpload(TestCase):
         project = self.project_1
         client = self.custodian_1_client
         url = reverse('api:upload-sites', kwargs={'pk': project.pk})
-        self.assertEquals(0, Site.objects.filter(project=project).count())
+        self.assertEqual(0, Site.objects.filter(project=project).count())
         with open(xlsx_file, 'rb') as fp:
             data = {
                 'file': fp
             }
             resp = client.post(url, data=data, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             qs = Site.objects.filter(project=project)
-            self.assertEquals(qs.count(), 1)
+            self.assertEqual(qs.count(), 1)
             site = qs.first()
-            self.assertEquals(site.code, 'C1')
+            self.assertEqual(site.code, 'C1')
             self.assertEqual(site.name, 'Site 1')
-            self.assertEquals(site.description, 'Description1')
+            self.assertEqual(site.description, 'Description1')
 
             # test geom and attr
             self.assertAlmostEqual(site.geometry.x, 116, places=4)
@@ -476,7 +476,7 @@ class TestSiteUpload(TestCase):
                 'Attribute1': 'attr11',
                 'Attribute2': 'attr12'}
 
-            self.assertEquals(expected_attributes, site.attributes)
+            self.assertEqual(expected_attributes, site.attributes)
 
     def test_site_code_column_name(self):
         """
@@ -491,16 +491,16 @@ class TestSiteUpload(TestCase):
         project = self.project_1
         client = self.custodian_1_client
         url = reverse('api:upload-sites', kwargs={'pk': project.pk})
-        self.assertEquals(0, Site.objects.filter(project=project).count())
+        self.assertEqual(0, Site.objects.filter(project=project).count())
         with open(csv_file) as fp:
             data = {
                 'file': fp
             }
             resp = client.post(url, data=data, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             qs = Site.objects.filter(project=project)
-            self.assertEquals(len(csv_data) - 1, qs.count())
-            self.assertEquals(['C1', 'C2'], [s.code for s in qs.order_by('code')])
+            self.assertEqual(len(csv_data) - 1, qs.count())
+            self.assertEqual(['C1', 'C2'], [s.code for s in qs.order_by('code')])
 
 
 class TestSerialization(helpers.BaseUserTestCase):

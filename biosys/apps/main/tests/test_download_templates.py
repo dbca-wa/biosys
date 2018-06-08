@@ -29,19 +29,19 @@ class TestDownloadSiteTemplates(TestCase):
         match = re.match('attachment; filename=(.+)', content_disposition)
         self.assertIsNotNone(match)
         filename, ext = path.splitext(match.group(1))
-        self.assertEquals(ext, '.xlsx')
-        self.assertEquals(filename, 'Sites_template_lat_long')
+        self.assertEqual(ext, '.xlsx')
+        self.assertEqual(filename, 'Sites_template_lat_long')
         # read content
         wb = load_workbook(six.BytesIO(resp.content), read_only=True)
         # one datasheet named 'Sites'
         expected_sheet_name = 'Sites'
         sheet_names = wb.get_sheet_names()
-        self.assertEquals(1, len(sheet_names))
-        self.assertEquals(sheet_names[0], expected_sheet_name)
-        ws = wb.get_sheet_by_name(expected_sheet_name)
+        self.assertEqual(1, len(sheet_names))
+        self.assertEqual(sheet_names[0], expected_sheet_name)
+        ws = wb[expected_sheet_name]
         rows = list(ws.rows)
         # only one row
-        self.assertEquals(len(rows), 1)
+        self.assertEqual(len(rows), 1)
         got_headers = [c.value for c in rows[0]]
         expected_headers = ['Name', 'Code', 'Description', 'Latitude', 'Longitude', 'Datum']
         self.assertEqual(got_headers, expected_headers)
@@ -63,19 +63,19 @@ class TestDownloadSiteTemplates(TestCase):
         match = re.match('attachment; filename=(.+)', content_disposition)
         self.assertIsNotNone(match)
         filename, ext = path.splitext(match.group(1))
-        self.assertEquals(ext, '.xlsx')
-        self.assertEquals(filename, 'Sites_template_easting_northing')
+        self.assertEqual(ext, '.xlsx')
+        self.assertEqual(filename, 'Sites_template_easting_northing')
         # read content
         wb = load_workbook(six.BytesIO(resp.content), read_only=True)
         # one datasheet named 'Sites'
         expected_sheet_name = 'Sites'
         sheet_names = wb.get_sheet_names()
-        self.assertEquals(1, len(sheet_names))
-        self.assertEquals(sheet_names[0], expected_sheet_name)
-        ws = wb.get_sheet_by_name(expected_sheet_name)
+        self.assertEqual(1, len(sheet_names))
+        self.assertEqual(sheet_names[0], expected_sheet_name)
+        ws = wb[expected_sheet_name]
         rows = list(ws.rows)
         # only one row
-        self.assertEquals(len(rows), 1)
+        self.assertEqual(len(rows), 1)
         got_headers = [c.value for c in rows[0]]
         expected_headers = ['Name', 'Code', 'Description', 'Easting', 'Northing', 'Datum', 'Zone']
         self.assertEqual(got_headers, expected_headers)

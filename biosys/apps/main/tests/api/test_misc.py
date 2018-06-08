@@ -101,18 +101,18 @@ class TestStatistics(TestCase):
             },
             'sites': {'total': 0},
         }
-        self.assertEquals(expected, resp.json())
+        self.assertEqual(expected, resp.json())
 
         # create one project
         project = G(Project)
-        self.assertEquals(1, Project.objects.count())
+        self.assertEqual(1, Project.objects.count())
         expected['projects']['total'] = 1
         resp = client.get(self.url)
         self.assertEqual(
             resp.status_code,
             status.HTTP_200_OK
         )
-        self.assertEquals(expected, resp.json())
+        self.assertEqual(expected, resp.json())
 
         # create some sites
         count = 3
@@ -124,7 +124,7 @@ class TestStatistics(TestCase):
             resp.status_code,
             status.HTTP_200_OK
         )
-        self.assertEquals(expected, resp.json())
+        self.assertEqual(expected, resp.json())
 
     def test_not_allowed_methods(self):
         user = G(get_user_model())

@@ -249,7 +249,7 @@ class BaseUserTestCase(TestCase):
                 'file': fp,
             }
             resp = client.post(infer_url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             # create the dataset. We should have to just add the project id from the returned data
             payload = resp.json()
             payload['project'] = project.pk
@@ -289,7 +289,7 @@ class BaseUserTestCase(TestCase):
         """
         dataset = self._create_dataset_from_rows(rows)
         resp = self._upload_records_from_rows(rows, dataset.pk)
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         return dataset
 
 

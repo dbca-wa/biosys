@@ -176,8 +176,8 @@ class TestSchemaConstraints(TestCase):
         """
         None or empty is accepted
         """
-        self.assertEquals({}, SchemaConstraints(None).descriptor)
-        self.assertEquals({}, SchemaConstraints({}).descriptor)
+        self.assertEqual({}, SchemaConstraints(None).descriptor)
+        self.assertEqual({}, SchemaConstraints({}).descriptor)
 
     def test_required_property(self):
         # no constraints -> require = False
@@ -198,10 +198,10 @@ class TestSchemaConstraints(TestCase):
         cts = clone(BASE_CONSTRAINTS)
         sch = SchemaConstraints(cts)
         self.assertTrue(hasattr(sch, 'get'))
-        self.assertEquals(cts.get('required'), sch.get('required'))
-        self.assertEquals(cts.get('constraints'), sch.get('constraints'))
-        self.assertEquals(None, sch.get('bad_keys'))
-        self.assertEquals('default', sch.get('bad_keys', 'default'))
+        self.assertEqual(cts.get('required'), sch.get('required'))
+        self.assertEqual(cts.get('constraints'), sch.get('constraints'))
+        self.assertEqual(None, sch.get('bad_keys'))
+        self.assertEqual('default', sch.get('bad_keys', 'default'))
 
 
 class TestSchemaField(TestCase):
@@ -229,10 +229,10 @@ class TestSchemaField(TestCase):
         field = self.base_field
         sch = SchemaField(field)
         self.assertTrue(hasattr(sch, 'get'))
-        self.assertEquals(field.get('Name'), sch.get('Name'))
-        self.assertEquals(field.get('constraints'), sch.get('constraints'))
-        self.assertEquals(None, sch.get('bad_keys'))
-        self.assertEquals('default', sch.get('bad_keys', 'default'))
+        self.assertEqual(field.get('Name'), sch.get('Name'))
+        self.assertEqual(field.get('constraints'), sch.get('constraints'))
+        self.assertEqual(None, sch.get('bad_keys'))
+        self.assertEqual('default', sch.get('bad_keys', 'default'))
 
     def test_column_name(self):
         """
@@ -240,7 +240,7 @@ class TestSchemaField(TestCase):
         """
         field = self.base_field
         sch = SchemaField(field)
-        self.assertEquals(sch.name, sch.column_name)
+        self.assertEqual(sch.name, sch.column_name)
         self.assertNotEqual(sch.column_name, sch.title)
 
     def test_constraints(self):
@@ -255,12 +255,12 @@ class TestSchemaField(TestCase):
         """
         field = self.base_field
         self.assertFalse(field.get('aliases'))
-        self.assertEquals([], SchemaField(field).aliases)
+        self.assertEqual([], SchemaField(field).aliases)
         field['aliases'] = []
-        self.assertEquals([], SchemaField(field).aliases)
+        self.assertEqual([], SchemaField(field).aliases)
         field['aliases'] = ['alias1', 'Alias2']
         sch = SchemaField(field)
-        self.assertEquals(field['aliases'], sch.aliases)
+        self.assertEqual(field['aliases'], sch.aliases)
         # test some related method
         self.assertTrue(sch.has_alias('alias1'))
         self.assertTrue(sch.has_alias('Alias2'))
@@ -466,8 +466,8 @@ class TestObservationSchemaCast(TestCase):
         self.assertIsNotNone(point)
         self.assertTrue(isinstance(point, GEOSGeometry))
         self.assertTrue(isinstance(point, Point))
-        self.assertEquals((115.3, -32), point.coords)
-        self.assertEquals(MODEL_SRID, point.get_srid())
+        self.assertEqual((115.3, -32), point.coords)
+        self.assertEqual(MODEL_SRID, point.get_srid())
 
     def test_cast_point_with_datum(self):
         """
@@ -485,9 +485,9 @@ class TestObservationSchemaCast(TestCase):
         point = schema.cast_geometry(record)
         self.assertIsNotNone(point)
         self.assertTrue(isinstance(point, Point))
-        self.assertEquals((115.3, -32), point.coords)
+        self.assertEqual((115.3, -32), point.coords)
         expected_srid = get_datum_srid(record['Datum'])
-        self.assertEquals(expected_srid, point.get_srid())
+        self.assertEqual(expected_srid, point.get_srid())
 
     def test_cast_point_with_invalid_datum(self):
         """
@@ -526,8 +526,8 @@ class TestObservationSchemaCast(TestCase):
         point = schema.cast_geometry(record)
         self.assertIsNotNone(point)
         self.assertTrue(isinstance(point, Point))
-        self.assertEquals((easting, northing), point.coords)
-        self.assertEquals(get_datum_srid(datum), point.get_srid())
+        self.assertEqual((easting, northing), point.coords)
+        self.assertEqual(get_datum_srid(datum), point.get_srid())
 
         # create a db record with geometry = east/north and check geometry conversion
         # create dataset
@@ -579,8 +579,8 @@ class TestObservationSchemaCast(TestCase):
         point = schema.cast_geometry(record)
         self.assertIsNotNone(point)
         self.assertTrue(isinstance(point, Point))
-        self.assertEquals((easting, northing), point.coords)
-        self.assertEquals(expected_srid, point.get_srid())
+        self.assertEqual((easting, northing), point.coords)
+        self.assertEqual(expected_srid, point.get_srid())
 
         # create a db record with geometry = east/north and check geometry conversion
         # create dataset

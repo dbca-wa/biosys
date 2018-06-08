@@ -30,7 +30,7 @@ class TestBasicAuth(TestCase):
         basic_key = base64.b64encode(six.b("readonly:password")).decode('utf-8')
         client.credentials(HTTP_AUTHORIZATION='Basic ' + basic_key)
         resp = client.get(url)
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
     def test_token_auth_end_point(self):
         """
@@ -48,7 +48,7 @@ class TestBasicAuth(TestCase):
             "password": "password"
         }
         resp = client.post(url, data=data, format='json')
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         # check that we have a token
         self.assertTrue('token' in resp.data)
         token = resp.data.get('token')
@@ -77,4 +77,4 @@ class TestBasicAuth(TestCase):
         # set credential token
         client.credentials(HTTP_AUTHORIZATION='Token ' + token)
         resp = client.get(url)
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
