@@ -17,7 +17,7 @@ from main.urls import download_urlpatterns
 
 
 def home_view_selection_view(request):
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         return redirect('api/explorer')
     else:
         return redirect('login')
@@ -26,7 +26,7 @@ def home_view_selection_view(request):
 def admin_view_selection_view(request):
     if request.user.is_superuser:
         return admin.site.index(request)
-    elif request.user.is_authenticated():
+    elif request.user.is_authenticated:
         return redirect('dashboard')
     else:
         return redirect('login')

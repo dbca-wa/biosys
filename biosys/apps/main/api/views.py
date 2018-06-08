@@ -442,7 +442,7 @@ class WhoamiView(APIView):
 
     def get(self, request, **kwargs):
         data = {}
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
             data = self.serializers(request.user).data
         return Response(data)
 
