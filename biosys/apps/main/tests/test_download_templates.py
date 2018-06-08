@@ -35,7 +35,7 @@ class TestDownloadSiteTemplates(TestCase):
         wb = load_workbook(six.BytesIO(resp.content), read_only=True)
         # one datasheet named 'Sites'
         expected_sheet_name = 'Sites'
-        sheet_names = wb.get_sheet_names()
+        sheet_names = wb.sheetnames
         self.assertEqual(1, len(sheet_names))
         self.assertEqual(sheet_names[0], expected_sheet_name)
         ws = wb[expected_sheet_name]
@@ -69,7 +69,7 @@ class TestDownloadSiteTemplates(TestCase):
         wb = load_workbook(six.BytesIO(resp.content), read_only=True)
         # one datasheet named 'Sites'
         expected_sheet_name = 'Sites'
-        sheet_names = wb.get_sheet_names()
+        sheet_names = wb.sheetnames
         self.assertEqual(1, len(sheet_names))
         self.assertEqual(sheet_names[0], expected_sheet_name)
         ws = wb[expected_sheet_name]

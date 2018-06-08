@@ -183,7 +183,7 @@ class TestExcelFormat(helpers.BaseUserTestCase):
         wb = load_workbook(six.BytesIO(resp.content), read_only=True)
         # one datasheet named after the dataset
         expected_sheet_name = dataset.name
-        sheet_names = wb.get_sheet_names()
+        sheet_names = wb.sheetnames
         self.assertEqual(1, len(sheet_names))
         self.assertEqual(sheet_names[0], expected_sheet_name)
 

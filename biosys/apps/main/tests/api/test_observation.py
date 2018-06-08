@@ -2080,7 +2080,7 @@ class TestExport(helpers.BaseUserTestCase):
         # read content
         wb = load_workbook(six.BytesIO(resp.content), read_only=True)
         # one datasheet named from dataset
-        sheet_names = wb.get_sheet_names()
+        sheet_names = wb.sheetnames
         self.assertEqual(1, len(sheet_names))
         self.assertEqual(dataset.name, sheet_names[0])
         ws = wb[dataset.name]
