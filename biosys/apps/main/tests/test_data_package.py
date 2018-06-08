@@ -467,7 +467,7 @@ class TestObservationSchemaCast(TestCase):
         self.assertTrue(isinstance(point, GEOSGeometry))
         self.assertTrue(isinstance(point, Point))
         self.assertEqual((115.3, -32), point.coords)
-        self.assertEqual(MODEL_SRID, point.get_srid())
+        self.assertEqual(MODEL_SRID, point.srid)
 
     def test_cast_point_with_datum(self):
         """
@@ -487,7 +487,7 @@ class TestObservationSchemaCast(TestCase):
         self.assertTrue(isinstance(point, Point))
         self.assertEqual((115.3, -32), point.coords)
         expected_srid = get_datum_srid(record['Datum'])
-        self.assertEqual(expected_srid, point.get_srid())
+        self.assertEqual(expected_srid, point.srid)
 
     def test_cast_point_with_invalid_datum(self):
         """
@@ -527,7 +527,7 @@ class TestObservationSchemaCast(TestCase):
         self.assertIsNotNone(point)
         self.assertTrue(isinstance(point, Point))
         self.assertEqual((easting, northing), point.coords)
-        self.assertEqual(get_datum_srid(datum), point.get_srid())
+        self.assertEqual(get_datum_srid(datum), point.srid)
 
         # create a db record with geometry = east/north and check geometry conversion
         # create dataset
@@ -545,7 +545,7 @@ class TestObservationSchemaCast(TestCase):
             geometry=point,
             data=record)
         record.refresh_from_db()
-        self.assertEqual(MODEL_SRID, record.geometry.get_srid())
+        self.assertEqual(MODEL_SRID, record.geometry.srid)
         self.assertEqual((116, -31), (int(record.geometry.x), int(record.geometry.y)))
 
     def test_cast_point_easting_northing_with_zone_field(self):
@@ -580,7 +580,7 @@ class TestObservationSchemaCast(TestCase):
         self.assertIsNotNone(point)
         self.assertTrue(isinstance(point, Point))
         self.assertEqual((easting, northing), point.coords)
-        self.assertEqual(expected_srid, point.get_srid())
+        self.assertEqual(expected_srid, point.srid)
 
         # create a db record with geometry = east/north and check geometry conversion
         # create dataset
@@ -598,7 +598,7 @@ class TestObservationSchemaCast(TestCase):
             geometry=point,
             data=record)
         record.refresh_from_db()
-        self.assertEqual(MODEL_SRID, record.geometry.get_srid())
+        self.assertEqual(MODEL_SRID, record.geometry.srid)
         self.assertEqual((116, -31), (int(record.geometry.x), int(record.geometry.y)))
 
 
