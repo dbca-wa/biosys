@@ -14,6 +14,7 @@ from drf_yasg import openapi
 from main.views import DashboardView
 from main.api.urls import urls as api_endpoints
 from main.urls import download_urlpatterns
+from publish.urls import publish_urlpatterns
 
 
 def home_view_selection_view(request):
@@ -42,8 +43,8 @@ web_urls = [
     url(r'^admin/logout/$', auth_views.logout, {'next_page': '/'}),
     # use a function to determine where admin/ will resolve to, based on the user
     url(r'^admin/$', admin_view_selection_view),
-    url(r'^admin/', include(admin.site.urls)),
-    url(r'^publish/', include('publish.urls', namespace='publish')),
+    url(r'^admin/', admin.site.urls),
+    url(r'^publish/', include(publish_urlpatterns, namespace='publish')),
     url(r'^$', home_view_selection_view, name='home'),
     url(r'^dashboard/', login_required(DashboardView.as_view()), name='dashboard'),
     url(r'^about/', TemplateView.as_view(template_name='main/about.html'), name='about'),

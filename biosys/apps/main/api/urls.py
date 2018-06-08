@@ -38,4 +38,5 @@ url_patterns = [
     url(r'utils/infer-dataset/?', api_views.InferDatasetView.as_view(), name='infer-dataset')
 ]
 
+app_name = 'api'
 urls = router.urls + url_patterns

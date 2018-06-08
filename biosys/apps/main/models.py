@@ -125,7 +125,8 @@ class Project(models.Model):
 @python_2_unicode_compatible
 class Site(models.Model):
     project = models.ForeignKey('Project', null=False, blank=False,
-                                verbose_name="Project", help_text="Select the project this site is part of (required)")
+                                verbose_name="Project", help_text="Select the project this site is part of (required)",
+                                on_delete=models.CASCADE)
     name = models.CharField(max_length=150, blank=True,
                             verbose_name="Name",
                             help_text="Enter a more descriptive name for this site, if one exists.")
@@ -214,7 +215,7 @@ class Dataset(models.Model):
         (TYPE_SPECIES_OBSERVATION, 'Species observation')
     ]
     project = models.ForeignKey('Project', null=False, blank=False, related_name='projects',
-                                related_query_name='project')
+                                related_query_name='project', on_delete=models.CASCADE)
     name = models.CharField(max_length=200, null=False, blank=False)
     code = models.CharField(max_length=50, blank=True)
     type = models.CharField(max_length=100, null=False, blank=False, choices=TYPE_CHOICES, default=TYPE_GENERIC)
@@ -390,9 +391,9 @@ class Dataset(models.Model):
 
 @python_2_unicode_compatible
 class Record(models.Model):
-    dataset = models.ForeignKey(Dataset, null=False, blank=False)
+    dataset = models.ForeignKey(Dataset, null=False, blank=False, on_delete=models.CASCADE)
     data = JSONField()
-    site = models.ForeignKey(Site, null=True, blank=True)
+    site = models.ForeignKey(Site, null=True, blank=True, on_delete=models.SET_NULL)
     # Fields for Observation and Species Observation
     datetime = models.DateTimeField(null=True, blank=True)
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
@@ -482,8 +483,8 @@ class Record(models.Model):
 class DatasetFile(models.Model):
     file = models.FileField(upload_to='%Y/%m/%d')
     uploaded_date = models.DateTimeField(auto_now_add=True)
-    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
-    dataset = models.ForeignKey(Dataset, blank=False, null=True)
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    dataset = models.ForeignKey(Dataset, blank=False, null=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.file.name
