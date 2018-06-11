@@ -197,7 +197,7 @@ class TestPermissions(helpers.BaseUserTestCase):
                     client.delete(url, data, format='json').status_code,
                     status.HTTP_204_NO_CONTENT
                 )
-                self.assertEquals(Dataset.objects.count(), count - 1)
+                self.assertEqual(Dataset.objects.count(), count - 1)
 
     def test_options(self):
         urls = [
@@ -230,12 +230,12 @@ class TestPermissions(helpers.BaseUserTestCase):
         url = reverse('api:dataset-list')
         client = self.admin_client
         resp = client.options(url)
-        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
         data = resp.json()
         choices = data.get('actions', {}).get('POST', {}).get('type', {}).get('choices', None)
         self.assertTrue(choices)
         expected = [{'value': d[0], 'display_name': d[1]} for d in Dataset.TYPE_CHOICES]
-        self.assertEquals(expected, choices)
+        self.assertEqual(expected, choices)
 
 
 class TestDataPackageValidation(helpers.BaseUserTestCase):
@@ -400,7 +400,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
 
         project = self.project_1
         # project datum is not a Zone one
-        self.assertEquals(project.datum, 4326)
+        self.assertEqual(project.datum, 4326)
         self.assertFalse(is_projected_srid(project.datum))
 
         fields_no_zone = [
@@ -442,7 +442,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         # check error message
         resp_data = resp.json()
         errors = resp_data.get('data_package')
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
         self.assertIn('Northing/easting coordinates require a zone', errors[0])
 
         # change the project datum
@@ -461,7 +461,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
 
         project = self.project_1
         # project datum is not a Zone one
-        self.assertEquals(project.datum, 4326)
+        self.assertEqual(project.datum, 4326)
         self.assertFalse(is_projected_srid(project.datum))
 
         fields = [
@@ -508,7 +508,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         # check error message
         resp_data = resp.json()
         errors = resp_data.get('data_package')
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
         self.assertIn('Northing/easting coordinates require a zone', errors[0])
 
         # add required constraints
@@ -755,7 +755,7 @@ class TestDatasetRecordsSearchAndOrdering(helpers.BaseUserTestCase):
         resp = self.client.get(url + '?ordering=row', format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         json_response = resp.json()
-        self.assertEquals(len(json_response), 11)
+        self.assertEqual(len(json_response), 11)
 
         # row start at 2
         sorted_rows = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -767,7 +767,7 @@ class TestDatasetRecordsSearchAndOrdering(helpers.BaseUserTestCase):
         resp = self.client.get(url + '?ordering=-row', format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         json_response = resp.json()
-        self.assertEquals(len(json_response), 11)
+        self.assertEqual(len(json_response), 11)
 
         record_rows = [record['source_info']['row'] for record in json_response]
         self.assertEqual(record_rows, list(reversed(sorted_rows)))

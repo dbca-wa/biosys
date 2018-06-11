@@ -40,15 +40,15 @@ class TestFieldSelection(helpers.BaseUserTestCase):
             'fields': 'geometry'
         }
         resp = client.get(url, data=query_params, format='json')
-        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
         records = resp.json()
         self.assertIsInstance(records, list)
         expected_record_count = len(self.rows) - 1
-        self.assertEquals(len(records), expected_record_count)
+        self.assertEqual(len(records), expected_record_count)
         expected_fields = ['geometry']
         for record in records:
             self.assertIsInstance(record, dict)
-            self.assertEquals(sorted(list(record.keys())), sorted(expected_fields))
+            self.assertEqual(sorted(list(record.keys())), sorted(expected_fields))
 
     def test_geometry_and_id(self):
         """
@@ -64,15 +64,15 @@ class TestFieldSelection(helpers.BaseUserTestCase):
             'fields': ['geometry', 'id']
         }
         resp = client.get(url, data=query_params, format='json')
-        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
         records = resp.json()
         self.assertIsInstance(records, list)
         expected_record_count = len(self.rows) - 1
-        self.assertEquals(len(records), expected_record_count)
+        self.assertEqual(len(records), expected_record_count)
         expected_fields = ['geometry', 'id']
         for record in records:
             self.assertIsInstance(record, dict)
-            self.assertEquals(sorted(list(record.keys())), sorted(expected_fields))
+            self.assertEqual(sorted(list(record.keys())), sorted(expected_fields))
 
     def test_geometry_and_id_record_end_point(self):
         """
@@ -89,21 +89,21 @@ class TestFieldSelection(helpers.BaseUserTestCase):
             'fields': ['geometry', 'id']
         }
         resp = client.get(url, data=query_params, format='json')
-        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
         records = resp.json()
         self.assertIsInstance(records, list)
         expected_record_count = len(self.rows) - 1
-        self.assertEquals(len(records), expected_record_count)
+        self.assertEqual(len(records), expected_record_count)
         expected_fields = ['geometry', 'id']
         for record in records:
             self.assertIsInstance(record, dict)
             # only key = geometry
-            self.assertEquals(sorted(list(record.keys())), sorted(expected_fields))
+            self.assertEqual(sorted(list(record.keys())), sorted(expected_fields))
             # request record individually
             url = reverse('api:record-detail', kwargs={'pk': record.get('id')})
             resp = client.get(url, data=query_params, format='json')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
-            self.assertEquals(sorted(list(resp.json().keys())), sorted(expected_fields))
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(sorted(list(resp.json().keys())), sorted(expected_fields))
 
     def test_not_existing_field(self):
         """
@@ -120,12 +120,12 @@ class TestFieldSelection(helpers.BaseUserTestCase):
             'fields': ['field_with_typo']
         }
         resp = client.get(url, data=query_params, format='json')
-        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
         records = resp.json()
         expected_fields = []
         for record in records:
             self.assertIsInstance(record, dict)
-            self.assertEquals(sorted(list(record.keys())), sorted(expected_fields))
+            self.assertEqual(sorted(list(record.keys())), sorted(expected_fields))
 
     def test_one_not_existing_field(self):
         """
@@ -142,12 +142,12 @@ class TestFieldSelection(helpers.BaseUserTestCase):
             'fields': ['geometry', 'field_with_typo']
         }
         resp = client.get(url, data=query_params, format='json')
-        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
         records = resp.json()
         expected_fields = ['geometry']
         for record in records:
             self.assertIsInstance(record, dict)
-            self.assertEquals(sorted(list(record.keys())), sorted(expected_fields))
+            self.assertEqual(sorted(list(record.keys())), sorted(expected_fields))
 
 
 class TestExcelFormat(helpers.BaseUserTestCase):
@@ -178,20 +178,20 @@ class TestExcelFormat(helpers.BaseUserTestCase):
         match = re.match('attachment; filename=(.+)', content_disposition)
         self.assertIsNotNone(match)
         filename, ext = path.splitext(match.group(1))
-        self.assertEquals(ext, '.xlsx')
+        self.assertEqual(ext, '.xlsx')
         # read content
         wb = load_workbook(six.BytesIO(resp.content), read_only=True)
         # one datasheet named after the dataset
         expected_sheet_name = dataset.name
-        sheet_names = wb.get_sheet_names()
-        self.assertEquals(1, len(sheet_names))
-        self.assertEquals(sheet_names[0], expected_sheet_name)
+        sheet_names = wb.sheetnames
+        self.assertEqual(1, len(sheet_names))
+        self.assertEqual(sheet_names[0], expected_sheet_name)
 
         # check rows values
-        ws = wb.get_sheet_by_name(expected_sheet_name)
+        ws = wb[expected_sheet_name]
         rows = list(ws.rows)
         # compare rows
-        self.assertEquals(len(rows), len(expected_rows))
+        self.assertEqual(len(rows), len(expected_rows))
         for (expected_values, xlsx_row) in zip(expected_rows, rows):
             actual_values = [c.value for c in xlsx_row]
             self.assertEqual(expected_values, actual_values)
@@ -225,11 +225,11 @@ class TestCSVFormat(helpers.BaseUserTestCase):
         match = re.match('attachment; filename=(.+)', content_disposition)
         self.assertIsNotNone(match)
         filename, ext = path.splitext(match.group(1))
-        self.assertEquals(ext, '.csv')
+        self.assertEqual(ext, '.csv')
         # read content
         reader = csv.reader(six.StringIO(resp.content.decode('utf-8')), dialect='excel')
         for expected_row, actual_row in zip(expected_rows, reader):
             expected_row_string = [str(v) for v in expected_row]
-            self.assertEquals(actual_row, expected_row_string)
+            self.assertEqual(actual_row, expected_row_string)
 
 

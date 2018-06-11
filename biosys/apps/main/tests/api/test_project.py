@@ -291,12 +291,12 @@ class TestPermissions(TestCase):
         url = reverse('api:project-list')
         client = self.admin_client
         resp = client.options(url)
-        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
         data = resp.json()
         datum_choices = data.get('actions', {}).get('POST', {}).get('datum', {}).get('choices', None)
         self.assertTrue(datum_choices)
         expected = [{'value': d[0], 'display_name': d[1]} for d in DATUM_CHOICES]
-        self.assertEquals(expected, datum_choices)
+        self.assertEqual(expected, datum_choices)
 
 
 class TestProjectSiteBulk(TestCase):
@@ -559,8 +559,8 @@ class TestProjectSiteBulk(TestCase):
         payload = 'all'
         resp = client.delete(url, payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEquals(Site.objects.filter(project=project).count(), 0)
-        self.assertEquals(Site.objects.filter(project=self.project_2).count(), previous_project2_sites_count)
+        self.assertEqual(Site.objects.filter(project=project).count(), 0)
+        self.assertEqual(Site.objects.filter(project=self.project_2).count(), previous_project2_sites_count)
 
 
 class TestProjectCustodians(TestCase):
@@ -624,7 +624,7 @@ class TestProjectCustodians(TestCase):
             'custodians': [custodian.pk, new_user.pk]
         }
         resp = client.patch(url, data, format='json')
-        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
         self.assertTrue(project.is_custodian(custodian))
         # new user is a custodian of the project
         self.assertTrue(project.is_custodian(new_user))
@@ -642,8 +642,8 @@ class TestProjectCustodians(TestCase):
         url = reverse('api:project-detail', kwargs={'pk': project.pk})
         expected_custodians = [custodian.pk]
         resp = client.get(url)
-        self.assertEquals(status.HTTP_200_OK, resp.status_code)
-        self.assertEquals(expected_custodians, resp.json()['custodians'])
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
+        self.assertEqual(expected_custodians, resp.json()['custodians'])
 
         # clear custodians list
         # custodians can't be empty
@@ -651,17 +651,17 @@ class TestProjectCustodians(TestCase):
             'custodians': []
         }
         resp = client.patch(url, data, format='json')
-        self.assertEquals(status.HTTP_400_BAD_REQUEST, resp.status_code)
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, resp.status_code)
 
         # add someone else
         data = {
             'custodians': [self.custodian_2_user.pk]
         }
         resp = client.patch(url, data, format='json')
-        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
         resp = client.get(url)
         expected_custodians = data['custodians']
-        self.assertEquals(expected_custodians, resp.json()['custodians'])
+        self.assertEqual(expected_custodians, resp.json()['custodians'])
         # no more a custodian
         self.assertFalse(project.is_custodian(custodian))
 
@@ -683,5 +683,5 @@ class TestProjectCustodians(TestCase):
             'custodians': [custodian.pk]
         }
         resp = client.patch(url, data, format='json')
-        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
         self.assertTrue(project.is_custodian(custodian))

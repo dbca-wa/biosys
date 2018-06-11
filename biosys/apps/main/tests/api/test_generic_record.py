@@ -304,7 +304,7 @@ class TestDataValidation(TestCase):
         self.assertIsNotNone(self.record_1)
         self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
         self.assertIsNotNone(self.record_1.site)
-        self.assertEquals(self.site_1, self.record_1.site)
+        self.assertEqual(self.site_1, self.record_1.site)
 
     def test_create_one_happy_path(self):
         """
@@ -324,7 +324,7 @@ class TestDataValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_201_CREATED
         )
-        self.assertEquals(Record.objects.count(), count + 1)
+        self.assertEqual(Record.objects.count(), count + 1)
 
     def test_empty_not_allowed(self):
         record = self.record_1
@@ -341,7 +341,7 @@ class TestDataValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(Record.objects.count(), count)
+        self.assertEqual(Record.objects.count(), count)
 
     def test_create_column_not_in_schema(self):
         """
@@ -364,7 +364,7 @@ class TestDataValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(Record.objects.count(), count)
+        self.assertEqual(Record.objects.count(), count)
 
     def test_update_column_not_in_schema(self):
         """
@@ -387,12 +387,12 @@ class TestDataValidation(TestCase):
             client.put(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(Record.objects.count(), count)
+        self.assertEqual(Record.objects.count(), count)
         self.assertEqual(
             client.patch(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(Record.objects.count(), count)
+        self.assertEqual(Record.objects.count(), count)
 
 
 class TestSiteExtraction(TestCase):
@@ -431,7 +431,7 @@ class TestSiteExtraction(TestCase):
         self.assertIsNotNone(self.record_1)
         self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
         self.assertIsNotNone(self.record_1.site)
-        self.assertEquals(self.site_1, self.record_1.site)
+        self.assertEqual(self.site_1, self.record_1.site)
 
     def test_create_with_site(self):
         """
@@ -441,7 +441,7 @@ class TestSiteExtraction(TestCase):
         """
         # clear all records
         Record.objects.all().delete()
-        self.assertEquals(Record.objects.count(), 0)
+        self.assertEqual(Record.objects.count(), 0)
         record = self.record_1
         data = {
             "dataset": record.dataset.pk,
@@ -456,8 +456,8 @@ class TestSiteExtraction(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_201_CREATED
         )
-        self.assertEquals(Record.objects.count(), 1)
-        self.assertEquals(Record.objects.first().site, expected_site)
+        self.assertEqual(Record.objects.count(), 1)
+        self.assertEqual(Record.objects.first().site, expected_site)
 
     def test_update_site(self):
         record = Record.objects.filter(site=self.site_1).first()
@@ -466,7 +466,7 @@ class TestSiteExtraction(TestCase):
         # need to test if the site belongs to the dataset project or the update won't happen
         self.assertIsNotNone(site)
         self.assertTrue(site.project == record.dataset.project)
-        self.assertNotEquals(record.site, site)
+        self.assertNotEqual(record.site, site)
         # update site value
         schema = record.dataset.schema
         site_column = schema.get_fk_for_model('Site').data_field
@@ -533,7 +533,7 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         # check headers
         self.assertEqual(resp.get('content-type'),
                          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -543,22 +543,22 @@ class TestExport(helpers.BaseUserTestCase):
         match = re.match('attachment; filename=(.+)', content_disposition)
         self.assertIsNotNone(match)
         filename, ext = path.splitext(match.group(1))
-        self.assertEquals(ext, '.xlsx')
+        self.assertEqual(ext, '.xlsx')
         filename.startswith(dataset.name)
         # read content
         wb = load_workbook(six.BytesIO(resp.content), read_only=True)
         # one datasheet named from dataset
-        sheet_names = wb.get_sheet_names()
-        self.assertEquals(1, len(sheet_names))
-        self.assertEquals(dataset.name, sheet_names[0])
-        ws = wb.get_sheet_by_name(dataset.name)
+        sheet_names = wb.sheetnames
+        self.assertEqual(1, len(sheet_names))
+        self.assertEqual(dataset.name, sheet_names[0])
+        ws = wb[dataset.name]
         rows = list(ws.rows)
         expected_records = Record.objects.filter(dataset=dataset)
-        self.assertEquals(len(rows), expected_records.count() + 1)
+        self.assertEqual(len(rows), expected_records.count() + 1)
         headers = [c.value for c in rows[0]]
         schema = dataset.schema
         # all the columns of the schema should be in the excel
-        self.assertEquals(schema.headers, headers)
+        self.assertEqual(schema.headers, headers)
 
     def test_permission_ok_for_not_custodian(self):
         """Export is a read action. Should be authorised for every logged-in user."""
@@ -573,7 +573,7 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
     def test_permission_denied_if_not_logged_in(self):
         """Must be logged-in."""
@@ -588,7 +588,7 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_excel_type(self):
         schema_fields = [
@@ -655,10 +655,10 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         # load workbook
         wb = load_workbook(six.BytesIO(resp.content))
-        ws = wb.get_sheet_by_name(dataset.name)
+        ws = wb[dataset.name]
         rows = list(ws.rows)
         self.assertEqual(len(rows), 2)
         cells = rows[1]
@@ -692,30 +692,30 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
 
         # no filters
         resp = client.get(url)
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
-        self.assertEquals(len(records), 4)
+        self.assertEqual(len(records), 4)
         expected_whats = sorted(['Crashed the db', 'Restored the db', 'Canis lupus', 'Chubby bat'])
-        self.assertEquals(sorted([r['data']['What'] for r in records]), expected_whats)
+        self.assertEqual(sorted([r['data']['What'] for r in records]), expected_whats)
 
         # dataset__id
         expected_dataset = dataset1
         url = reverse('api:record-list')
         resp = client.get(url, {'dataset__id': expected_dataset.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
-        self.assertEquals(len(records), 2)
+        self.assertEqual(len(records), 2)
         expected_whats = sorted(['Crashed the db', 'Restored the db'])
-        self.assertEquals(sorted([r['data']['What'] for r in records]), expected_whats)
+        self.assertEqual(sorted([r['data']['What'] for r in records]), expected_whats)
 
         # dataset__name
         expected_dataset = dataset2
         resp = client.get(url, {'dataset__name': expected_dataset.name})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
-        self.assertEquals(len(records), 2)
+        self.assertEqual(len(records), 2)
         expected_whats = sorted(['Canis lupus', 'Chubby bat'])
-        self.assertEquals(sorted([r['data']['What'] for r in records]), expected_whats)
+        self.assertEqual(sorted([r['data']['What'] for r in records]), expected_whats)
 
     def test_search_in_json_data(self):
         """
@@ -740,22 +740,22 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
 
         # search Serge in dataset1
         resp = client.get(url, {'search': 'Serge', 'dataset__id': dataset1.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
-        self.assertEquals(len(records), 1)
+        self.assertEqual(len(records), 1)
         record = records[0]
         expected_data = sorted(['Crashed the db', '2018-02-14', 'Serge'])
-        self.assertEquals(sorted(list(record['data'].values())), expected_data)
+        self.assertEqual(sorted(list(record['data'].values())), expected_data)
 
         # search serge in dataset2 case insensitive
         resp = client.get(url, {'search': 'Serge', 'dataset__id': dataset2.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
-        self.assertEquals(len(records), 1)
+        self.assertEqual(len(records), 1)
         record = records[0]
         expected_data = sorted(['Chubby Serge', '2017-05-18', '-34.4', '116.78'])
         record_values_as_string = [str(v) for v in record['data'].values()]
-        self.assertEquals(sorted(list(record_values_as_string)), expected_data)
+        self.assertEqual(sorted(list(record_values_as_string)), expected_data)
 
     def test_string_ordering_in_json_data(self):
         """
@@ -777,29 +777,29 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         # order by What asc
         ordering = 'What'
         resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
-        self.assertEquals(len(records), 4)
+        self.assertEqual(len(records), 4)
         expected_whats = sorted(['Alligator', 'Canis lupus', 'Chubby bat', 'Zebra'])
-        self.assertEquals([r['data']['What'] for r in records], expected_whats)
+        self.assertEqual([r['data']['What'] for r in records], expected_whats)
 
         # order by What desc
         ordering = '-What'
         resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
-        self.assertEquals(len(records), 4)
+        self.assertEqual(len(records), 4)
         expected_whats = sorted(['Alligator', 'Canis lupus', 'Chubby bat', 'Zebra'], reverse=True)
-        self.assertEquals([r['data']['What'] for r in records], expected_whats)
+        self.assertEqual([r['data']['What'] for r in records], expected_whats)
 
         # test that the ordering is case sensitive
         ordering = 'what'
         resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
-        self.assertEquals(len(records), 4)
+        self.assertEqual(len(records), 4)
         expected_whats = sorted(['Alligator', 'Canis lupus', 'Chubby bat', 'Zebra'])
-        self.assertNotEquals([r['data']['What'] for r in records], expected_whats)
+        self.assertNotEqual([r['data']['What'] for r in records], expected_whats)
 
     def test_server_side_ordering_row_number(self):
         """
@@ -828,7 +828,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         json_response = resp.json()
-        self.assertEquals(len(json_response), 11)
+        self.assertEqual(len(json_response), 11)
 
         # row start at 2
         sorted_rows = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -841,7 +841,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         json_response = resp.json()
-        self.assertEquals(len(json_response), 11)
+        self.assertEqual(len(json_response), 11)
 
         record_rows = [record['source_info']['row'] for record in json_response]
         self.assertEqual(record_rows, list(reversed(sorted_rows)))
@@ -860,18 +860,18 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
             ['Alligator', 10]
         ])
         # check that we have a field of type integer
-        self.assertEquals(dataset.schema.get_field_by_name('How Many').type, 'integer')
+        self.assertEqual(dataset.schema.get_field_by_name('How Many').type, 'integer')
 
         client = self.custodian_1_client
         url = reverse('api:record-list')
 
         ordering = 'How Many'
         resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
-        self.assertEquals(len(records), 4)
+        self.assertEqual(len(records), 4)
         expected = [('Zebra', 1), ('Canis lupus', 7), ('Chubby bat', 9), ('Alligator', 10)]
-        self.assertEquals([(r['data']['What'], r['data']['How Many']) for r in records], expected)
+        self.assertEqual([(r['data']['What'], r['data']['How Many']) for r in records], expected)
 
     def test_numeric_ordering_in_json_data_from_post_end_point(self):
         """
@@ -884,7 +884,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         # while a string sorted should return ['123.4', '2.6', '203.4', '23.6']
         float_sorted = sorted(weights)
         string_sorted = sorted([str(w) for w in weights])
-        self.assertNotEquals(float_sorted, [float(s) for s in string_sorted])
+        self.assertNotEqual(float_sorted, [float(s) for s in string_sorted])
 
         dataset = self._create_dataset_from_rows([
             ['What', 'Weight'],
@@ -894,7 +894,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
             ['Alligator', weights[3]]
         ])
         # check that we have a field of type integer
-        self.assertEquals(dataset.schema.get_field_by_name('Weight').type, 'number')
+        self.assertEqual(dataset.schema.get_field_by_name('Weight').type, 'number')
         # post some records
         records_data = [
             {
@@ -922,21 +922,21 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
 
         ordering = 'Weight'
         resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
-        self.assertEquals(len(records), 4)
+        self.assertEqual(len(records), 4)
         expected = [('Chubby bat', 2.6), ('Canis lupus', 23.6), ('Zebra', 123.4), ('Alligator', 203.4)]
-        self.assertEquals([(r['data']['What'], r['data']['Weight']) for r in records], expected)
+        self.assertEqual([(r['data']['What'], r['data']['Weight']) for r in records], expected)
 
         # revert ordering
         ordering = '-Weight'
         resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
-        self.assertEquals(len(records), 4)
+        self.assertEqual(len(records), 4)
         # reverse expected
         expected = expected[::-1]
-        self.assertEquals([(r['data']['What'], r['data']['Weight']) for r in records], expected)
+        self.assertEqual([(r['data']['What'], r['data']['Weight']) for r in records], expected)
 
 
 class TestSchemaValidation(helpers.BaseUserTestCase):
@@ -992,7 +992,7 @@ class TestSchemaValidation(helpers.BaseUserTestCase):
             ['  ', '   ', '  ', '  '],
         ]
         resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk, strict=True)
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
     def test_required_date_with_format_any(self):
         """
@@ -1020,10 +1020,10 @@ class TestSchemaValidation(helpers.BaseUserTestCase):
             ['   ', 'something'],
         ]
         resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk, strict=True)
-        self.assertEquals(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         received = resp.json()
         self.assertIsInstance(received, list)
-        self.assertEquals(len(received), 3)
+        self.assertEqual(len(received), 3)
         # this what an report should look like
         expected_row_report = {
             'row': 3,
@@ -1034,7 +1034,7 @@ class TestSchemaValidation(helpers.BaseUserTestCase):
             errors = row_report.get('errors')
             self.assertIn('DateAny', errors)
             msg = errors.get('DateAny')
-            self.assertEquals(msg, expected_row_report['errors']['DateAny'])
+            self.assertEqual(msg, expected_row_report['errors']['DateAny'])
 
 
 class TestPatch(helpers.BaseUserTestCase):

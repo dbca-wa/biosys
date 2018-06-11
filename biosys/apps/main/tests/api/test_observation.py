@@ -354,7 +354,7 @@ class TestDataValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_201_CREATED
         )
-        self.assertEquals(ds.record_queryset.count(), count + 1)
+        self.assertEqual(ds.record_queryset.count(), count + 1)
 
     def test_empty_not_allowed(self):
         ds = self.ds_1
@@ -370,7 +370,7 @@ class TestDataValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(ds.record_queryset.count(), count)
+        self.assertEqual(ds.record_queryset.count(), count)
 
     def test_create_column_not_in_schema(self):
         """
@@ -394,7 +394,7 @@ class TestDataValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(ds.record_queryset.count(), count)
+        self.assertEqual(ds.record_queryset.count(), count)
 
     def test_update_column_not_in_schema(self):
         """
@@ -418,12 +418,12 @@ class TestDataValidation(TestCase):
             client.put(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(ds.record_queryset.count(), count)
+        self.assertEqual(ds.record_queryset.count(), count)
         self.assertEqual(
             client.patch(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(ds.record_queryset.count(), count)
+        self.assertEqual(ds.record_queryset.count(), count)
 
     def test_date_error(self):
         """
@@ -449,7 +449,7 @@ class TestDataValidation(TestCase):
                 client.post(url_post, data, format='json').status_code,
                 status.HTTP_201_CREATED
             )
-            self.assertEquals(ds.record_queryset.count(), count + 1)
+            self.assertEqual(ds.record_queryset.count(), count + 1)
 
         invalid_values = [None, '', 'abcd']
         for value in invalid_values:
@@ -473,7 +473,7 @@ class TestDataValidation(TestCase):
                 client.patch(url_update, data, format='json').status_code,
                 status.HTTP_400_BAD_REQUEST
             )
-            self.assertEquals(ds.record_queryset.count(), count)
+            self.assertEqual(ds.record_queryset.count(), count)
 
     def test_geometry_error(self):
         """
@@ -499,7 +499,7 @@ class TestDataValidation(TestCase):
                 client.post(url_post, data, format='json').status_code,
                 status.HTTP_201_CREATED
             )
-            self.assertEquals(ds.record_queryset.count(), count + 1)
+            self.assertEqual(ds.record_queryset.count(), count + 1)
 
         invalid_values = [None, '', 'abcd']
         for value in invalid_values:
@@ -523,7 +523,7 @@ class TestDataValidation(TestCase):
                 client.patch(url_update, data, format='json').status_code,
                 status.HTTP_400_BAD_REQUEST
             )
-            self.assertEquals(ds.record_queryset.count(), count)
+            self.assertEqual(ds.record_queryset.count(), count)
 
 
 class TestSiteExtraction(TestCase):
@@ -595,7 +595,7 @@ class TestSiteExtraction(TestCase):
         # clear all records
         ds = self.ds_1
         ds.record_queryset.delete()
-        self.assertEquals(ds.record_queryset.count(), 0)
+        self.assertEqual(ds.record_queryset.count(), 0)
         record = self.record_1
         data = {
             "dataset": record.dataset.pk,
@@ -610,8 +610,8 @@ class TestSiteExtraction(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_201_CREATED
         )
-        self.assertEquals(ds.record_queryset.count(), 1)
-        self.assertEquals(ds.record_queryset.first().site, expected_site)
+        self.assertEqual(ds.record_queryset.count(), 1)
+        self.assertEqual(ds.record_queryset.first().site, expected_site)
 
     def test_update_site(self):
         ds = self.ds_1
@@ -620,8 +620,8 @@ class TestSiteExtraction(TestCase):
         site = Site.objects.filter(name="Site1").first()
         # need to test if the site belongs to the dataset project or the update won't happen
         self.assertIsNotNone(site)
-        self.assertEquals(site.project, record.dataset.project)
-        self.assertNotEquals(record.site, site)
+        self.assertEqual(site.project, record.dataset.project)
+        self.assertNotEqual(record.site, site)
         # update site value
         schema = record.dataset.schema
         site_column = schema.get_fk_for_model('Site').data_field
@@ -733,7 +733,7 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
         client = self.custodian_1_client
         schema = self.schema_with_lat_long_and_date()
         dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
-        self.assertEquals(dataset.record_queryset.count(), 0)
+        self.assertEqual(dataset.record_queryset.count(), 0)
         record_data = {
             'What': 'A test',
             'When': '01/06/2017',
@@ -750,9 +750,9 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
             client.post(url, payload, format='json').status_code,
             status.HTTP_201_CREATED
         )
-        self.assertEquals(dataset.record_queryset.count(), 1)
+        self.assertEqual(dataset.record_queryset.count(), 1)
         record = dataset.record_queryset.first()
-        self.assertEquals(timezone.localtime(record.datetime).date(), expected_date)
+        self.assertEqual(timezone.localtime(record.datetime).date(), expected_date)
         geometry = record.geometry
         self.assertIsInstance(geometry, Point)
         self.assertEqual(geometry.x, 116.0)
@@ -768,7 +768,7 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
         client = self.custodian_1_client
         schema = self.schema_with_lat_long_and_date()
         dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
-        self.assertEquals(dataset.record_queryset.count(), 0)
+        self.assertEqual(dataset.record_queryset.count(), 0)
         record_data = {
             'What': 'A test',
             'When': '01/06/2017',
@@ -807,10 +807,10 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
             client.patch(url, data=payload, format='json').status_code,
             status.HTTP_200_OK
         )
-        self.assertEquals(dataset.record_queryset.count(), 1)
+        self.assertEqual(dataset.record_queryset.count(), 1)
         record.refresh_from_db()
         expected_date = datetime.date(2016, 4, 20)
-        self.assertEquals(timezone.localtime(record.datetime).date(), expected_date)
+        self.assertEqual(timezone.localtime(record.datetime).date(), expected_date)
         geometry = record.geometry
         self.assertIsInstance(geometry, Point)
         self.assertEqual(geometry.x, new_long)
@@ -824,7 +824,7 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
         client = self.custodian_1_client
         schema = self.schema_with_no_date()
         dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
-        self.assertEquals(dataset.record_queryset.count(), 0)
+        self.assertEqual(dataset.record_queryset.count(), 0)
         record_data = {
             'What': 'A test',
             'Latitude': -32.0,
@@ -839,7 +839,7 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
             client.post(url, payload, format='json').status_code,
             status.HTTP_201_CREATED
         )
-        self.assertEquals(dataset.record_queryset.count(), 1)
+        self.assertEqual(dataset.record_queryset.count(), 1)
         record = dataset.record_queryset.first()
         self.assertIsNone(record.datetime)
         geometry = record.geometry
@@ -855,7 +855,7 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
         client = self.custodian_1_client
         schema = self.schema_with_no_date()
         dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
-        self.assertEquals(dataset.record_queryset.count(), 0)
+        self.assertEqual(dataset.record_queryset.count(), 0)
         record_data = {
             'What': 'A test',
             'Latitude': -32.0,
@@ -887,7 +887,7 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
             client.patch(url, data=payload, format='json').status_code,
             status.HTTP_200_OK
         )
-        self.assertEquals(dataset.record_queryset.count(), 1)
+        self.assertEqual(dataset.record_queryset.count(), 1)
         record.refresh_from_db()
         self.assertIsNone(record.datetime)
         geometry = record.geometry
@@ -975,7 +975,7 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         resp = client.post(url, data=payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         qs = dataset.record_queryset
-        self.assertEquals(qs.count(), 1)
+        self.assertEqual(qs.count(), 1)
         record = qs.first()
         geom = record.geometry
         # should be in WGS84 -> srid = 4326
@@ -983,8 +983,8 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         # convert it back to GAD / zone 50 -> srid = 28350
         geom.transform(28350)
         # compare with 2 decimal place precision
-        self.assertAlmostEquals(geom.x, easting, places=2)
-        self.assertAlmostEquals(geom.y, northing, places=2)
+        self.assertAlmostEqual(geom.x, easting, places=2)
+        self.assertAlmostEqual(geom.y, northing, places=2)
 
     def test_update_happy_path(self):
         project = self.project_1
@@ -1015,7 +1015,7 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         resp = client.post(url, data=payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         qs = dataset.record_queryset
-        self.assertEquals(qs.count(), 1)
+        self.assertEqual(qs.count(), 1)
         record = qs.first()
         geom = record.geometry
         # should be in WGS84 -> srid = 4326
@@ -1023,8 +1023,8 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         # convert it back to GAD / zone 50 -> srid = 28350
         geom.transform(28350)
         # compare with 2 decimal place precision. Should be different that of expected
-        self.assertNotAlmostEquals(geom.x, easting, places=2)
-        self.assertNotAlmostEquals(geom.y, northing, places=2)
+        self.assertNotAlmostEqual(geom.x, easting, places=2)
+        self.assertNotAlmostEqual(geom.y, northing, places=2)
 
         # send path to update the zone
         record_data = {
@@ -1047,8 +1047,8 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         self.assertEqual(geom.srid, 4326)
         # convert it back to GAD / zone 50 -> srid = 28350
         geom.transform(28350)
-        self.assertAlmostEquals(geom.x, easting, places=2)
-        self.assertAlmostEquals(geom.y, northing, places=2)
+        self.assertAlmostEqual(geom.x, easting, places=2)
+        self.assertAlmostEqual(geom.y, northing, places=2)
 
     def test_default_datum(self):
         """
@@ -1124,7 +1124,7 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         resp = client.post(url, data=payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         qs = dataset.record_queryset
-        self.assertEquals(qs.count(), 1)
+        self.assertEqual(qs.count(), 1)
         record = qs.first()
         geom = record.geometry
         # should be in WGS84 -> srid = 4326
@@ -1557,16 +1557,16 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             ['what_2', '02/02/2017', site_2_code]
         ]
         file_ = helpers.rows_to_xlsx_file(csv_data)
-        self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
+        self.assertEqual(0, Record.objects.filter(dataset=dataset).count())
         url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
         with open(file_, 'rb') as fp:
             payload = {
                 'file': fp
             }
             resp = client.post(url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             records = Record.objects.filter(dataset=dataset)
-            self.assertEquals(records.count(), len(csv_data) - 1)
+            self.assertEqual(records.count(), len(csv_data) - 1)
             r = [r for r in records if r.data['What'] == 'what_1'][0]
             self.assertEqual(r.site, site_1)
             self.assertEqual(r.geometry, site_1_geometry)
@@ -1599,17 +1599,17 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             ['what_2', '02/02/2017', site_2_code]
         ]
         file_ = helpers.rows_to_xlsx_file(csv_data)
-        self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
+        self.assertEqual(0, Record.objects.filter(dataset=dataset).count())
         url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
         with open(file_, 'rb') as fp:
             payload = {
                 'file': fp
             }
             resp = client.post(url, data=payload, format='multipart')
-            self.assertEquals(resp.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
             # Check that the good record is there.
             records = Record.objects.filter(dataset=dataset)
-            self.assertEquals(records.count(), 1)
+            self.assertEqual(records.count(), 1)
             r = records.first()
             self.assertEqual(r.site, site_1)
             self.assertEqual(r.geometry, site_1_geometry)
@@ -1642,16 +1642,16 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             ['what_2', '02/02/2017', site_2_code]
         ]
         file_ = helpers.rows_to_xlsx_file(csv_data)
-        self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
+        self.assertEqual(0, Record.objects.filter(dataset=dataset).count())
         url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
         with open(file_, 'rb') as fp:
             payload = {
                 'file': fp
             }
             resp = client.post(url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             records = Record.objects.filter(dataset=dataset)
-            self.assertEquals(records.count(), len(csv_data) - 1)
+            self.assertEqual(records.count(), len(csv_data) - 1)
             record_1 = [r for r in records if r.data['What'] == 'what_1'][0]
             self.assertEqual(record_1.site, site_1)
             self.assertEqual(record_1.geometry, site_1_geometry)
@@ -1945,8 +1945,8 @@ class TestGeometryConversion(helpers.BaseUserTestCase):
         )
         self.assertIsNotNone(record)
         self.assertIsNotNone(record.geometry)
-        self.assertEquals(record.geometry.x, 115.75)
-        self.assertEquals(record.geometry.y, -32.0)
+        self.assertEqual(record.geometry.x, 115.75)
+        self.assertEqual(record.geometry.y, -32.0)
 
         # try with the upload end-point
         dataset.record_set.all().delete()
@@ -1959,12 +1959,12 @@ class TestGeometryConversion(helpers.BaseUserTestCase):
             dataset.pk,
             strict=True
         )
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         record = dataset.record_set.last()
         self.assertIsNotNone(record)
         self.assertIsNotNone(record.geometry)
-        self.assertEquals(record.geometry.x, 115.75)
-        self.assertEquals(record.geometry.y, -32.0)
+        self.assertEqual(record.geometry.x, 115.75)
+        self.assertEqual(record.geometry.y, -32.0)
 
 
 class TestSerialization(TestCase):
@@ -2065,7 +2065,7 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         # check headers
         self.assertEqual(resp.get('content-type'),
                          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -2075,22 +2075,22 @@ class TestExport(helpers.BaseUserTestCase):
         match = re.match('attachment; filename=(.+)', content_disposition)
         self.assertIsNotNone(match)
         filename, ext = path.splitext(match.group(1))
-        self.assertEquals(ext, '.xlsx')
+        self.assertEqual(ext, '.xlsx')
         filename.startswith(dataset.name)
         # read content
         wb = load_workbook(six.BytesIO(resp.content), read_only=True)
         # one datasheet named from dataset
-        sheet_names = wb.get_sheet_names()
-        self.assertEquals(1, len(sheet_names))
-        self.assertEquals(dataset.name, sheet_names[0])
-        ws = wb.get_sheet_by_name(dataset.name)
+        sheet_names = wb.sheetnames
+        self.assertEqual(1, len(sheet_names))
+        self.assertEqual(dataset.name, sheet_names[0])
+        ws = wb[dataset.name]
         rows = list(ws.rows)
         expected_records = Record.objects.filter(dataset=dataset)
-        self.assertEquals(len(rows), expected_records.count() + 1)
+        self.assertEqual(len(rows), expected_records.count() + 1)
         headers = [c.value for c in rows[0]]
         schema = dataset.schema
         # all the columns of the schema should be in the excel
-        self.assertEquals(schema.headers, headers)
+        self.assertEqual(schema.headers, headers)
 
     def test_permission_ok_for_not_custodian(self):
         """Export is a read action. Should be authorised for every logged-in user."""
@@ -2105,7 +2105,7 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
     def test_permission_denied_if_not_logged_in(self):
         """Must be logged-in."""
@@ -2120,7 +2120,7 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class TestDateNotMandatory(helpers.BaseUserTestCase):

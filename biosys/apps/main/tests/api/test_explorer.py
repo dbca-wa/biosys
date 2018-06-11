@@ -46,4 +46,4 @@ class TestView(TestCase):
     def test_logged_in_happy_path(self):
         url = reverse('doc-swagger')
         resp = self.readonly_client.get(url, follow=True)
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
