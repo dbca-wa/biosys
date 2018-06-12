@@ -12,6 +12,7 @@ router.register(r'projects?', api_views.ProjectViewSet, 'project')
 router.register(r'sites?', api_views.SiteViewSet, 'site')
 router.register(r'datasets?', api_views.DatasetViewSet, 'dataset')
 router.register(r'records?', api_views.RecordViewSet, 'record')
+router.register(r'media', api_views.MediaViewSet, 'media')
 
 url_patterns = [
     url(r'auth-token/', obtain_auth_token, name="auth_token"),

@@ -55,3 +55,8 @@ class DatasetAdmin(MainAppAdmin):
 class RecordAdmin(MainAppAdmin):
     list_display = ['dataset', 'client_id', 'data']
     list_filter = ['dataset', 'published', 'consumed']
+
+
+@admin.register(Media)
+class MediaAdmin(MainAppAdmin):
+    list_display = ['id', 'record', 'file']

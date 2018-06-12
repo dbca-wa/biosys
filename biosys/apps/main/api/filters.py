@@ -44,3 +44,20 @@ class RecordFilterSet(filters.FilterSet):
             'site__name': ['exact'],
             'client_id': ['exact']
         }
+
+
+class MediaFilterSet(filters.FilterSet):
+    class Meta:
+        model = models.Media
+        fields = [
+            'id',
+            'record',
+            'record__id',
+            'record__species_name',
+            'record__dataset__id',
+            'record__dataset__name',
+            'record__dataset__code',
+            'record__dataset__project__id',
+            'record__dataset__project__name',
+            'record__dataset__project__code',
+        ]

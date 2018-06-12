@@ -1,10 +1,7 @@
-from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
-from django.test import TestCase, override_settings
 from rest_framework import status
-from rest_framework.test import APIClient
 
-from main.models import Project, Site, Dataset
+from main.models import Dataset
 from main.tests.api import helpers
 from main.tests.test_data_package import (
     clone,
@@ -12,7 +9,6 @@ from main.tests.test_data_package import (
     LAT_LONG_OBSERVATION_DATA_PACKAGE,
     SPECIES_OBSERVATION_DATA_PACKAGE,
 )
-from main.utils_auth import is_admin
 
 
 class TestPermissions(helpers.BaseUserTestCase):

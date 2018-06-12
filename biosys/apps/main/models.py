@@ -479,15 +479,36 @@ class Record(models.Model):
         ordering = ['id']
 
 
+def get_media_path(instance, filename):
+    """
+    The function used in Media file field to build the path of the uploaded file.
+    see model below
+    https://docs.djangoproject.com/en/1.11/ref/models/fields/#filefield
+    :param instance:
+    :param filename:
+    :return: string
+    """
+    try:
+        return 'project_{project}/dataset_{dataset}/record_{record}/{filename}'.format(
+            project=instance.project.id,
+            dataset=instance.dataset.id,
+            record=instance.record.id,
+            filename=filename
+        )
+    except Exception as e:
+        logger.exception('Error while building the media file name')
+        return 'unknown/{}'.format(filename)
+
+
 @python_2_unicode_compatible
-class DatasetFile(models.Model):
-    file = models.FileField(upload_to='%Y/%m/%d')
-    uploaded_date = models.DateTimeField(auto_now_add=True)
-    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
-    dataset = models.ForeignKey(Dataset, blank=False, null=True, on_delete=models.CASCADE)
+class Media(models.Model):
+    file = models.FileField(upload_to=get_media_path)
+    record = models.ForeignKey(Record, blank=False, null=False, on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.file.name
+        return self.filename
 
     @property
     def path(self):
@@ -496,3 +517,61 @@ class DatasetFile(models.Model):
     @property
     def filename(self):
         return path.basename(self.path)
+
+    @property
+    def dataset(self):
+        return self.record.dataset
+
+    @property
+    def project(self):
+        return self.dataset.project
+
+    def is_custodian(self, user):
+        return self.record.is_custodian(user)
+
+    # API permissions
+    @staticmethod
+    def has_read_permission(request):
+        return True
+
+    def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_metadata_permission(request):
+        return True
+
+    def has_object_metadata_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_create_permission(request):
+        """
+        Custodian and admin only
+        Check that the user is a custodian of the dataset pk passed in the POST data.
+        :param request:
+        :return:
+        """
+        result = False
+        if is_admin(request.user):
+            result = True
+        elif 'record' in request.data:
+            record = Record.objects.filter(pk=request.data['record']).first()
+            result = record is not None and record.is_custodian(request.user)
+        return result
+
+    @staticmethod
+    def has_update_permission(request):
+        """
+        Update not allowed
+        :param request:
+        :return:
+        """
+        return False
+
+    @staticmethod
+    def has_destroy_permission(request):
+        return True
+
+    def has_object_destroy_permission(self, request):
+        return is_admin(request.user) or self.is_custodian(request.user)
