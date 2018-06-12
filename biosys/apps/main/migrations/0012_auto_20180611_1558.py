@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             name='Media',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('file', models.FileField(upload_to=main.models.media_path)),
+                ('file', models.FileField(upload_to=main.models.get_media_path)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('last_modified', models.DateTimeField(auto_now=True)),
             ],

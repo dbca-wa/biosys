@@ -479,7 +479,15 @@ class Record(models.Model):
         ordering = ['id']
 
 
-def media_path(instance, filename):
+def get_media_path(instance, filename):
+    """
+    The function used in Media file field to build the path of the uploaded file.
+    see model below
+    https://docs.djangoproject.com/en/1.11/ref/models/fields/#filefield
+    :param instance:
+    :param filename:
+    :return: string
+    """
     try:
         return 'project_{project}/dataset_{dataset}/record_{record}/{filename}'.format(
             project=instance.project.id,
@@ -494,7 +502,7 @@ def media_path(instance, filename):
 
 @python_2_unicode_compatible
 class Media(models.Model):
-    file = models.FileField(upload_to=media_path)
+    file = models.FileField(upload_to=get_media_path)
     record = models.ForeignKey(Record, blank=False, null=False, on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
