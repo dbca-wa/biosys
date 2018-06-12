@@ -18,7 +18,7 @@ CHUBBY_BAT_IMAGE_PATH = path.join(path.dirname(__file__), 'data/chubby-bat.png')
 
 def get_chubby_bat_img_base64():
     """
-    :return: a binary string b'sasasas'
+    :return: bytes
     """
     with open(CHUBBY_BAT_IMAGE_PATH, 'rb') as fp:
         return base64.b64encode(fp.read())
