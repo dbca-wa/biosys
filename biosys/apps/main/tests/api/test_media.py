@@ -208,6 +208,85 @@ class TestSerialization(helpers.BaseUserTestCase):
             data = resp.json()
             self.assertEqual(len(data), 2)
 
+    def test_json_base64_upload_no_type(self):
+        """
+        Test that we can upload a media using json with pure base64 string as data (no data mime provided)
+        also test that the serializer infer the file type
+        """
+        client = self.custodian_1_client
+        url = reverse('api:media-list')
+        record = self.record_1
+        # first delete all media
+        Media.objects.filter(record=record).delete()
+        b64s = factories.get_chubby_bat_img_base64()
+        payload = {
+            'record': record.id,
+            'file': b64s
+        }
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        # test that the file type (extension) has been rightly inferred
+        data = resp.json()
+        self.assertIn('file', data)
+        file = data['file']
+        # should be an url
+        self.assertTrue(file.startswith('http://'))
+        # expect png extension
+        self.assertTrue(file.endswith('.png'))
+        # compare image
+        media = Media.objects.filter(id=data['id']).first()
+        self.assertIsNotNone(media)
+        self.assertEqual(
+            open(factories.CHUBBY_BAT_IMAGE_PATH, 'rb').read(),
+            open(media.path, 'rb').read()
+        )
+
+    def test_json_base64_upload_html_format(self):
+        """
+        Test that we can upload a media using json with string like
+        data:image/png;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7
+        """
+        client = self.custodian_1_client
+        url = reverse('api:media-list')
+        record = self.record_1
+        # first delete all media
+        Media.objects.filter(record=record).delete()
+        b64s = factories.get_chubby_bat_img_base64()
+        payload = {
+            'record': record.id,
+            'file': 'data:image/png;base64,{}'.format(b64s.decode('ascii'))
+        }
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        # test that the file type (extension) has been rightly inferred
+        data = resp.json()
+        self.assertIn('file', data)
+        file = data['file']
+        # should be an url
+        self.assertTrue(file.startswith('http://'))
+        # expect png extension
+        self.assertTrue(file.endswith('.png'))
+        # compare image
+        media = Media.objects.filter(id=data['id']).first()
+        self.assertIsNotNone(media)
+        self.assertEqual(
+            open(factories.CHUBBY_BAT_IMAGE_PATH, 'rb').read(),
+            open(media.path, 'rb').read()
+        )
+
+        # test that even if we put the wrong file type it will infer the right one
+        # send with data:image/gif
+        payload = {
+            'record': record.id,
+            'file': 'data:image/gif;base64,{}'.format(b64s.decode('ascii'))
+        }
+        resp = client.post(url, data=payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        # test that the file type (extension) has been rightly inferred
+        data = resp.json()
+        # expect png extension
+        self.assertTrue(data['file'].endswith('.png'))
+
 
 class TestFilters(helpers.BaseUserTestCase):
     def setUp(self):

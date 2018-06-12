@@ -507,6 +507,9 @@ class Media(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name_plural = "media"
+
     def __str__(self):
         return self.filename
 
