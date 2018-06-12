@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.conf import settings
 from dry_rest_permissions.generics import DRYPermissions
 from rest_framework import viewsets, generics, status
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, FileUploadParser, JSONParser
 from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
 from rest_framework.views import APIView, Response
 from rest_framework.settings import import_from_string
@@ -389,6 +389,14 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
         instance = self.get_object()
         self.dataset = instance.dataset
         return super(RecordViewSet, self).update(request, *args, **kwargs)
+
+
+class MediaViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
+    queryset = models.Media.objects.all()
+    serializer_class = serializers.MediaSerializer
+    filter_class = filters.MediaFilterSet
+    parser_classes = (FormParser, MultiPartParser)
 
 
 class StatisticsView(APIView):
