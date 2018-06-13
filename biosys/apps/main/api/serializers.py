@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_gis import serializers as serializers_gis
+from drf_extra_fields.fields import Base64ImageField
 
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
@@ -289,6 +290,16 @@ class RecordSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Record
+        fields = '__all__'
+
+
+class Base64MediaSerializer(serializers.ModelSerializer):
+    # Only image supported for base 64
+    # TODO: investigate extending drf_extra_fields.fields.Base64FileField for video support
+    file = Base64ImageField(required=True)
+
+    class Meta:
+        model = Media
         fields = '__all__'
 
 

@@ -394,9 +394,15 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
 class MediaViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Media.objects.all()
-    serializer_class = serializers.MediaSerializer
     filter_class = filters.MediaFilterSet
-    parser_classes = (FormParser, MultiPartParser)
+    parser_classes = (FormParser, MultiPartParser, JSONParser)
+
+    def get_serializer_class(self):
+        if self.request.content_type.startswith('application/json'):
+            return serializers.Base64MediaSerializer
+        else:
+            # multipart form serializer
+            return serializers.MediaSerializer
 
 
 class StatisticsView(APIView):
