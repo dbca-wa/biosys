@@ -76,6 +76,8 @@ class DatasetSerializer(serializers.ModelSerializer):
         if has_data:
             different_type = instance.type != validated_data.get('type')
             different_data_package = instance.data_package != validated_data.get('data_package')
+            #TODO: implement a smart risk-checking of changing dataset schema when there's data.
+            different_data_package = False
             if different_type or different_data_package:
                 message = "This dataset already contains records. " \
                           "You cannot change this field. " \
@@ -126,6 +128,9 @@ class SchemaValidator:
 
 
 class RecordSerializer(serializers.ModelSerializer):
+    parent = serializers.SerializerMethodField()
+    children = serializers.SerializerMethodField()
+
     # TODO: Split the serializer in 3 subclasses. One for every type of dataset.
     def __init__(self, instance=None, **kwargs):
         super(RecordSerializer, self).__init__(instance, **kwargs)
@@ -257,6 +262,22 @@ class RecordSerializer(serializers.ModelSerializer):
             return instance
         except Exception as e:
             raise serializers.ValidationError(e)
+
+    def get_parent(self, record):
+        """
+        Return the FIRST parent record.id or None
+        """
+        parents = record.parents
+        # currently client support only one parent
+        return parents[0].id if parents else None
+
+    def get_children(self, record):
+        """
+        :param record:
+        :return: an array of children record ids, or None
+        """
+        children = record.children
+        return [rec.id for rec in children] if children is not None else None
 
     def validate_data(self, data):
         """

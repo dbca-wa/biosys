@@ -409,6 +409,10 @@ class SchemaForeignKey:
         return self.fields[0] if self.fields else None
 
     @property
+    def parent_data_field(self):
+        return self.reference_fields[0] if self.reference_fields else None
+
+    @property
     def reference(self):
         return self.descriptor.get('reference', {})
 

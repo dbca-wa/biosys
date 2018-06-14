@@ -13,6 +13,7 @@ from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ValidationError
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.text import Truncator
+from django.db.models.query_utils import Q
 from timezone_field import TimeZoneField
 
 from main.constants import DATUM_CHOICES, MODEL_SRID
@@ -270,8 +271,40 @@ class Dataset(models.Model):
         return self.resources[0]
 
     @property
+    def resource_name(self):
+        return self.resource['name']
+
+    @property
     def resources(self):
         return self.data_package.get('resources', [])
+
+    @property
+    def foreign_keys_resource_names(self):
+        """
+        Return a list of all the resource names referenced as foreign key in the schema
+        :return:
+        """
+        return [fk.reference_resource for fk in self.schema.foreign_keys]
+
+    @property
+    def get_parent_dataset(self):
+        """
+        If the schema declared some foreign keys, lookup for the first dataset that matches a foreign key.
+        Rules:
+        - it must belong to the same project
+        - the resource name referenced in the foreign key must match a dataset name, code or datapackage
+        first resource name.
+        :return: a matching dataset or None
+        """
+        initial_queryset = Dataset.objects.filter(project=self.project)
+        fk_resource_names = self.foreign_keys_resource_names
+        if fk_resource_names:
+            resource_name_query = Q(name__in=fk_resource_names) | \
+                                  Q(code__in=fk_resource_names) | \
+                                  Q(data_package__resources__0__name__in=fk_resource_names)
+            return initial_queryset.filter(resource_name_query).first()
+        else:
+            return None
 
     @staticmethod
     def validate_data_package(data_package, dataset_type, project=None):
@@ -333,6 +366,39 @@ class Dataset(models.Model):
 
     def is_custodian(self, user):
         return self.project.is_custodian(user)
+
+    def has_foreign_key_to(self, dataset):
+        """
+        Check if this dataset has declared a foreign key to the given dataset
+        We check the resources name against the dataset name, code and resource name
+        :return: True if FK found.
+        """
+        for resource_name in self.foreign_keys_resource_names:
+            if resource_name in [dataset.name, dataset.code, dataset.resource_name]:
+                return True
+        return False
+
+    def get_children_datasets(self):
+        """
+        Return all the datasets within the project that have declared a foreign key to this dataset.
+        :return: a list (NOT a QuerySet) of dataset
+        """
+        # TODO: use a proper json field lookup for foreign key to return a queryset
+        return [ds for ds in Dataset.objects.filter(project=self.project) if ds.has_foreign_key_to(self)]
+
+    def get_fk_lookup_fields_for_dataset(self, dataset):
+        """
+        Traverse this dataset declared foreign keys and find the first one that matches the given dataset.
+        If found it will return a tuple (parent_field, child_field) for a mapping between the child_field (our field)
+        and it's parent (from the given dataset)
+        :return: a tuple (parent_field, child_field) if a fk to the given dataset is found or (None, None)
+        """
+        for fk in self.schema.foreign_keys:
+            if fk.reference_resource in [dataset.name, dataset.code, dataset.resource_name]:
+                parent_field = fk.parent_data_field
+                child_field = fk.data_field
+                return parent_field, child_field
+        return None, None
 
     # API permissions
     @staticmethod
@@ -421,6 +487,34 @@ class Record(models.Model):
     @property
     def data_with_id(self):
         return dict({'id': self.id}, **self.data)
+
+    @property
+    def parents(self):
+        parent_dataset = self.dataset.get_parent_dataset
+        if parent_dataset:
+            parent_field, child_field = self.dataset.get_fk_lookup_fields_for_dataset(parent_dataset)
+            if parent_field and child_field:
+                child_value = self.data[child_field]
+                if child_value:
+                    query = Q(dataset=parent_dataset) & Q(data__contains={parent_field: child_value})
+                    return Record.objects.filter(query)
+        return Record.objects.none()
+
+    @property
+    def children(self):
+        children_datasets = self.dataset.get_children_datasets()
+        if children_datasets:
+            query = None
+            for ds in children_datasets:
+                parent_field, child_field = ds.get_fk_lookup_fields_for_dataset(self.dataset)
+                if parent_field and child_field:
+                    parent_value = self.data[parent_field]
+                    if parent_value:
+                        dataset_query = Q(dataset=ds, data__contains={child_field: parent_value})
+                        query = query | dataset_query if query else dataset_query
+            if query:
+                return Record.objects.filter(query)
+        return Record.objects.none()
 
     def is_custodian(self, user):
         return self.dataset.is_custodian(user)

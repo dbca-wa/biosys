@@ -1094,3 +1094,11 @@ class TestPatch(helpers.BaseUserTestCase):
         record.refresh_from_db()
         self.assertTrue(record.consumed)
         self.assertTrue(json.dumps(record.data), previous_data)
+
+
+class TestParentChildrenForeignKey(helpers.BaseUserTestCase):
+    """
+    Tests are about a dataset schema declaring one of its field as a foreign key to another dataset schema field
+    """
+    #TODO tests
+
