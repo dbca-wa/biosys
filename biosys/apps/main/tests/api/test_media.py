@@ -179,9 +179,11 @@ class TestSerialization(helpers.BaseUserTestCase):
         url = data.get('file')
         self.assertIsNotNone(url)
         # validate url. Can't use the django URLValidator here it will fail because of the domain name.
-        # Typical test url http://testserver/media/project_1/dataset_60/record_60/chubby-bat.png
+        # Typical test url http://testserver/media/project_1/dataset_60/record_60/chubby-bat_{id}.png
         self.assertTrue(url.startswith('http://'))
-        self.assertTrue(url.endswith('/chubby-bat.png'))
+        file_name = url.split('/').pop()
+        self.assertTrue(file_name.startswith('chubby-bat'))
+        self.assertTrue(file_name.endswith('.png'))
 
     def test_multipart_upload(self):
         """

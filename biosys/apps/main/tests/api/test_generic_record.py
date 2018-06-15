@@ -1094,3 +1094,354 @@ class TestPatch(helpers.BaseUserTestCase):
         record.refresh_from_db()
         self.assertTrue(record.consumed)
         self.assertTrue(json.dumps(record.data), previous_data)
+
+
+class TestForeignKey(helpers.BaseUserTestCase):
+    """
+    Tests are about a dataset schema declaring one of its field as a foreign key to another dataset schema field
+    When declaring a FK in the schema you have to define a resource name. This name is supposed to be a dataset name.
+    or the resource name.
+    """
+
+    def test_fk_with_dataset_name(self):
+        """
+        Test that the parent children works when the declared FK refer to a dataset name.
+        :return:
+        """
+        # Create a parent dataset with some records
+        parent_dataset = self._create_dataset_and_records_from_rows([
+            ['Survey ID', 'Where', 'When', 'Who'],
+            ['ID-001', 'King\'s Park', '2018-07-15', 'Tim Reynolds'],
+            ['ID-002', 'Cottesloe', '2018-07-11', 'SLB'],
+            ['ID-003', 'Somewhere', '2018-07-13', 'Phil Bill']
+        ])
+        parent_records = parent_dataset.record_set.all()
+        self.assertEqual(parent_records.count(), 3)
+
+        # Create a child/related schema
+        child_schema = helpers.create_schema_from_fields([
+            {
+                "name": "Survey ID",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "What",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Comments",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+            }
+        ])
+        # declaring a foreign key pointing to the dataset name
+        foreign_keys = [{
+            'fields': 'Survey ID',
+            'reference': {
+                'fields': 'Survey ID',
+                'resource': parent_dataset.name
+            }
+        }]
+        child_schema['foreignKeys'] = foreign_keys
+        child_dataset = self._create_dataset_with_schema(
+            self.project_1,
+            self.custodian_1_client,
+            child_schema
+        )
+        self.assertIsNotNone(child_dataset)
+        # post some records for survey ID--001
+        rows = [
+            ['Survey ID', 'What', 'Comments'],
+            ['ID-001', 'Canis lupus', 'doggy, doggy'],
+            ['ID-001', 'A frog', 'kiss'],
+            ['ID-001', 'A tooth brush', 'I should stop drinking'],
+        ]
+        self._upload_records_from_rows(rows, child_dataset.id, strict=False)
+        children_records = child_dataset.record_set.all()
+        self.assertEqual(children_records.count(), 3)
+
+        # test serialisation of parent records
+        id_001 = parent_records.filter(data__contains={'Survey ID': 'ID-001'}).first()
+        expected_children_ids = [r.id for r in children_records]
+        expected_parent_id = None
+        self.assertIsNotNone(id_001)
+        url = reverse('api:record-detail', kwargs={'pk': id_001.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        id_002 = parent_records.filter(data__contains={'Survey ID': 'ID-002'}).first()
+        expected_children_ids = []
+        expected_parent_id = None
+        self.assertIsNotNone(id_002)
+        url = reverse('api:record-detail', kwargs={'pk': id_002.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        id_003 = parent_records.filter(data__contains={'Survey ID': 'ID-003'}).first()
+        expected_children_ids = []
+        expected_parent_id = None
+        self.assertIsNotNone(id_003)
+        url = reverse('api:record-detail', kwargs={'pk': id_003.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        #
+        # test serialisation of children records
+        # they all have the same parent and no children
+        #
+        expected_children_ids = []
+        expected_parent_id = id_001.pk
+        client = self.custodian_1_client
+        for record in children_records:
+            url = reverse('api:record-detail', kwargs={'pk': record.pk})
+            resp = client.get(url)
+            self.assertEqual(resp.status_code, status.HTTP_200_OK)
+            data = resp.json()
+            self.assertEqual(data['children'], expected_children_ids)
+            self.assertEqual(data['parent'], expected_parent_id)
+
+    def test_fk_with_dataset_code(self):
+        """
+        This is the same test as above but this time the foreign key is declared with the parent dataset code instead
+        of name
+        :return:
+        """
+        # Create a parent dataset with some records
+        parent_dataset = self._create_dataset_and_records_from_rows([
+            ['Survey ID', 'Where', 'When', 'Who'],
+            ['ID-001', 'King\'s Park', '2018-07-15', 'Tim Reynolds'],
+            ['ID-002', 'Cottesloe', '2018-07-11', 'SLB'],
+            ['ID-003', 'Somewhere', '2018-07-13', 'Phil Bill']
+        ])
+        parent_dataset.code = 'Survey'
+        parent_dataset.save()
+        parent_records = parent_dataset.record_set.all()
+        self.assertEqual(parent_records.count(), 3)
+
+        # Create a child/related schema
+        child_schema = helpers.create_schema_from_fields([
+            {
+                "name": "Survey ID",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "What",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Comments",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+            }
+        ])
+        # declaring a foreign key pointing to the dataset name
+        foreign_keys = [{
+            'fields': 'Survey ID',
+            'reference': {
+                'fields': 'Survey ID',
+                'resource': parent_dataset.code
+            }
+        }]
+        child_schema['foreignKeys'] = foreign_keys
+        child_dataset = self._create_dataset_with_schema(
+            self.project_1,
+            self.custodian_1_client,
+            child_schema
+        )
+        self.assertIsNotNone(child_dataset)
+        # post some records for survey ID--001
+        rows = [
+            ['Survey ID', 'What', 'Comments'],
+            ['ID-001', 'Canis lupus', 'doggy, doggy'],
+            ['ID-001', 'A frog', 'kiss'],
+            ['ID-001', 'A tooth brush', 'I should stop drinking'],
+        ]
+        self._upload_records_from_rows(rows, child_dataset.id, strict=False)
+        children_records = child_dataset.record_set.all()
+        self.assertEqual(children_records.count(), 3)
+
+        # test serialisation of parent records
+        id_001 = parent_records.filter(data__contains={'Survey ID': 'ID-001'}).first()
+        expected_children_ids = [r.id for r in children_records]
+        expected_parent_id = None
+        self.assertIsNotNone(id_001)
+        url = reverse('api:record-detail', kwargs={'pk': id_001.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        id_002 = parent_records.filter(data__contains={'Survey ID': 'ID-002'}).first()
+        expected_children_ids = []
+        expected_parent_id = None
+        self.assertIsNotNone(id_002)
+        url = reverse('api:record-detail', kwargs={'pk': id_002.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        id_003 = parent_records.filter(data__contains={'Survey ID': 'ID-003'}).first()
+        expected_children_ids = []
+        expected_parent_id = None
+        self.assertIsNotNone(id_003)
+        url = reverse('api:record-detail', kwargs={'pk': id_003.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        #
+        # test serialisation of children records
+        # they all have the same parent and no children
+        #
+        expected_children_ids = []
+        expected_parent_id = id_001.pk
+        client = self.custodian_1_client
+        for record in children_records:
+            url = reverse('api:record-detail', kwargs={'pk': record.pk})
+            resp = client.get(url)
+            self.assertEqual(resp.status_code, status.HTTP_200_OK)
+            data = resp.json()
+            self.assertEqual(data['children'], expected_children_ids)
+            self.assertEqual(data['parent'], expected_parent_id)
+
+    def test_fk_with_dataset_resource_name(self):
+        """
+        This is the same test as above but this time the foreign key is declared with the parent dataset resource name
+        :return:
+        """
+        # Create a parent dataset with some records
+        parent_dataset = self._create_dataset_and_records_from_rows([
+            ['Survey ID', 'Where', 'When', 'Who'],
+            ['ID-001', 'King\'s Park', '2018-07-15', 'Tim Reynolds'],
+            ['ID-002', 'Cottesloe', '2018-07-11', 'SLB'],
+            ['ID-003', 'Somewhere', '2018-07-13', 'Phil Bill']
+        ])
+        parent_dataset.name = 'Survey'
+        parent_dataset.code = 'SURV'
+        parent_dataset.save()
+        self.assertTrue(parent_dataset.resource_name)  # not None or empty string
+        self.assertNotEqual(parent_dataset.resource_name, parent_dataset.name)
+        self.assertNotEqual(parent_dataset.resource_name, parent_dataset.code)
+        parent_records = parent_dataset.record_set.all()
+        self.assertEqual(parent_records.count(), 3)
+
+        # Create a child/related schema
+        child_schema = helpers.create_schema_from_fields([
+            {
+                "name": "Survey ID",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "What",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Comments",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+            }
+        ])
+        # declaring a foreign key pointing to the dataset name
+        foreign_keys = [{
+            'fields': 'Survey ID',
+            'reference': {
+                'fields': 'Survey ID',
+                'resource': parent_dataset.resource_name
+            }
+        }]
+        child_schema['foreignKeys'] = foreign_keys
+        child_dataset = self._create_dataset_with_schema(
+            self.project_1,
+            self.custodian_1_client,
+            child_schema
+        )
+        self.assertIsNotNone(child_dataset)
+        # post some records for survey ID--001
+        rows = [
+            ['Survey ID', 'What', 'Comments'],
+            ['ID-001', 'Canis lupus', 'doggy, doggy'],
+            ['ID-001', 'A frog', 'kiss'],
+            ['ID-001', 'A tooth brush', 'I should stop drinking'],
+        ]
+        self._upload_records_from_rows(rows, child_dataset.id, strict=False)
+        children_records = child_dataset.record_set.all()
+        self.assertEqual(children_records.count(), 3)
+
+        # test serialisation of parent records
+        id_001 = parent_records.filter(data__contains={'Survey ID': 'ID-001'}).first()
+        expected_children_ids = [r.id for r in children_records]
+        expected_parent_id = None
+        self.assertIsNotNone(id_001)
+        url = reverse('api:record-detail', kwargs={'pk': id_001.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        id_002 = parent_records.filter(data__contains={'Survey ID': 'ID-002'}).first()
+        expected_children_ids = []
+        expected_parent_id = None
+        self.assertIsNotNone(id_002)
+        url = reverse('api:record-detail', kwargs={'pk': id_002.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        id_003 = parent_records.filter(data__contains={'Survey ID': 'ID-003'}).first()
+        expected_children_ids = []
+        expected_parent_id = None
+        self.assertIsNotNone(id_003)
+        url = reverse('api:record-detail', kwargs={'pk': id_003.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        #
+        # test serialisation of children records
+        # they all have the same parent and no children
+        #
+        expected_children_ids = []
+        expected_parent_id = id_001.pk
+        client = self.custodian_1_client
+        for record in children_records:
+            url = reverse('api:record-detail', kwargs={'pk': record.pk})
+            resp = client.get(url)
+            self.assertEqual(resp.status_code, status.HTTP_200_OK)
+            data = resp.json()
+            self.assertEqual(data['children'], expected_children_ids)
+            self.assertEqual(data['parent'], expected_parent_id)
+
