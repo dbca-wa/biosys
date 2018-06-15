@@ -1101,7 +1101,13 @@ class TestForeignKey(helpers.BaseUserTestCase):
     Tests are about a dataset schema declaring one of its field as a foreign key to another dataset schema field
     When declaring a FK in the schema you have to define a resource name. This name is supposed to be a dataset name.
     or the resource name.
+    Note: in order to get children records the parent dataset schema MUST declare a 'primaryKey' property.
     """
+
+    def setUp(self):
+        super(TestForeignKey, self).setUp()
+        # delete all datasets
+        Dataset.objects.all().delete()
 
     def test_fk_with_dataset_name(self):
         """
@@ -1115,6 +1121,8 @@ class TestForeignKey(helpers.BaseUserTestCase):
             ['ID-002', 'Cottesloe', '2018-07-11', 'SLB'],
             ['ID-003', 'Somewhere', '2018-07-13', 'Phil Bill']
         ])
+        parent_dataset.data_package['resources'][0]['schema']['primaryKey'] = 'Survey ID'
+        parent_dataset.save()
         parent_records = parent_dataset.record_set.all()
         self.assertEqual(parent_records.count(), 3)
 
@@ -1203,7 +1211,7 @@ class TestForeignKey(helpers.BaseUserTestCase):
         # test serialisation of children records
         # they all have the same parent and no children
         #
-        expected_children_ids = []
+        expected_children_ids = None
         expected_parent_id = id_001.pk
         client = self.custodian_1_client
         for record in children_records:
@@ -1227,6 +1235,8 @@ class TestForeignKey(helpers.BaseUserTestCase):
             ['ID-002', 'Cottesloe', '2018-07-11', 'SLB'],
             ['ID-003', 'Somewhere', '2018-07-13', 'Phil Bill']
         ])
+        parent_dataset.data_package['resources'][0]['schema']['primaryKey'] = 'Survey ID'
+        parent_dataset.save()
         parent_dataset.code = 'Survey'
         parent_dataset.save()
         parent_records = parent_dataset.record_set.all()
@@ -1317,7 +1327,7 @@ class TestForeignKey(helpers.BaseUserTestCase):
         # test serialisation of children records
         # they all have the same parent and no children
         #
-        expected_children_ids = []
+        expected_children_ids = None
         expected_parent_id = id_001.pk
         client = self.custodian_1_client
         for record in children_records:
@@ -1340,6 +1350,8 @@ class TestForeignKey(helpers.BaseUserTestCase):
             ['ID-002', 'Cottesloe', '2018-07-11', 'SLB'],
             ['ID-003', 'Somewhere', '2018-07-13', 'Phil Bill']
         ])
+        parent_dataset.data_package['resources'][0]['schema']['primaryKey'] = 'Survey ID'
+        parent_dataset.save()
         parent_dataset.name = 'Survey'
         parent_dataset.code = 'SURV'
         parent_dataset.save()
@@ -1434,7 +1446,7 @@ class TestForeignKey(helpers.BaseUserTestCase):
         # test serialisation of children records
         # they all have the same parent and no children
         #
-        expected_children_ids = []
+        expected_children_ids = None
         expected_parent_id = id_001.pk
         client = self.custodian_1_client
         for record in children_records:
