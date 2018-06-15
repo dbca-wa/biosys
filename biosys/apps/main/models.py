@@ -279,12 +279,27 @@ class Dataset(models.Model):
         return self.data_package.get('resources', [])
 
     @property
+    def foreign_keys(self):
+        # note: don't use the self.schema (schema object) it is too slow.
+        return self.schema_data.get('foreignKeys', [])
+
+    @property
+    def has_foreign_keys(self):
+        return bool(self.foreign_keys)
+
+    @property
     def foreign_keys_resource_names(self):
         """
         Return a list of all the resource names referenced as foreign key in the schema
         :return:
         """
-        return [fk.reference_resource for fk in self.schema.foreign_keys]
+        # note: don't use the self.schema (schema object) it is too slow.
+        result = []
+        for fk in (self.foreign_keys or []):
+            resource_name = fk.get('reference', {}).get('resource')
+            if resource_name:
+                result.append(resource_name)
+        return result
 
     @property
     def get_parent_dataset(self):
@@ -296,15 +311,24 @@ class Dataset(models.Model):
         first resource name.
         :return: a matching dataset or None
         """
-        initial_queryset = Dataset.objects.filter(project=self.project)
         fk_resource_names = self.foreign_keys_resource_names
         if fk_resource_names:
+            initial_queryset = Dataset.objects.filter(project=self.project)
             resource_name_query = Q(name__in=fk_resource_names) | \
                                   Q(code__in=fk_resource_names) | \
                                   Q(data_package__resources__0__name__in=fk_resource_names)
+            # TODO: we support only one FK
             return initial_queryset.filter(resource_name_query).first()
         else:
             return None
+
+    @property
+    def has_primary_key(self):
+        """
+        Check uf this dataset has a declared primaryKey in its schema
+        :return:
+        """
+        return bool(self.schema_data.get('primaryKey'))
 
     @staticmethod
     def validate_data_package(data_package, dataset_type, project=None):
@@ -494,35 +518,42 @@ class Record(models.Model):
         If the record dataset schema has a declared foreign key, look for the parents of this record.
         :return: a Record queryset or Record.objects.none()
         """
-        parent_dataset = self.dataset.get_parent_dataset
-        if parent_dataset:
-            parent_field, child_field = self.dataset.get_fk_lookup_fields_for_dataset(parent_dataset)
-            if parent_field and child_field:
-                child_value = self.data[child_field]
-                if child_value:
-                    query = Q(dataset=parent_dataset) & Q(data__contains={parent_field: child_value})
-                    return Record.objects.filter(query)
-        return Record.objects.none()
+        if self.dataset.has_foreign_keys:
+            parent_dataset = self.dataset.get_parent_dataset
+            if parent_dataset:
+                parent_field, child_field = self.dataset.get_fk_lookup_fields_for_dataset(parent_dataset)
+                if parent_field and child_field:
+                    child_value = self.data[child_field]
+                    if child_value:
+                        query = Q(dataset=parent_dataset) & Q(data__contains={parent_field: child_value})
+                        return Record.objects.filter(query)
+            return Record.objects.none()
+        else:
+            return None
 
     @property
     def children(self):
         """
         If a dataset schema has a declared foreign key to the dataset of this record, look for children
-        :return: a Record queryset or Record.objects.none()
+        Important note: Only a dataset with a declared 'primaryKey' in schema can be used for children lookup.
+        :return: a Record queryset or None if the dataset has no declared primaryKey
         """
-        children_datasets = self.dataset.get_children_datasets()
-        if children_datasets:
-            query = None
-            for ds in children_datasets:
-                parent_field, child_field = ds.get_fk_lookup_fields_for_dataset(self.dataset)
-                if parent_field and child_field:
-                    parent_value = self.data[parent_field]
-                    if parent_value:
-                        dataset_query = Q(dataset=ds, data__contains={child_field: parent_value})
-                        query = query | dataset_query if query else dataset_query
-            if query:
-                return Record.objects.filter(query)
-        return Record.objects.none()
+        if self.dataset.has_primary_key:
+            children_datasets = self.dataset.get_children_datasets()
+            if children_datasets:
+                query = None
+                for ds in children_datasets:
+                    parent_field, child_field = ds.get_fk_lookup_fields_for_dataset(self.dataset)
+                    if parent_field and child_field:
+                        parent_value = self.data[parent_field]
+                        if parent_value:
+                            dataset_query = Q(dataset=ds, data__contains={child_field: parent_value})
+                            query = query | dataset_query if query else dataset_query
+                if query:
+                    return Record.objects.filter(query)
+            return Record.objects.none()
+        else:
+            return None
 
     def is_custodian(self, user):
         return self.dataset.is_custodian(user)
