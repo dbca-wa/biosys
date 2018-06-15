@@ -395,7 +395,7 @@ class Dataset(models.Model):
         """
         for fk in self.schema.foreign_keys:
             if fk.reference_resource in [dataset.name, dataset.code, dataset.resource_name]:
-                parent_field = fk.parent_data_field
+                parent_field = fk.parent_data_field_name
                 child_field = fk.data_field
                 return parent_field, child_field
         return None, None
