@@ -490,6 +490,10 @@ class Record(models.Model):
 
     @property
     def parents(self):
+        """
+        If the record dataset schema has a declared foreign key, look for the parents of this record.
+        :return: a Record queryset or Record.objects.none()
+        """
         parent_dataset = self.dataset.get_parent_dataset
         if parent_dataset:
             parent_field, child_field = self.dataset.get_fk_lookup_fields_for_dataset(parent_dataset)
@@ -502,6 +506,10 @@ class Record(models.Model):
 
     @property
     def children(self):
+        """
+        If a dataset schema has a declared foreign key to the dataset of this record, look for children
+        :return: a Record queryset or Record.objects.none()
+        """
         children_datasets = self.dataset.get_children_datasets()
         if children_datasets:
             query = None
