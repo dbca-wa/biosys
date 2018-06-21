@@ -941,7 +941,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
     def test_filter_id__in(self):
         """
         Test the id__in filter.
-        Note: the filter parameter has to be a comma-separated list od ids, e.g: &id__in=1,2,3,4
+        Note: the filter parameter has to be a comma-separated list of ids, e.g: &id__in=1,2,3,4
         Not supported:
         - &id__in=[1,2,3,4]    (square bracket)
         - &id__in=1&id__in=2&id__in=3  (repeated key)
@@ -980,7 +980,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         self.assertEqual(1, len(records))
         self.assertEqual(records[0]['id'], expected_id)
 
-        # Test blank returns all record (filter disabled)
+        # Test blank returns all records (filter disabled)
         params = {
             'id__in': ''
         }
@@ -1008,6 +1008,7 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
             'id__in': expected_ids,  # repeated key is the default url encoding for an array for the python test client
         }
         resp = client.get(url, params)
+        self.assertEqual(resp.request['QUERY_STRING'], 'id__in={}&id__in={}'.format(record_ids[0], record_ids[-1]))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         records = resp.json()
         self.assertEqual(1, len(records))
