@@ -69,7 +69,7 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, UserPermission,)
     queryset = get_user_model().objects.all()
     serializer_class = serializers.UserSerializer
-    filter_fields = ('username', 'first_name', 'last_name', 'email')
+    filter_class = filters.UserFilterSet
 
 
 class ProjectViewSet(viewsets.ModelViewSet):

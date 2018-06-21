@@ -1,6 +1,25 @@
+from django.contrib.auth import get_user_model
 from django_filters import rest_framework as filters
 
 from main import models
+
+
+class UserFilterSet(filters.FilterSet):
+    project_id = filters.NumberFilter(name='project', method='filter_project_custodians')
+
+    @staticmethod
+    def filter_project_custodians(queryset, name, project_id):
+        return queryset.filter(project__in=[project_id])
+
+    class Meta:
+        model = get_user_model()
+        fields = {
+            'id': ['exact', 'in'],
+            'username': ['exact', 'icontains'],
+            'first_name': ['exact', 'icontains'],
+            'last_name': ['exact', 'icontains'],
+            'email': ['exact', 'icontains'],
+        }
 
 
 class DatasetFilterSet(filters.FilterSet):

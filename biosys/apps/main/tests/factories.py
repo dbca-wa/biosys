@@ -2,8 +2,16 @@ from os import path
 import factory
 import base64
 
+from django.contrib.auth import get_user_model
 
 from main import models
+
+
+class UserFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = get_user_model()
+
+    username = factory.sequence(lambda n: 'User{}'.format(n))
 
 
 class ProjectFactory(factory.django.DjangoModelFactory):
