@@ -938,6 +938,83 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         expected = expected[::-1]
         self.assertEqual([(r['data']['What'], r['data']['Weight']) for r in records], expected)
 
+    def test_filter_id__in(self):
+        """
+        Test the id__in filter.
+        Note: the filter parameter has to be a comma-separated list of ids, e.g: &id__in=1,2,3,4
+        Not supported:
+        - &id__in=[1,2,3,4]    (square bracket)
+        - &id__in=1&id__in=2&id__in=3  (repeated key)
+        """
+        self._create_dataset_and_records_from_rows([
+            ['What', 'Comment'],
+            ['aaaa', 'AAAA'],
+            ['bbbb', 'BBBB'],
+            ['cccc', 'CCCC'],
+            ['dddd', 'DDDD'],
+        ])
+        record_ids = list(Record.objects.values_list('id', flat=True))
+        self.assertTrue(len(record_ids) >= 4)
+        url = reverse('api:record-list')
+        client = self.custodian_1_client
+
+        # Test 2 records (first and last)
+        expected_ids = [record_ids[0], record_ids[-1]]
+        params = {
+            'id__in': ','.join([str(i) for i in expected_ids])
+        }
+        resp = client.get(url, params)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEqual(2, len(records))
+        self.assertEqual(sorted([r['id'] for r in records]), sorted(expected_ids))
+
+        # Test only one value
+        expected_id = record_ids[1]
+        params = {
+            'id__in': expected_id
+        }
+        resp = client.get(url, params)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEqual(1, len(records))
+        self.assertEqual(records[0]['id'], expected_id)
+
+        # Test blank returns all records (filter disabled)
+        params = {
+            'id__in': ''
+        }
+        resp = client.get(url, params)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEqual(len(record_ids), len(records))
+        expected_ids = record_ids
+        self.assertEqual(sorted([r['id'] for r in records]), sorted(expected_ids))
+
+        # Test that square bracket doesn't work. It will return no records
+        expected_ids = [record_ids[0], record_ids[-1]]
+        params = {
+            'id__in': json.dumps(expected_ids)  # '[1,4]'
+        }
+        resp = client.get(url, params)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEqual(0, len(records))
+        self.assertNotEqual(sorted([r['id'] for r in records]), sorted(expected_ids))
+
+        # Test that repeated key doesn't work. It will return the last one
+        expected_ids = [record_ids[0], record_ids[-1]]
+        params = {
+            'id__in': expected_ids,  # repeated key is the default url encoding for an array for the python test client
+        }
+        resp = client.get(url, params)
+        self.assertEqual(resp.request['QUERY_STRING'], 'id__in={}&id__in={}'.format(record_ids[0], record_ids[-1]))
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEqual(1, len(records))
+        self.assertNotEqual(sorted([r['id'] for r in records]), sorted(expected_ids))
+        self.assertEqual(records[0]['id'], record_ids[-1])
+
 
 class TestSchemaValidation(helpers.BaseUserTestCase):
 
