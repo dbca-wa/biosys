@@ -1015,6 +1015,118 @@ class TestFilteringAndOrdering(helpers.BaseUserTestCase):
         self.assertNotEqual(sorted([r['id'] for r in records]), sorted(expected_ids))
         self.assertEqual(records[0]['id'], record_ids[-1])
 
+    def test_json_filter_contains(self):
+        """
+        Test the data__contains filter. Filter for key=value in the data JSONField.
+        see:
+        https://docs.djangoproject.com/en/2.0/ref/contrib/postgres/fields/#std:fieldlookup-hstorefield.contains
+        """
+        dataset = self._create_dataset_and_records_from_rows([
+            ['Species Name', 'When', 'Latitude', 'Longitude'],
+            ['Canis lupus', '2018-06-22', -32, 115.75],
+            ['Koala', '2018-04-01', -35.0, 118],
+            ['Koala', '2017-12-12', -33.333, 111.111],
+            ['Eucalyptus robusta', '2017-11-23', -36.5, 120.5]
+        ])
+        self.assertEqual(dataset.type, Dataset.TYPE_SPECIES_OBSERVATION)
+        url = reverse('api:record-list')
+        client = self.custodian_1_client
+
+        # search for koala
+        expected_number = 2
+        expected_species = 'Koala'
+        param = {
+            'data__contains': json.dumps({"Species Name": "Koala"})
+        }
+        resp = client.get(url, param, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEqual(len(records), expected_number)
+        for record in records:
+            self.assertEqual(record['data']['Species Name'], expected_species)
+
+        # test species + date
+        expected_number = 1
+        expected_species = 'Koala'
+        param = {
+            'data__contains': json.dumps({
+                "Species Name": "Koala",
+                "When": "2017-12-12"
+            })
+        }
+        resp = client.get(url, param, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEqual(len(records), expected_number)
+        for record in records:
+            self.assertEqual(record['data']['Species Name'], expected_species)
+            self.assertEqual(record['data']['When'], "2017-12-12")
+
+        # test numeric: latitude
+        param = {
+            'data__contains': json.dumps({"Latitude": -32})
+        }
+        resp = client.get(url, param, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]['data']['Species Name'], 'Canis lupus')
+
+        # test numeric: latitude with decimal .0
+        param = {
+            'data__contains': json.dumps({"Latitude": -32.0})
+        }
+        resp = client.get(url, param, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]['data']['Species Name'], 'Canis lupus')
+
+    def test_json_field_has_key(self):
+        """
+        Test the JSONField has_key lookup
+        see:
+        https://docs.djangoproject.com/en/2.0/ref/contrib/postgres/fields/#has-key
+        """
+        self._create_dataset_and_records_from_rows([
+            ['Species Name', 'When', 'Latitude', 'Longitude'],
+            ['Canis lupus', '2018-06-22', -32, 115.75],
+            ['Koala', '2018-04-01', -35.0, 118],
+            ['Koala', '2017-12-12', -33.333, 111.111],
+            ['Eucalyptus robusta', '2017-11-23', -36.5, 120.5]
+        ])
+
+        # the second dataset has different column name but the 'When'
+        self._create_dataset_and_records_from_rows([
+            ['What', 'When', 'Lat', 'Long'],
+            ['Canis lupus', '2018-06-22', -32, 115.75],
+            ['Koala', '2018-04-01', -35.0, 118],
+            ['Koala', '2017-12-12', -33.333, 111.111],
+            ['Eucalyptus robusta', '2017-11-23', -36.5, 120.5]
+        ])
+        url = reverse('api:record-list')
+        client = self.custodian_1_client
+
+        # search for every record with 'Species Name'
+        expected_number = 4
+        param = {
+            'data__has_key': 'Species Name'
+        }
+        resp = client.get(url, param, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEqual(len(records), expected_number)
+
+        # search for every record with 'When'. Should return all the records
+        expected_number = 4 * 2
+        param = {
+            'data__has_key': 'When'
+        }
+        resp = client.get(url, param, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        records = resp.json()
+        self.assertEqual(len(records), expected_number)
+
 
 class TestSchemaValidation(helpers.BaseUserTestCase):
 
