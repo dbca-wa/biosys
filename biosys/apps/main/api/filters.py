@@ -5,7 +5,7 @@ from main import models
 
 
 class UserFilterSet(filters.FilterSet):
-    project__id = filters.NumberFilter(name='project', method='filter_project_id_custodians')
+    project__id = filters.CharFilter(name='project', method='filter_project_id_custodians')
     project__name = filters.CharFilter(name='project', method='filter_project_name_custodians')
     project__code = filters.CharFilter(name='project', method='filter_project_code_custodians')
 
