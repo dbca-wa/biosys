@@ -1,6 +1,39 @@
+from django.contrib.auth import get_user_model
 from django_filters import rest_framework as filters
 
 from main import models
+
+
+class UserFilterSet(filters.FilterSet):
+    project__id = filters.CharFilter(name='project', method='filter_project_id_custodians')
+    project__name = filters.CharFilter(name='project', method='filter_project_name_custodians')
+    project__code = filters.CharFilter(name='project', method='filter_project_code_custodians')
+
+    @staticmethod
+    def filter_project_id_custodians(queryset, name, project_ids):
+        if not isinstance(project_ids, list):
+            project_ids = [project_ids]
+        return queryset.filter(project__in=project_ids)
+
+    @staticmethod
+    def filter_project_name_custodians(queryset, name, project_name):
+        project_ids = list(models.Project.objects.filter(name=project_name).values_list('id', flat=True))
+        return UserFilterSet.filter_project_id_custodians(queryset, name, project_ids)
+
+    @staticmethod
+    def filter_project_code_custodians(queryset, name, project_code):
+        project_ids = list(models.Project.objects.filter(code=project_code).values_list('id', flat=True))
+        return UserFilterSet.filter_project_id_custodians(queryset, name, project_ids)
+
+    class Meta:
+        model = get_user_model()
+        fields = {
+            'id': ['exact', 'in'],
+            'username': ['exact', 'icontains'],
+            'first_name': ['exact', 'icontains'],
+            'last_name': ['exact', 'icontains'],
+            'email': ['exact', 'icontains'],
+        }
 
 
 class DatasetFilterSet(filters.FilterSet):
