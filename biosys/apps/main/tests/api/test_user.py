@@ -203,10 +203,35 @@ class TestFiltering(helpers.BaseUserTestCase):
             self.assertTrue(project.is_custodian(user))
         self.assertFalse(project.is_custodian(user_2))
 
+        # test by project id
         url = reverse('api:user-list')
         client = self.custodian_1_client
         filters = {
-            'project_id': project.id
+            'project__id': project.id
+        }
+        resp = client.get(url, filters)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        users = resp.json()
+        self.assertEqual(len(users), len(expected_users))
+        self.assertEqual(sorted([u['id'] for u in users]), sorted([u.id for u in expected_users]))
+
+        # test by project name
+        url = reverse('api:user-list')
+        client = self.custodian_1_client
+        filters = {
+            'project__name': project.name
+        }
+        resp = client.get(url, filters)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        users = resp.json()
+        self.assertEqual(len(users), len(expected_users))
+        self.assertEqual(sorted([u['id'] for u in users]), sorted([u.id for u in expected_users]))
+
+        # test by project code
+        url = reverse('api:user-list')
+        client = self.custodian_1_client
+        filters = {
+            'project__code': project.code
         }
         resp = client.get(url, filters)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
