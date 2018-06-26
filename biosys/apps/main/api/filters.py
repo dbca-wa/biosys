@@ -1,7 +1,38 @@
+import logging
+import json
+
 from django.contrib.auth import get_user_model
-from django_filters import rest_framework as filters
+from django_filters import rest_framework as filters, constants
+from django.utils import six
 
 from main import models
+
+logger = logging.getLogger(__name__)
+
+
+class JSONFilter(filters.CharFilter):
+    """
+    A filter that json decode the lookup value before passing it to the queryset filter.
+    Typical use for a JSONField with contains lookup
+    """
+    def filter(self, qs, value):
+        if value in constants.EMPTY_VALUES:
+            return qs
+        # value should be a valid json string
+        try:
+            if isinstance(value, six.string_types):
+                # replace single quote by double quote
+                value = value.replace('\'', '\"')
+                value = json.loads(value)
+            qs = super(JSONFilter, self).filter(qs, value)
+        except Exception as e:
+            logger.error("Error while filtering {field}__{lookup} with value: {value}. {e}".format(
+                field=self.field_name,
+                lookup=self.lookup_expr,
+                value=value,
+                e=e
+            ))
+        return qs
 
 
 class UserFilterSet(filters.FilterSet):
@@ -55,7 +86,9 @@ class DatasetFilterSet(filters.FilterSet):
 
 
 class RecordFilterSet(filters.FilterSet):
-    # TODO: Add custom filter field for JSONField
+    data__contains = JSONFilter(field_name='data', lookup_expr='contains', distinct=True)
+    data__has_key = filters.CharFilter(field_name='data', lookup_expr='has_key', distinct=True)
+
     class Meta:
         model = models.Record
         fields = {
