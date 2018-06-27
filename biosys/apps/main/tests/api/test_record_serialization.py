@@ -1,6 +1,7 @@
 import re
 from os import path
 
+from django.test import override_settings
 from openpyxl import load_workbook
 
 from django.shortcuts import reverse
@@ -152,6 +153,7 @@ class TestFieldSelection(helpers.BaseUserTestCase):
 
 class TestExcelFormat(helpers.BaseUserTestCase):
 
+    @override_settings(EXPORTER_CLASS='main.api.exporters.DefaultExporter')
     def test_happy_path(self):
         expected_rows = [
             ['What', 'When', 'Latitude', 'Longitude'],
@@ -199,6 +201,7 @@ class TestExcelFormat(helpers.BaseUserTestCase):
 
 class TestCSVFormat(helpers.BaseUserTestCase):
 
+    @override_settings(EXPORTER_CLASS='main.api.exporters.DefaultExporter')
     def test_happy_path(self):
         expected_rows = [
             ['What', 'When', 'Latitude', 'Longitude'],

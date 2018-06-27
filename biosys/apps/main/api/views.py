@@ -25,7 +25,7 @@ from main.api.uploaders import SiteUploader, FileReader, RecordCreator, DataPack
 from main.api.validators import get_record_validator_for_dataset
 from main.models import Project, Site, Dataset, Record
 from main.utils_auth import is_admin
-from main.utils_data_package import Exporter
+from main.api.exporters import DefaultExporter
 from main.utils_http import WorkbookResponse, CSVFileResponse
 from main.utils_species import NoSpeciesFacade
 from main.utils_misc import search_json_fields, order_by_json_field
@@ -369,7 +369,16 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
             if not self.dataset:
                 return Response(status=status.HTTP_400_BAD_REQUEST, data="No dataset specified")
             qs = self.filter_queryset(self.get_queryset())
-            exporter = Exporter(self.dataset, qs)
+
+            # exporter class
+            exporter_class = DefaultExporter
+            if hasattr(settings, 'EXPORTER_CLASS') and settings.EXPORTER_CLASS:
+                try:
+                    exporter_class = import_from_string(settings.EXPORTER_CLASS, 'EXPORTER_CLASS')
+                except Exception:
+                    logger.exception("Error while importing exporter class: {}".format(settings.EXPORTER_CLASS))
+
+            exporter = exporter_class(self.dataset, qs)
             now = datetime.datetime.now()
             file_name = self.dataset.name + '_' + now.strftime('%Y-%m-%d-%H%M%S')
             if output == 'xlsx':
