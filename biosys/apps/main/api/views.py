@@ -72,11 +72,18 @@ class UserViewSet(viewsets.ModelViewSet):
     filter_class = filters.UserFilterSet
 
 
+class ProgramViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
+    queryset = models.Program.objects.all()
+    serializer_class = serializers.ProgramSerializer
+    filter_class = filters.ProgramFilterSet
+
+
 class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
-    filter_fields = ('id', 'name', 'custodians', 'code')
+    filter_class = filters.ProjectFilterSet
 
 
 class ProjectPermission(BasePermission):

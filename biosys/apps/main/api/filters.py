@@ -15,6 +15,7 @@ class JSONFilter(filters.CharFilter):
     A filter that json decode the lookup value before passing it to the queryset filter.
     Typical use for a JSONField with contains lookup
     """
+
     def filter(self, qs, value):
         if value in constants.EMPTY_VALUES:
             return qs
@@ -65,6 +66,20 @@ class UserFilterSet(filters.FilterSet):
             'last_name': ['exact', 'icontains'],
             'email': ['exact', 'icontains'],
         }
+
+
+class ProgramFilterSet(filters.FilterSet):
+    class Meta:
+        model = models.Program
+        fields = '__all__'
+
+
+class ProjectFilterSet(filters.FilterSet):
+    class Meta:
+        model = models.Project
+        fields = [
+            'id', 'name', 'custodians', 'code'
+        ]
 
 
 class DatasetFilterSet(filters.FilterSet):

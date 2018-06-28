@@ -11,7 +11,7 @@ from drf_extra_fields.fields import Base64ImageField
 
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
-from main.models import Project, Site, Dataset, Record, Media
+from main.models import Program, Project, Site, Dataset, Record, Media
 from main.utils_species import get_key_for_value
 
 
@@ -25,6 +25,12 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         exclude = ('password',)
+
+
+class ProgramSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Program
+        fields = '__all__'
 
 
 class ProjectSerializer(serializers.ModelSerializer):
