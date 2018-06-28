@@ -77,9 +77,15 @@ class ProgramFilterSet(filters.FilterSet):
 class ProjectFilterSet(filters.FilterSet):
     class Meta:
         model = models.Project
-        fields = [
-            'id', 'name', 'custodians', 'code'
-        ]
+        fields = {
+            'id': ['exact', 'in'],
+            'name': ['exact'],
+            'code': ['exact'],
+            'custodians': ['exact'],
+            'program': ['exact'],
+            'program__name': ['exact'],
+            'program__code': ['exact'],
+        }
 
 
 class DatasetFilterSet(filters.FilterSet):
