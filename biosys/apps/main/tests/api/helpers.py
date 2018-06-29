@@ -154,6 +154,12 @@ class BaseUserTestCase(TestCase):
             },
         ]
         schema = create_schema_from_fields(schema_fields)
+        # add Site Code foreign key
+        schema = add_model_field_foreign_key_to_schema(schema, {
+            'schema_field': 'Site Code',
+            'model': 'Site',
+            'model_field': 'code'
+        })
         return schema
 
     @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
