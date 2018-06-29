@@ -85,6 +85,7 @@ class ProjectFilterSet(filters.FilterSet):
             'program': ['exact'],
             'program__name': ['exact'],
             'program__code': ['exact'],
+            'program__data_engineers': ['exact']
         }
 
 
