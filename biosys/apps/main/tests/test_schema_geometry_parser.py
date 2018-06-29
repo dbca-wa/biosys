@@ -562,7 +562,7 @@ class SiteCodeOnly(TestCase):
             },
         ]
         schema = helpers.create_schema_from_fields(schema_fields)
-        schema = helpers.add_foreign_key_to_schema(schema, {
+        schema = helpers.add_model_field_foreign_key_to_schema(schema, {
             'schema_field': 'Island',
             'model': 'Site',
             'model_field': 'code'
@@ -622,7 +622,7 @@ class LatLongAndSiteCode(TestCase):
             },
         ]
         schema = helpers.create_schema_from_fields(schema_fields)
-        schema = helpers.add_foreign_key_to_schema(schema, {
+        schema = helpers.add_model_field_foreign_key_to_schema(schema, {
             'schema_field': 'Site Code',
             'model': 'Site',
             'model_field': 'code'

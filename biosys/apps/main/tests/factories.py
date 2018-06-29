@@ -14,11 +14,28 @@ class UserFactory(factory.django.DjangoModelFactory):
     username = factory.sequence(lambda n: 'User{}'.format(n))
 
 
+class ProgramFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.Program
+
+    name = factory.Sequence(lambda n: 'Program {}'.format(n))
+    code = factory.Sequence(lambda n: 'PROGRAM{}'.format(n))
+
+
 class ProjectFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = models.Project
 
     name = factory.Sequence(lambda n: 'Project {}'.format(n))
+    code = factory.Sequence(lambda n: 'PROJECT{}'.format(n))
+
+
+class SiteFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.Site
+
+    name = factory.Sequence(lambda n: 'Site {}'.format(n))
+    code = factory.Sequence(lambda n: 'SITE{}'.format(n))
 
 
 CHUBBY_BAT_IMAGE_PATH = path.join(path.dirname(__file__), 'data/chubby-bat.png')

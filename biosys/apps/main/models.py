@@ -166,7 +166,7 @@ class Project(models.Model):
         :return:
         """
         user = request.user
-        return is_admin(user) or self.program.is_data_engineer(user) or self.is_custodian(user)
+        return is_admin(user) or self.program.is_data_engineer(user)
 
     @staticmethod
     def has_destroy_permission(request):
@@ -179,7 +179,7 @@ class Project(models.Model):
         :return:
         """
         user = request.user
-        return is_admin(user) or self.program.is_data_engineer(user) or self.is_custodian(user)
+        return is_admin(user) or self.program.is_data_engineer(user)
 
     @property
     def centroid(self):
@@ -269,7 +269,8 @@ class Site(models.Model):
         return True
 
     def has_object_update_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        user = request.user
+        return is_admin(user) or self.is_custodian(user) or self.is_data_engineer(user)
 
     @staticmethod
     def has_destroy_permission(request):
@@ -651,7 +652,7 @@ class Record(models.Model):
         return self.dataset.is_custodian(user)
 
     def is_data_engineer(self, user):
-        return self.dataset.data_engineer(user)
+        return self.dataset.is_data_engineer(user)
 
     # API permissions
     @staticmethod
@@ -695,7 +696,8 @@ class Record(models.Model):
         return True
 
     def has_object_update_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        user = request.user
+        return is_admin(user) or self.is_custodian(user) or self.is_data_engineer(user)
 
     @staticmethod
     def has_destroy_permission(request):
