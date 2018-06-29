@@ -468,7 +468,7 @@ class StatisticsView(APIView):
 
 
 class WhoamiView(APIView):
-    serializers = serializers.SimpleUserSerializer
+    serializers = serializers.WhoAmISerializer
 
     def get(self, request, **kwargs):
         data = {}
