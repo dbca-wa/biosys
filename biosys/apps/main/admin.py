@@ -27,7 +27,8 @@ class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
     fields = ('name', 'code', 'program', 'datum', 'timezone', 'custodians', 'attributes',
               'description', 'site_data_package', 'geometry')
     filter_horizontal = ('custodians',)  # TODO: why it's not working?
-    list_display = ('name', 'id', 'code')
+    list_display = ('name', 'id', 'code', 'program')
+    list_filter = ('program',)
     readonly_fields = ['id']
     search_fields = ['name', 'code']
     openlayers_url = '//static.dbca.wa.gov.au/static/libs/openlayers/2.13.1/OpenLayers.js'
