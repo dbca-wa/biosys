@@ -67,7 +67,15 @@ class Program(models.Model):
         return is_admin(request.user)
 
     @staticmethod
+    def has_object_update_permission(request):
+        return is_admin(request.user)
+
+    @staticmethod
     def has_destroy_permission(request):
+        return is_admin(request.user)
+
+    @staticmethod
+    def has_object_destroy_permission(request):
         return is_admin(request.user)
 
     def __str__(self):
