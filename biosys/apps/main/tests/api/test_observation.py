@@ -543,7 +543,7 @@ class TestSiteExtraction(helpers.BaseUserTestCase):
     def test_update_site(self):
         ds = self.ds_1
         record = self.record_1
-        site = factories.SiteFactory.create(code='NEW-SITE', project=self.project_1)
+        site = factories.SiteFactory.create(code='NEW-SITE', project=self.project_1, geometry=Point(117, 33))
         # need to test if the site belongs to the dataset project or the update won't happen
         self.assertIsNotNone(site)
         self.assertEqual(site.project, record.dataset.project)
@@ -554,14 +554,12 @@ class TestSiteExtraction(helpers.BaseUserTestCase):
         self.assertIsNotNone(site_column)
         r_data = record.data
         r_data[site_column] = site.code
-        print(r_data)
         data = {
             "data": r_data
         }
         url = reverse('api:record-detail', kwargs={"pk": record.pk})
         client = self.custodian_1_client
         resp = client.patch(url, data, format='json')
-        print(resp.json())
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         record.refresh_from_db()
         self.assertEqual(record.site, site)
