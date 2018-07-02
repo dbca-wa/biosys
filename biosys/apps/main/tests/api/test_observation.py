@@ -490,7 +490,7 @@ class TestSiteExtraction(helpers.BaseUserTestCase):
         super(TestSiteExtraction, self).setUp()
         self.site_1 = factories.SiteFactory.create(
             project=self.project_1,
-            code = 'COTT',
+            code='COTT',
             geometry="SRID=4326;"
                      "LINESTRING (124.18701171875 -17.6484375, 126.38427734375 -18.615234375, 123.35205078125 "
                      "-20.65869140625, 124.1650390625 -17.71435546875)",)
@@ -1356,7 +1356,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         field_name, message = errors[0].split('::')
         self.assertEqual(field_name, 'Site Code')
         # message should be something like:
-        expected_message = 'The site Cottesloe does not exist or has no geometry'
+        expected_message = 'The site Cottesloe has no geometry'
         self.assertEqual(message, expected_message)
 
     def test_schema_with_lat_long_and_site_fk(self):
@@ -1839,8 +1839,10 @@ class TestGeometryConversion(helpers.BaseUserTestCase):
         Success if record.geometry is Point(115.75, -32.0)
         """
         # Create project with projected datum
+        program = factories.ProgramFactory.create()
         datum_srid = constants.get_datum_srid('GDA94 / MGA zone 56')
         project = factories.ProjectFactory.create(
+            program=program,
             datum=datum_srid
         )
         self.assertTrue(constants.is_projected_srid(project.datum))
@@ -1892,65 +1894,7 @@ class TestGeometryConversion(helpers.BaseUserTestCase):
         self.assertEqual(record.geometry.y, -32.0)
 
 
-class TestSerialization(TestCase):
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-observations'
-    ]
-
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
-    def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Adolphus").first()
-        self.ds_1 = Dataset.objects.filter(name="Observation1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = self.ds_1.record_model.objects.filter(dataset=self.ds_1).first()
-        self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-        self.assertTrue(self.record_1.site, self.site_1)
-
-        self.custodian_2_user = User.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.custodian_2_user.set_password(password)
-        self.custodian_2_user.save()
-        self.custodian_2_client = APIClient()
-        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
-        self.site_2 = Site.objects.filter(code="Site2").first()
-        self.ds_2 = Dataset.objects.filter(name="Observation2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
-
-        self.readonly_user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
-        self.readonly_user.set_password(password)
-        self.readonly_user.save()
-        self.readonly_client = APIClient()
-        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
-
-        self.anonymous_client = APIClient()
+class TestSerialization(helpers.BaseUserTestCase):
 
     def test_date_serialization_uses_project_timezone(self):
         # TODO: implement this
@@ -1958,23 +1902,18 @@ class TestSerialization(TestCase):
 
 
 class TestExport(helpers.BaseUserTestCase):
-    fixtures = [
-        'test-sites',
-        'test-datasets',
-        'test-observations'
-    ]
 
-    def _more_setup(self):
-        self.ds_1 = Dataset.objects.filter(name="Observation1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = Record.objects.filter(dataset=self.ds_1).first()
-        self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-
-        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
+    def setUp(self):
+        super(TestExport, self).setUp()
+        rows = [
+            ['When', 'Species', 'How Many', 'Latitude', 'Longitude', 'Comments'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
+            ['2018-02-10', 'Unknown', 3, -32.0, 115.75, 'Canis?'],
+        ]
+        self.ds_1 = self._create_dataset_and_records_from_rows(rows)
+        self.assertEqual(self.ds_1.type, Dataset.TYPE_OBSERVATION)
 
     def test_happy_path_no_filter(self):
         client = self.custodian_1_client
@@ -2018,7 +1957,9 @@ class TestExport(helpers.BaseUserTestCase):
         self.assertEqual(schema.headers, headers)
 
     def test_permission_ok_for_not_custodian(self):
-        """Export is a read action. Should be authorised for every logged-in user."""
+        """
+        Export is a read action. Should be authorised for every logged-in user.
+        """
         client = self.custodian_2_client
         dataset = self.ds_1
         url = reverse('api:record-list')
