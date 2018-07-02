@@ -1037,23 +1037,18 @@ class TestNameIDFromSpeciesName(helpers.BaseUserTestCase):
 
 
 class TestExport(helpers.BaseUserTestCase):
-    fixtures = helpers.BaseUserTestCase.fixtures + [
-        'test-sites',
-        'test-datasets',
-        'test-species-observations'
-    ]
 
-    def _more_setup(self):
-        self.ds_1 = Dataset.objects.filter(name="Bats1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = Record.objects.filter(dataset=self.ds_1).first()
-        self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-
-        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
+    def setUp(self):
+        super(TestExport, self).setUp()
+        rows = [
+            ['When', 'Species Name', 'How Many', 'Latitude', 'Longitude', 'Comments'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
+            ['2018-02-10', 'Unknown', 3, -32.0, 115.75, 'Canis?'],
+        ]
+        self.ds_1 = self._create_dataset_and_records_from_rows(rows)
+        self.assertEqual(self.ds_1.type, Dataset.TYPE_SPECIES_OBSERVATION)
 
     def test_happy_path_no_filter(self):
         client = self.custodian_1_client
