@@ -1,37 +1,15 @@
-import base64
-
-import six
-from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
-from django.test import TestCase
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from main.tests.api import helpers
 
-class TestBasicAuth(TestCase):
-    """
-    Basic Auth is currently turned on.
-    """
-    fixtures = [
-        'test-users'
-    ]
 
-    def test_basic_auth(self):
-        client = APIClient()
-        url = reverse('api:dataset-list')
-        resp = client.get(url)
-        self.assertIn(resp.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
+class TestAuth(helpers.BaseUserTestCase):
 
-        user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(user)
-        self.assertTrue(user.check_password('password'))
-
-        # build the Authorization Header for basic for user=normaluser password=password
-        basic_key = base64.b64encode(six.b("readonly:password")).decode('utf-8')
-        client.credentials(HTTP_AUTHORIZATION='Basic ' + basic_key)
-        resp = client.get(url)
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-
+    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
+                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def test_token_auth_end_point(self):
         """
         Test that when hitting the auth_token end point we receive a token
@@ -40,8 +18,7 @@ class TestBasicAuth(TestCase):
         client = APIClient()
         # request token
         url = reverse('api:auth_token')
-        user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(user)
+        user = self.readonly_user
         self.assertTrue(user.check_password('password'))
         data = {
             'username': "readonly",
@@ -54,15 +31,19 @@ class TestBasicAuth(TestCase):
         token = resp.data.get('token')
         self.assertTrue(token)
 
+    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
+                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def test_token_valid(self):
         """
         Test that the token received can be used for authentication
         :return:
         """
         client = APIClient()
+        user = self.readonly_user
+        self.assertTrue(user.check_password('password'))
         url = reverse('api:auth_token')
         data = {
-            'username': "readonly",
+            'username': user.username,
             "password": "password"
         }
         resp = client.post(url, data=data, format='json')
