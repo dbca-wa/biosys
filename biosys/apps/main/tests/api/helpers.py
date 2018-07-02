@@ -258,7 +258,7 @@ class BaseUserTestCase(TestCase):
         :return: the dataset object
         """
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         infer_url = reverse('api:infer-dataset')
         file_ = rows_to_xlsx_file(rows)
         with open(file_, 'rb') as fp:

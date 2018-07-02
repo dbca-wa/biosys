@@ -53,7 +53,7 @@ class InferTestBase(helpers.BaseUserTestCase):
 
         # Verify that we can create a dataset from the inference result.
         url = reverse('api:dataset-list')
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         project = self.project_1
         payload = {
             'project': project.pk,
@@ -79,7 +79,7 @@ class TestGenericSchema(InferTestBase):
             ['Frederic', 56, 80.5, 'a comment'],
             ['Hilda', 24, 56, '']
         ]
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         file_ = helpers.rows_to_xlsx_file(rows)
         with open(file_, 'rb') as fp:
             payload = {
@@ -139,7 +139,7 @@ class TestGenericSchema(InferTestBase):
             ['Frederic', '56', '80.5', 'a comment'],
             ['Hilda', '24', '56', '']
         ]
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         file_ = helpers.rows_to_csv_file(rows)
         with open(file_, 'rb') as fp:
             payload = {
@@ -203,7 +203,7 @@ class TestGenericSchema(InferTestBase):
             ['Another thing', dt.date(2017, 12, 29).isoformat()],
             ['Another thing', '2017-08-01']
         ]
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         file_ = helpers.rows_to_xlsx_file(rows)
         with open(file_, 'rb') as fp:
             payload = {
@@ -246,7 +246,7 @@ class TestGenericSchema(InferTestBase):
             [4],
             [5]
         ]
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         file_ = helpers.rows_to_xlsx_file(rows)
         with open(file_, 'rb') as fp:
             payload = {
@@ -293,9 +293,9 @@ class TestGenericSchema(InferTestBase):
             if six.PY3:
                 data = data.encode('utf-8')
             request = factory.generic('POST', self.url, data, content_type=content_type)
-            user = self.custodian_1_user
+            user = self.data_engineer_1_user
             token, _ = Token.objects.get_or_create(user=user)
-            force_authenticate(request, user=self.custodian_1_user, token=token)
+            force_authenticate(request, user=self.data_engineer_1_user, token=token)
             resp = view(request).render()
             self.assertEqual(status.HTTP_200_OK, resp.status_code)
             # should be json

@@ -408,7 +408,7 @@ class TestObservation(helpers.BaseUserTestCase):
         self.client = self.custodian_1_client
         self.dataset = self._create_dataset_with_schema(
             self.project,
-            self.client,
+            self.data_engineer_1_client,
             self.all_fields_nothing_required,
             Dataset.TYPE_OBSERVATION
         )

@@ -269,7 +269,7 @@ class TestDataValidation(helpers.BaseUserTestCase):
         super(TestDataValidation, self).setUp()
         self.ds_1 = self._create_dataset_with_schema(
             self.project_1,
-            self.custodian_1_client,
+            self.data_engineer_1_client,
             self.observation_schema_with_with_all_possible_geometry_fields(),
             dataset_type=Dataset.TYPE_OBSERVATION
         )
@@ -491,7 +491,7 @@ class TestSiteExtraction(helpers.BaseUserTestCase):
 
         self.ds_1 = self._create_dataset_with_schema(
             self.project_1,
-            self.custodian_1_client,
+            self.data_engineer_1_client,
             self.observation_schema_with_with_all_possible_geometry_fields(),
             dataset_type=Dataset.TYPE_OBSERVATION
         )
@@ -651,7 +651,9 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_lat_long_and_date()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema,
+            dataset_type=Dataset.TYPE_OBSERVATION)
         self.assertEqual(dataset.record_queryset.count(), 0)
         record_data = {
             'What': 'A test',
@@ -686,7 +688,9 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_lat_long_and_date()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertEqual(dataset.record_queryset.count(), 0)
         record_data = {
             'What': 'A test',
@@ -742,7 +746,8 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_no_date()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
         self.assertEqual(dataset.record_queryset.count(), 0)
         record_data = {
             'What': 'A test',
@@ -773,7 +778,9 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_no_date()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertEqual(dataset.record_queryset.count(), 0)
         record_data = {
             'What': 'A test',
@@ -870,7 +877,9 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_easting_northing()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
 
@@ -909,7 +918,9 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_easting_northing()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
 
@@ -1023,7 +1034,9 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
             }
         ]
         schema = helpers.create_schema_from_fields(schema_fields)
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
 
@@ -1177,7 +1190,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         # create data set
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         dataset_name = "Observation with site foreign key and no geometry"
         payload = {
             "name": dataset_name,
@@ -1225,7 +1238,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         # create data set
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         dataset_name = "Observation with project foreign key and no geometry"
         payload = {
             "name": dataset_name,
@@ -1244,7 +1257,9 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_site_code_fk()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
@@ -1274,7 +1289,9 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_site_code_fk()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
@@ -1324,7 +1341,9 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_site_code_fk()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         site_code = 'Cottesloe'
         # create the site
         site = factories.SiteFactory(code=site_code, geometry=None, project=project)
@@ -1364,7 +1383,9 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_latlong_and_site_code_fk()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.latitude_field)
         self.assertIsNotNone(dataset.schema.longitude_field)
         site_code = 'Cottesloe'
@@ -1458,7 +1479,9 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_site_code_fk()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         # create two sites
         site_1_code = 'Cottesloe'
         site_1_geometry = Point(115.76, -32.0)
@@ -1502,7 +1525,9 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_site_code_fk()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         # create two sites the number 2 without a geometry
         site_1_code = 'Cottesloe'
         site_1_geometry = Point(115.76, -32.0)
@@ -1543,7 +1568,9 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_site_code_fk()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         # create two sites
         site_1_code = 'Cottesloe'
         site_1_geometry = Point(115.76, -32.0)
@@ -1622,7 +1649,9 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.observation_schema_with_with_all_possible_geometry_fields()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
 
@@ -1680,7 +1709,9 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.observation_schema_with_with_all_possible_geometry_fields()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
 
@@ -1734,7 +1765,9 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.observation_schema_with_with_all_possible_geometry_fields()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
 
@@ -1783,7 +1816,9 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.observation_schema_with_with_all_possible_geometry_fields()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
 
@@ -1834,6 +1869,7 @@ class TestGeometryConversion(helpers.BaseUserTestCase):
         """
         # Create project with projected datum
         program = factories.ProgramFactory.create()
+        program.data_engineers.add(self.data_engineer_1_user)
         datum_srid = constants.get_datum_srid('GDA94 / MGA zone 56')
         project = factories.ProjectFactory.create(
             program=program,
@@ -1848,7 +1884,7 @@ class TestGeometryConversion(helpers.BaseUserTestCase):
         client = self.custodian_1_client
         dataset = self._create_dataset_with_schema(
             project,
-            client,
+            self.data_engineer_1_client,
             schema,
             dataset_type=Dataset.TYPE_OBSERVATION
         )
@@ -2040,7 +2076,7 @@ class TestDateNotMandatory(helpers.BaseUserTestCase):
         client = self.custodian_1_client
         dataset = self._create_dataset_with_schema(
             project,
-            client,
+            self.data_engineer_1_client,
             self.date_easting_northing_site_nothing_required_schema,
             Dataset.TYPE_OBSERVATION
         )

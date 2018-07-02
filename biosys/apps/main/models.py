@@ -540,7 +540,7 @@ class Dataset(models.Model):
     @staticmethod
     def has_create_permission(request):
         """
-        Custodian and admin only
+        Data engineers and admin only
         Check that the user is a custodian of the project pk passed in the POST data
         :param request:
         :return:
@@ -551,7 +551,7 @@ class Dataset(models.Model):
             result = True
         elif 'project' in request.data:
             project = Project.objects.filter(pk=request.data['project']).first()
-            result = project is not None and project.is_custodian(user) or project.is_data_engineer(user)
+            result = project is not None and project.is_data_engineer(user)
         return result
 
     @staticmethod
@@ -565,7 +565,7 @@ class Dataset(models.Model):
 
     def has_object_update_permission(self, request):
         user = request.user
-        return is_admin(user) or self.is_custodian(user) or self.is_data_engineer(user)
+        return is_admin(user) or self.is_data_engineer(user)
 
     @staticmethod
     def has_destroy_permission(request):
@@ -573,7 +573,7 @@ class Dataset(models.Model):
 
     def has_object_destroy_permission(self, request):
         user = request.user
-        return is_admin(user) or self.is_custodian(user) or self.project.is_data_engineer(user)
+        return is_admin(user) or self.project.is_data_engineer(user)
 
     class Meta:
         unique_together = ('project', 'name')

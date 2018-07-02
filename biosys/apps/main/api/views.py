@@ -216,7 +216,7 @@ class DatasetRecordsPermission(BasePermission):
         return \
             request.method in SAFE_METHODS \
             or is_admin(user) \
-            or (hasattr(view, 'dataset') and view.dataset and view.dataset.is_custodian(user))
+            or (hasattr(view, 'dataset') and view.dataset and (view.dataset.is_custodian(user) or view.dataset.is_data_engineer(user)))
 
 
 class SpeciesMixin(object):

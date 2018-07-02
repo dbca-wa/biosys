@@ -272,7 +272,7 @@ class TestDataValidation(helpers.BaseUserTestCase):
             "data": record.data
         }
         url = reverse('api:record-list')
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         count = Record.objects.count()
         self.assertEqual(
             client.post(url, data, format='json').status_code,
@@ -565,7 +565,7 @@ class TestExport(helpers.BaseUserTestCase):
         ]
         schema = helpers.create_schema_from_fields(schema_fields)
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         dataset = self._create_dataset_with_schema(project, client, schema)
 
         # create one record
@@ -1074,7 +1074,7 @@ class TestSchemaValidation(helpers.BaseUserTestCase):
         try:
             return self._create_dataset_with_schema(
                 self.project_1,
-                self.custodian_1_client,
+                self.data_engineer_1_client,
                 schema,
                 dataset_type=Dataset.TYPE_GENERIC
             )
@@ -1284,7 +1284,7 @@ class TestForeignKey(helpers.BaseUserTestCase):
         child_schema['foreignKeys'] = foreign_keys
         child_dataset = self._create_dataset_with_schema(
             self.project_1,
-            self.custodian_1_client,
+            self.data_engineer_1_client,
             child_schema
         )
         self.assertIsNotNone(child_dataset)
@@ -1400,7 +1400,7 @@ class TestForeignKey(helpers.BaseUserTestCase):
         child_schema['foreignKeys'] = foreign_keys
         child_dataset = self._create_dataset_with_schema(
             self.project_1,
-            self.custodian_1_client,
+            self.data_engineer_1_client,
             child_schema
         )
         self.assertIsNotNone(child_dataset)
@@ -1519,7 +1519,7 @@ class TestForeignKey(helpers.BaseUserTestCase):
         child_schema['foreignKeys'] = foreign_keys
         child_dataset = self._create_dataset_with_schema(
             self.project_1,
-            self.custodian_1_client,
+            self.data_engineer_1_client,
             child_schema
         )
         self.assertIsNotNone(child_dataset)
