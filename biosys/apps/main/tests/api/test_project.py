@@ -1,11 +1,10 @@
-from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
 from rest_framework import status
 
 from main.constants import DATUM_CHOICES
 from main.models import Project, Site
-from main.tests.api import helpers
 from main.tests import factories
+from main.tests.api import helpers
 
 
 class TestPermissions(helpers.BaseUserTestCase):
@@ -14,7 +13,7 @@ class TestPermissions(helpers.BaseUserTestCase):
     Get: authenticated
     Update: admin, custodians
     Create: admin, data_engineer
-    Delete: forbidden through API
+    Delete: admin, data_engineer
     """
 
     def test_get(self):
