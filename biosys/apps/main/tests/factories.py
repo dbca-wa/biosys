@@ -38,6 +38,11 @@ class SiteFactory(factory.django.DjangoModelFactory):
     code = factory.Sequence(lambda n: 'SITE{}'.format(n))
 
 
+class DataSetFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.Dataset
+
+
 CHUBBY_BAT_IMAGE_PATH = path.join(path.dirname(__file__), 'data/chubby-bat.png')
 
 

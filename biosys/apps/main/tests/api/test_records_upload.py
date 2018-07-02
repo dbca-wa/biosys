@@ -1,13 +1,13 @@
-from os import path
 import datetime
+from os import path
 
-from django.core.urlresolvers import reverse
 from django.contrib.gis.geos import Point
+from django.core.urlresolvers import reverse
 from django.utils import timezone
-from django_dynamic_fixture import G
 from rest_framework import status
 
-from main.models import Dataset, Site, Record
+from main.models import Dataset, Site
+from main.tests import factories
 from main.tests.api import helpers
 
 
@@ -31,7 +31,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             }
         ]
         self.data_package = helpers.create_data_package_from_fields(self.fields)
-        self.ds = G(Dataset,
+        self.ds = factories.DataSetFactory(
                     project=self.project_1,
                     type=Dataset.TYPE_GENERIC,
                     data_package=self.data_package)

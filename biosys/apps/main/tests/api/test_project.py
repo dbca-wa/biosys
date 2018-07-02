@@ -1,6 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
-from django_dynamic_fixture import G
 from rest_framework import status
 
 from main.constants import DATUM_CHOICES
@@ -504,7 +503,7 @@ class TestProjectCustodians(helpers.BaseUserTestCase):
         client = self.data_engineer_1_client
         self.assertTrue(project.is_custodian(custodian))
 
-        new_user = G(get_user_model())
+        new_user = factories.UserFactory.create()
         self.assertFalse(project.is_custodian(new_user))
         # add this user
         url = reverse('api:project-detail', kwargs={'pk': project.pk})

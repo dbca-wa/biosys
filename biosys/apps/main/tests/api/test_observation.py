@@ -1,25 +1,19 @@
 import datetime
+import json
 import re
 from os import path
-import json
 
-from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
 from django.core.urlresolvers import reverse
-from django.test import TestCase, override_settings
 from django.utils import timezone, six
-# TODO: replace all the use of G by a factory from factory-boy
-from django_dynamic_fixture import G
 from openpyxl import load_workbook
 from rest_framework import status
-from rest_framework.test import APIClient
 
 from main import constants
-from main.models import Project, Site, Dataset, Record
+from main.models import Site, Dataset, Record
+from main.tests import factories
 from main.tests.api import helpers
 from main.tests.test_data_package import clone
-from main.utils_auth import is_admin
-from main.tests import factories
 
 
 class TestPermissions(helpers.BaseUserTestCase):
@@ -1254,7 +1248,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
-        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+        site = factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
         record_data = {
             'What': 'Hello! This is a test.',
             'When': '12/12/2017',
@@ -1284,7 +1278,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
-        G(Site, code=site_code, geometry=site_geometry, project=project)
+        factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
         record_data = {
             'What': 'Hello! This is a test.',
             'When': '12/12/2017',
@@ -1305,7 +1299,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         site_code = 'Somewhere'
         site_geometry = Point(116.0, -30.0)
         # create the site
-        G(Site, code=site_code, geometry=site_geometry, project=project)
+        factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
         record_data = {
             'What': 'Yellow!',
             'When': '01/01/2017',
@@ -1333,7 +1327,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
         site_code = 'Cottesloe'
         # create the site
-        site = G(Site, code=site_code, geometry=None, project=project)
+        site = factories.SiteFactory(code=site_code, geometry=None, project=project)
         self.assertIsNone(site.geometry)
         record_data = {
             'What': 'Hello! This is a test.',
@@ -1376,7 +1370,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
-        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+        site = factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
         # the observation geometry different than the site geometry
         observation_geometry = Point(site_geometry.x + 2, site_geometry.y + 2)
         self.assertNotEqual(site.geometry, observation_geometry)
@@ -1468,12 +1462,12 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         # create two sites
         site_1_code = 'Cottesloe'
         site_1_geometry = Point(115.76, -32.0)
-        site_1 = G(Site, code=site_1_code, geometry=site_1_geometry, project=project)
+        site_1 = factories.SiteFactory(code=site_1_code, geometry=site_1_geometry, project=project)
 
         site_2_code = 'Somewhere'
         site_2_geometry = Point(116.0, -30.0)
         # create the site
-        site_2 = G(Site, code=site_2_code, geometry=site_2_geometry, project=project)
+        site_2 = factories.SiteFactory(code=site_2_code, geometry=site_2_geometry, project=project)
 
         # data
         csv_data = [
@@ -1512,11 +1506,11 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         # create two sites the number 2 without a geometry
         site_1_code = 'Cottesloe'
         site_1_geometry = Point(115.76, -32.0)
-        site_1 = G(Site, code=site_1_code, geometry=site_1_geometry, project=project)
+        site_1 = factories.SiteFactory(code=site_1_code, geometry=site_1_geometry, project=project)
 
         site_2_code = 'Somewhere'
         site_2_geometry = None
-        G(Site, code=site_2_code, geometry=site_2_geometry, project=project)
+        factories.SiteFactory(code=site_2_code, geometry=site_2_geometry, project=project)
 
         csv_data = [
             ['What', 'When', 'Site Code'],
@@ -1553,12 +1547,12 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         # create two sites
         site_1_code = 'Cottesloe'
         site_1_geometry = Point(115.76, -32.0)
-        site_1 = G(Site, code=site_1_code, geometry=site_1_geometry, project=project)
+        site_1 = factories.SiteFactory(code=site_1_code, geometry=site_1_geometry, project=project)
 
         site_2_code = 'Somewhere'
         site_2_geometry = Point(116.0, -30.0)
         # create the site
-        site_2 = G(Site, code=site_2_code, geometry=site_2_geometry, project=project)
+        site_2 = factories.SiteFactory(code=site_2_code, geometry=site_2_geometry, project=project)
 
         # data
         csv_data = [
@@ -1636,7 +1630,7 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
-        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+        site = factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
 
         # easting/northing: nearly (116.0, -32.0)
         easting = 405542.537
@@ -1694,7 +1688,7 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
-        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+        site = factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
 
         # lat/long
         longitude = 117.0
@@ -1748,7 +1742,7 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
-        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+        site = factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
 
         # easting/northing: nearly (116.0, -32.0)
         easting = 405542.537
@@ -1797,7 +1791,7 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
-        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+        site = factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
 
         record_data = {
             'What': 'A record with all geometry fields populated',
