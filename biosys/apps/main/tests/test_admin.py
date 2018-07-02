@@ -1,22 +1,20 @@
 from django.core.urlresolvers import reverse
-from django.test import TestCase
-from django.test.client import Client
-from mixer.backend.django import mixer
 
 from main.models import Project, Site
+from main.tests import factories
+from main.tests.api import helpers
 
 
-class BaseTestCase(TestCase):
-    fixtures = [
-        'test-users.json'
-    ]
-    client = Client()
+class BaseTestCase(helpers.BaseUserTestCase):
 
     def setUp(self):
         super(BaseTestCase, self).setUp()
         # Create some data
-        self.project = mixer.blend(Project)
-        self.site = mixer.blend(Site, project=mixer.SELECT)
+        self.program = factories.ProgramFactory.create()
+        self.project = self.project_1
+        self.site = factories.SiteFactory(
+            project=self.project_1
+        )
 
 
 class AdminTest(BaseTestCase):
@@ -24,11 +22,16 @@ class AdminTest(BaseTestCase):
         """Test that non-superusers are all redirected away from the admin index
         """
         url = reverse('admin:index')
-        response = self.client.get(url)  # Anonymous user
-        self.assertEqual(response.status_code, 302)
-        for user in ['readonly', 'custodian']:
-            self.client.login(username=user, password='password')
-            response = self.client.get(url)
+        forbidden = [
+            self.anonymous_client,
+            self.readonly_client,
+            self.custodian_1_client,
+            self.data_engineer_1_client,
+            self.custodian_2_client,
+            self.data_engineer_2_client,
+        ]
+        for client in forbidden:
+            response = client.get(url)
             self.assertEqual(response.status_code, 302)
 
     def test_permission_main_index(self):
