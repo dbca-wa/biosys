@@ -59,7 +59,7 @@ class LatLongSchema(helpers.BaseUserTestCase):
 
     def test_data_to_geometry(self):
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         schema = self.schema_with_lat_long()
         dataset = self._create_dataset_with_schema(project, client, schema)
         self.assertIsNotNone(dataset.schema.latitude_field)
@@ -120,7 +120,7 @@ class LatLongSchema(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_lat_long()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(project, self.data_engineer_1_client, schema)
         self.assertIsNotNone(dataset.schema.latitude_field)
         self.assertIsNotNone(dataset.schema.longitude_field)
         self.assertIsNotNone(dataset.schema.datum_field)
@@ -232,26 +232,14 @@ class EastingNorthingSchema(helpers.BaseUserTestCase):
         ]
         return helpers.create_schema_from_fields(schema_fields)
 
-    def _create_dataset_with_schema(self, project, client, schema):
-        resp = client.post(
-            reverse('api:dataset-list'),
-            data={
-                "name": "Test site code geometry",
-                "type": Dataset.TYPE_OBSERVATION,
-                "project": project.pk,
-                'data_package': helpers.create_data_package_from_schema(schema)
-            },
-            format='json')
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
-        self.assertIsNotNone(dataset)
-        return dataset
-
     def test_data_to_geometry(self):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_easting_northing()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client,
+            schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.easting_field)
         self.assertIsNotNone(dataset.schema.northing_field)
         self.assertIsNotNone(dataset.schema.datum_field)
@@ -315,12 +303,16 @@ class EastingNorthingSchema(helpers.BaseUserTestCase):
         self.assertAlmostEqual(got_x, expected_x, places=4)
         self.assertAlmostEqual(got_y, expected_y, places=4)
 
-
     def test_geometry_to_data(self):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_easting_northing()
-        dataset = self._create_dataset_with_schema(project, client, schema)
+        dataset = self._create_dataset_with_schema(
+            project,
+            self.data_engineer_1_client,
+            schema,
+            dataset_type=Dataset.TYPE_OBSERVATION
+        )
 
         url = reverse('api:geometry-to-data', kwargs={'pk': dataset.pk})
         # the geometry is required

@@ -24,8 +24,70 @@ logger = logging.getLogger(__name__)
 
 
 @python_2_unicode_compatible
+class Program(models.Model):
+    name = models.CharField(max_length=300, null=False, blank=False, unique=True,
+                            verbose_name="Name", help_text="Enter a name for the program (required).")
+    code = models.CharField(max_length=30, null=True, blank=True,
+                            verbose_name="Code",
+                            help_text="Provide a brief code or acronym for this program.")
+
+    description = models.TextField(null=True, blank=True,
+                                   verbose_name="Description", help_text="")
+
+    data_engineers = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        help_text="Users that can create/update projects and dataset schema within this program."
+    )
+
+    def is_data_engineer(self, user):
+        return user in self.data_engineers.all()
+
+    # API permissions
+    @staticmethod
+    def has_read_permission(request):
+        return True
+
+    def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_metadata_permission(request):
+        return True
+
+    def has_object_metadata_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_create_permission(request):
+        return is_admin(request.user)
+
+    @staticmethod
+    def has_update_permission(request):
+        return is_admin(request.user)
+
+    @staticmethod
+    def has_object_update_permission(request):
+        return is_admin(request.user)
+
+    @staticmethod
+    def has_destroy_permission(request):
+        return is_admin(request.user)
+
+    @staticmethod
+    def has_object_destroy_permission(request):
+        return is_admin(request.user)
+
+    def __str__(self):
+        return self.name
+
+
+@python_2_unicode_compatible
 class Project(models.Model):
     DEFAULT_TIMEZONE = settings.TIME_ZONE
+
+    program = models.ForeignKey(Program, blank=False, null=False, on_delete=models.CASCADE,
+                                help_text="The program this project belongs to.")
 
     name = models.CharField(max_length=300, null=False, blank=False, unique=True,
                             verbose_name="Name", help_text="Enter a name for the project (required).")
@@ -62,6 +124,9 @@ class Project(models.Model):
     def is_custodian(self, user):
         return user in self.custodians.all()
 
+    def is_data_engineer(self, user):
+        return self.program.is_data_engineer(user)
+
     # API permissions
     @staticmethod
     def has_read_permission(request):
@@ -79,7 +144,19 @@ class Project(models.Model):
 
     @staticmethod
     def has_create_permission(request):
-        return True
+        """
+        Admin or data_engineer of the program the project would belong to.
+        Check that the user is a data_engineer of the program pk passed in the POST data.
+        :param request:
+        :return:
+        """
+        result = False
+        if is_admin(request.user):
+            result = True
+        elif 'program' in request.data:
+            program = Program.objects.filter(pk=request.data['program']).first()
+            result = program is not None and program.is_data_engineer(request.user)
+        return result
 
     @staticmethod
     def has_update_permission(request):
@@ -91,14 +168,26 @@ class Project(models.Model):
         return True
 
     def has_object_update_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        """
+        Admin or program data_engineer or project custodian
+        :param request:
+        :return:
+        """
+        user = request.user
+        return is_admin(user) or self.program.is_data_engineer(user)
 
     @staticmethod
     def has_destroy_permission(request):
         return True
 
     def has_object_destroy_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        """
+        Admin or program data_engineer or project custodian
+        :param request:
+        :return:
+        """
+        user = request.user
+        return is_admin(user) or self.program.is_data_engineer(user)
 
     @property
     def centroid(self):
@@ -143,6 +232,9 @@ class Site(models.Model):
     def is_custodian(self, user):
         return self.project.is_custodian(user)
 
+    def is_data_engineer(self, user):
+        return self.project.is_data_engineer(user)
+
     # API permissions
     @staticmethod
     def has_read_permission(request):
@@ -161,17 +253,18 @@ class Site(models.Model):
     @staticmethod
     def has_create_permission(request):
         """
-        Custodian and admin only
+        Custodian and admin and data engineer
         Check that the user is a custodian of the project pk passed in the POST data.
         :param request:
         :return:
         """
         result = False
-        if is_admin(request.user):
+        user = request.user
+        if is_admin(user):
             result = True
         elif 'project' in request.data:
             project = Project.objects.filter(pk=request.data['project']).first()
-            result = project is not None and project.is_custodian(request.user)
+            result = project is not None and project.is_custodian(user) or project.is_data_engineer(user)
         return result
 
     @staticmethod
@@ -184,14 +277,16 @@ class Site(models.Model):
         return True
 
     def has_object_update_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        user = request.user
+        return is_admin(user) or self.is_custodian(user) or self.is_data_engineer(user)
 
     @staticmethod
     def has_destroy_permission(request):
         return True
 
     def has_object_destroy_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        user = request.user
+        return is_admin(user) or self.is_custodian(user) or self.project.is_data_engineer(user)
 
     @property
     def centroid(self):
@@ -391,6 +486,9 @@ class Dataset(models.Model):
     def is_custodian(self, user):
         return self.project.is_custodian(user)
 
+    def is_data_engineer(self, user):
+        return self.project.is_data_engineer(user)
+
     def has_foreign_key_to(self, dataset):
         """
         Check if this dataset has declared a foreign key to the given dataset
@@ -442,17 +540,18 @@ class Dataset(models.Model):
     @staticmethod
     def has_create_permission(request):
         """
-        Custodian and admin only
+        Data engineers and admin only
         Check that the user is a custodian of the project pk passed in the POST data
         :param request:
         :return:
         """
         result = False
-        if is_admin(request.user):
+        user = request.user
+        if is_admin(user):
             result = True
         elif 'project' in request.data:
             project = Project.objects.filter(pk=request.data['project']).first()
-            result = project is not None and project.is_custodian(request.user)
+            result = project is not None and project.is_data_engineer(user)
         return result
 
     @staticmethod
@@ -465,14 +564,16 @@ class Dataset(models.Model):
         return True
 
     def has_object_update_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        user = request.user
+        return is_admin(user) or self.is_data_engineer(user)
 
     @staticmethod
     def has_destroy_permission(request):
         return True
 
     def has_object_destroy_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        user = request.user
+        return is_admin(user) or self.project.is_data_engineer(user)
 
     class Meta:
         unique_together = ('project', 'name')
@@ -558,6 +659,9 @@ class Record(models.Model):
     def is_custodian(self, user):
         return self.dataset.is_custodian(user)
 
+    def is_data_engineer(self, user):
+        return self.dataset.is_data_engineer(user)
+
     # API permissions
     @staticmethod
     def has_read_permission(request):
@@ -582,11 +686,12 @@ class Record(models.Model):
         :return:
         """
         result = False
-        if is_admin(request.user):
+        user = request.user
+        if is_admin(user):
             result = True
         elif 'dataset' in request.data:
             ds = Dataset.objects.filter(pk=request.data['dataset']).first()
-            result = ds is not None and ds.is_custodian(request.user)
+            result = ds is not None and ds.is_custodian(user) or ds.is_data_engineer(user)
         return result
 
     @staticmethod
@@ -599,14 +704,16 @@ class Record(models.Model):
         return True
 
     def has_object_update_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        user = request.user
+        return is_admin(user) or self.is_custodian(user) or self.is_data_engineer(user)
 
     @staticmethod
     def has_destroy_permission(request):
         return True
 
     def has_object_destroy_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        user = request.user
+        return is_admin(user) or self.is_custodian(user) or self.is_data_engineer(user)
 
     class Meta:
         ordering = ['id']
@@ -665,6 +772,9 @@ class Media(models.Model):
     def is_custodian(self, user):
         return self.record.is_custodian(user)
 
+    def is_data_engineer(self, user):
+        return self.record.is_data_engineer(user)
+
     # API permissions
     @staticmethod
     def has_read_permission(request):
@@ -689,11 +799,12 @@ class Media(models.Model):
         :return:
         """
         result = False
-        if is_admin(request.user):
+        user = request.user
+        if is_admin(user):
             result = True
         elif 'record' in request.data:
             record = Record.objects.filter(pk=request.data['record']).first()
-            result = record is not None and record.is_custodian(request.user)
+            result = record is not None and record.is_custodian(user) or record.is_data_engineer(user)
         return result
 
     @staticmethod
@@ -710,4 +821,4 @@ class Media(models.Model):
         return True
 
     def has_object_destroy_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        return is_admin(request.user) or self.is_custodian(request.user) or self.is_data_engineer(request.user)

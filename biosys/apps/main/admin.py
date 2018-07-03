@@ -14,12 +14,21 @@ class MainAppAdmin(admin.ModelAdmin):
     change_list_template = 'main/main_change_list.html'
 
 
+@admin.register(Program)
+class ProgramAdmin(MainAppAdmin):
+    filter_horizontal = ('data_engineers',)  # TODO: why it's not working?
+    list_display = ('name', 'id', 'code')
+    readonly_fields = ['id']
+    search_fields = ['name', 'code']
+
+
 @admin.register(Project)
 class ProjectAdmin(MainAppAdmin, OSMGeoAdmin):
-    fields = ('name', 'code', 'datum', 'timezone', 'custodians', 'attributes',
+    fields = ('name', 'code', 'program', 'datum', 'timezone', 'custodians', 'attributes',
               'description', 'site_data_package', 'geometry')
     filter_horizontal = ('custodians',)  # TODO: why it's not working?
-    list_display = ('name', 'id', 'code')
+    list_display = ('name', 'id', 'code', 'program')
+    list_filter = ('program',)
     readonly_fields = ['id']
     search_fields = ['name', 'code']
     openlayers_url = '//static.dbca.wa.gov.au/static/libs/openlayers/2.13.1/OpenLayers.js'

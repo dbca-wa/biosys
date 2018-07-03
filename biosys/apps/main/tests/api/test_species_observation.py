@@ -61,7 +61,7 @@ class TestPermissions(helpers.BaseUserTestCase):
         from main.api.views import SpeciesMixin
         SpeciesMixin.species_facade_class = self.species_facade_class
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         schema = self.schema_with_species_name()
         self.ds_1 = self._create_dataset_with_schema(project, client, schema,
                                                      dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
@@ -312,8 +312,9 @@ class TestDataValidation(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_species_name()
-        self.ds_1 = self._create_dataset_with_schema(project, client, schema,
-                                                     dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        self.ds_1 = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema,
+            dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
 
     def _create_default_record(self):
         ds = self.ds_1
@@ -624,7 +625,9 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_species_name()
-        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        ds = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         data = {
             'Species Name': 'Chubby Bat',
             'Latitude': -32.0,
@@ -660,7 +663,9 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_species_name()
-        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        ds = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         data = {
             'Species Name': 'Chubby Bat',
             'Latitude': -32.0,
@@ -752,7 +757,9 @@ class TestSpeciesNameExtraction(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_species_name()
-        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        ds = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         data = {
             'Species Name': 'Chubby Bat',
             'Latitude': -32.0,
@@ -782,7 +789,9 @@ class TestSpeciesNameExtraction(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_species_name()
-        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        ds = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         data = {
             'Species Name': 'Chubby Bat',
             'Latitude': -32.0,
@@ -828,7 +837,9 @@ class TestSpeciesNameExtraction(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_species_name()
-        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        ds = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         data = {
             'Species Name': 'Chubby Bat',
             'Latitude': -32.0,
@@ -918,7 +929,9 @@ class TestNameIDFromSpeciesName(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_species_name()
-        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        ds = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         data = {
             'Latitude': -32.0,
             'Longitude': 115.75,
@@ -947,7 +960,9 @@ class TestNameIDFromSpeciesName(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_species_name()
-        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        ds = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         # create a record with a wrong species name. Should have name_id = -1
         data = {
             'Species Name': 'Chubby Bat',
@@ -995,7 +1010,9 @@ class TestNameIDFromSpeciesName(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_species_name()
-        ds = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        ds = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         # create a record with a wrong species name. Should have name_id = -1
         data = {
             'Species Name': 'Chubby Bat',
@@ -1037,23 +1054,18 @@ class TestNameIDFromSpeciesName(helpers.BaseUserTestCase):
 
 
 class TestExport(helpers.BaseUserTestCase):
-    fixtures = helpers.BaseUserTestCase.fixtures + [
-        'test-sites',
-        'test-datasets',
-        'test-species-observations'
-    ]
 
-    def _more_setup(self):
-        self.ds_1 = Dataset.objects.filter(name="Bats1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = Record.objects.filter(dataset=self.ds_1).first()
-        self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-
-        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
+    def setUp(self):
+        super(TestExport, self).setUp()
+        rows = [
+            ['When', 'Species Name', 'How Many', 'Latitude', 'Longitude', 'Comments'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
+            ['2018-02-10', 'Unknown', 3, -32.0, 115.75, 'Canis?'],
+        ]
+        self.ds_1 = self._create_dataset_and_records_from_rows(rows)
+        self.assertEqual(self.ds_1.type, Dataset.TYPE_SPECIES_OBSERVATION)
 
     def test_happy_path_no_filter(self):
         client = self.custodian_1_client
@@ -1182,8 +1194,9 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema,
-                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         # data
         csv_data = [
             ['Name Id', 'When', 'Latitude', 'Longitude'],
@@ -1219,8 +1232,9 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema,
-                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         record_data = {
             'Name Id': 25454,  # "Canis lupus"
             'When': '12/12/2017',
@@ -1248,8 +1262,9 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema,
-                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         record_data = {
             'Name Id': 25454,  # "Canis lupus"
             'When': '12/12/2017',
@@ -1290,8 +1305,9 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema,
-                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         # data
         csv_data = [
             ['Name Id', 'When', 'Latitude', 'Longitude'],
@@ -1318,8 +1334,9 @@ class TestSpeciesNameFromNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id()
-        dataset = self._create_dataset_with_schema(project, client, schema,
-                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         record_data = {
             'Name Id': 9999,  # wrong
             'When': '12/12/2017',
@@ -1396,8 +1413,9 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id_and_species_name()
-        dataset = self._create_dataset_with_schema(project, client, schema,
-                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         # data
         csv_data = [
             ['Name Id', 'Species Name', 'When', 'Latitude', 'Longitude'],
@@ -1433,8 +1451,9 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id_and_species_name()
-        dataset = self._create_dataset_with_schema(project, client, schema,
-                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         # data
         csv_data = [
             ['Name Id', 'Species Name', 'When', 'Latitude', 'Longitude'],
@@ -1470,8 +1489,9 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id_and_species_name()
-        dataset = self._create_dataset_with_schema(project, client, schema,
-                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         record_data = {
             'Name Id': 25454,  # "Canis lupus"
             'Species Name': 'Chubby Bat',
@@ -1500,8 +1520,9 @@ class TestSpeciesNameAndNameID(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_name_id_and_species_name()
-        dataset = self._create_dataset_with_schema(project, client, schema,
-                                                   dataset_type=Dataset.TYPE_SPECIES_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
+        )
         record_data = {
             'Name Id': 25454,  # "Canis lupus"
             'Species Name': 'Chubby Bat',
@@ -1637,7 +1658,7 @@ class TestCompositeSpeciesName(helpers.BaseUserTestCase):
         try:
             return self._create_dataset_with_schema(
                 self.project_1,
-                self.custodian_1_client,
+                self.data_engineer_1_client,
                 schema,
                 dataset_type=Dataset.TYPE_SPECIES_OBSERVATION
             )

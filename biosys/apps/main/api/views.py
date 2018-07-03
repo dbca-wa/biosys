@@ -72,11 +72,18 @@ class UserViewSet(viewsets.ModelViewSet):
     filter_class = filters.UserFilterSet
 
 
+class ProgramViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
+    queryset = models.Program.objects.all()
+    serializer_class = serializers.ProgramSerializer
+    filter_class = filters.ProgramFilterSet
+
+
 class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
-    filter_fields = ('id', 'name', 'custodians', 'code')
+    filter_class = filters.ProjectFilterSet
 
 
 class ProjectPermission(BasePermission):
@@ -209,7 +216,7 @@ class DatasetRecordsPermission(BasePermission):
         return \
             request.method in SAFE_METHODS \
             or is_admin(user) \
-            or (hasattr(view, 'dataset') and view.dataset and view.dataset.is_custodian(user))
+            or (hasattr(view, 'dataset') and view.dataset and (view.dataset.is_custodian(user) or view.dataset.is_data_engineer(user)))
 
 
 class SpeciesMixin(object):
@@ -461,7 +468,7 @@ class StatisticsView(APIView):
 
 
 class WhoamiView(APIView):
-    serializers = serializers.SimpleUserSerializer
+    serializers = serializers.WhoAmISerializer
 
     def get(self, request, **kwargs):
         data = {}

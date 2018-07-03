@@ -1021,10 +1021,12 @@ class GeometryParser(object):
             # extract geometry from site
             from main.models import Site  # import here to avoid cyclic import problem
             site_code = self.get_site_code(record)
-            site = Site.objects.filter(code=site_code, geometry__isnull=False).first()
+            site = Site.objects.filter(code=site_code).first()
+            if site_code and site is None:
+                raise Exception('The site {} does not exist'.format(site_code))
             geometry = site.geometry if site is not None else None
             if geometry is None and self.is_site_code_only:
-                raise Exception('The site {} does not exist or has no geometry'.format(site_code))
+                raise Exception('The site {} has no geometry'.format(site_code))
         if geometry is not None:
             return geometry
         else:

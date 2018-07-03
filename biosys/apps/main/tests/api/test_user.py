@@ -17,11 +17,18 @@ class TestPermissions(helpers.BaseUserTestCase):
     def test_get(self):
         urls = [
             reverse('api:user-list'),
-            reverse('api:user-detail', kwargs={'pk': 1})
+            reverse('api:user-detail', kwargs={'pk': self.readonly_user.pk})
         ]
         access = {
             "forbidden": [self.anonymous_client],
-            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+            "allowed": [
+                self.readonly_client,
+                self.custodian_1_client,
+                self.custodian_2_client,
+                self.admin_client,
+                self.data_engineer_1_client,
+                self.data_engineer_2_client
+            ]
         }
         for client in access['forbidden']:
             for url in urls:

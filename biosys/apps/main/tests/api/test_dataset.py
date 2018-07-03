@@ -15,20 +15,29 @@ class TestPermissions(helpers.BaseUserTestCase):
     """
     Test Permissions
     Get: authenticated
-    Update: admin, custodians
-    Create: admin, custodians
-    Delete: admin, custodians
+    Update: admin, data_engineer
+    Create: admin, data_engineer
+    Delete: admin, data_engineer
     """
 
     def test_get(self):
-        dataset = self._create_dataset_with_schema(self.project_1, self.custodian_1_client, helpers.GENERIC_SCHEMA)
+        dataset = self._create_dataset_with_schema(self.project_1, self.data_engineer_1_client, helpers.GENERIC_SCHEMA)
         urls = [
             reverse('api:dataset-list'),
             reverse('api:dataset-detail', kwargs={'pk': dataset.pk})
         ]
         access = {
-            "forbidden": [self.anonymous_client],
-            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+            "forbidden": [
+                self.anonymous_client
+            ],
+            "allowed": [
+                self.readonly_client,
+                self.custodian_1_client,
+                self.custodian_2_client,
+                self.data_engineer_1_client,
+                self.data_engineer_2_client,
+                self.admin_client
+            ]
         }
         for client in access['forbidden']:
             for url in urls:
@@ -46,7 +55,7 @@ class TestPermissions(helpers.BaseUserTestCase):
 
     def test_create(self):
         """
-        Admin and custodians
+        Admin and data engineers
         :return:
         """
         data_package = clone(GENERIC_DATA_PACKAGE)
@@ -59,8 +68,17 @@ class TestPermissions(helpers.BaseUserTestCase):
             'data_package': data_package
         }
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
-            "allowed": [self.admin_client, self.custodian_1_client]
+            "forbidden": [
+                self.anonymous_client,
+                self.readonly_client,
+                self.custodian_2_client,
+                self.custodian_1_client,
+                self.data_engineer_2_client
+            ],
+            "allowed": [
+                self.admin_client,
+                self.data_engineer_1_client
+            ]
         }
         for client in access['forbidden']:
             for url in urls:
@@ -107,8 +125,15 @@ class TestPermissions(helpers.BaseUserTestCase):
             }
         ]
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client, self.admin_client,
-                          self.custodian_1_client],
+            "forbidden": [
+                self.anonymous_client,
+                self.readonly_client,
+                self.custodian_2_client,
+                self.admin_client,
+                self.custodian_1_client,
+                self.data_engineer_1_client,
+                self.data_engineer_2_client
+            ],
             "allowed": []
         }
         for client in access['forbidden']:
@@ -132,10 +157,10 @@ class TestPermissions(helpers.BaseUserTestCase):
 
     def test_update(self):
         """
-        admin + custodian of project for site 1
+        admin + data engineer of project for site 1
         :return:
         """
-        ds = self._create_dataset_with_schema(self.project_1, self.custodian_1_client, helpers.GENERIC_SCHEMA)
+        ds = self._create_dataset_with_schema(self.project_1, self.data_engineer_1_client, helpers.GENERIC_SCHEMA)
         previous_name = ds.name
         updated_name = previous_name + "-updated"
         urls = [reverse('api:dataset-detail', kwargs={'pk': ds.pk})]
@@ -143,10 +168,18 @@ class TestPermissions(helpers.BaseUserTestCase):
             "name": updated_name,
         }
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
-            "allowed": [self.admin_client, self.custodian_1_client]
+            "forbidden": [
+                self.anonymous_client,
+                self.readonly_client,
+                self.custodian_2_client,
+                self.custodian_1_client,
+                self.data_engineer_2_client
+            ],
+            "allowed": [
+                self.admin_client,
+                self.data_engineer_1_client
+            ]
         }
-
         for client in access['forbidden']:
             for url in urls:
                 self.assertIn(
@@ -170,12 +203,21 @@ class TestPermissions(helpers.BaseUserTestCase):
         Currently admin + custodian
         :return:
         """
-        ds = self._create_dataset_with_schema(self.project_1, self.custodian_1_client, helpers.GENERIC_SCHEMA)
+        ds = self._create_dataset_with_schema(self.project_1, self.data_engineer_1_client, helpers.GENERIC_SCHEMA)
         urls = [reverse('api:dataset-detail', kwargs={'pk': ds.pk})]
         data = None
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
-            "allowed": [self.admin_client, self.custodian_1_client]
+            "forbidden": [
+                self.anonymous_client,
+                self.readonly_client,
+                self.custodian_2_client,
+                self.custodian_1_client,
+                self.data_engineer_2_client
+            ],
+            "allowed": [
+                self.admin_client,
+                self.data_engineer_1_client
+            ]
         }
 
         for client in access['forbidden']:
@@ -202,7 +244,14 @@ class TestPermissions(helpers.BaseUserTestCase):
         ]
         access = {
             "forbidden": [self.anonymous_client],
-            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+            "allowed": [
+                self.readonly_client,
+                self.custodian_1_client,
+                self.custodian_2_client,
+                self.admin_client,
+                self.data_engineer_1_client,
+                self.data_engineer_2_client
+            ]
         }
         for client in access['forbidden']:
             for url in urls:
@@ -244,7 +293,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
 
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_GENERIC,
@@ -261,7 +310,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
 
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_OBSERVATION,
@@ -278,7 +327,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
 
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_SPECIES_OBSERVATION,
@@ -297,7 +346,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         """
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_GENERIC,
@@ -315,8 +364,8 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         :return:
         """
         project = self.project_1
-        client = self.custodian_1_client
-        ds = self._create_dataset_with_schema(project, client, helpers.GENERIC_SCHEMA)
+        client = self.data_engineer_1_client
+        ds = self._create_dataset_with_schema(project, self.data_engineer_1_client, helpers.GENERIC_SCHEMA)
         url = reverse('api:dataset-detail', kwargs={"pk": ds.pk})
         data = {
             "name": "New for Unit test",
@@ -337,7 +386,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         """
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_GENERIC,
@@ -356,8 +405,8 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         :return:
         """
         project = self.project_1
-        client = self.custodian_1_client
-        ds = self._create_dataset_with_schema(project, client, helpers.GENERIC_SCHEMA)
+        client = self.data_engineer_1_client
+        ds = self._create_dataset_with_schema(project, self.data_engineer_1_client, helpers.GENERIC_SCHEMA)
         url = reverse('api:dataset-detail', kwargs={"pk": ds.pk})
         data = {
             "name": "New for Unit test",
@@ -375,7 +424,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         data_package['resources'][0]['schema'] = {}
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_GENERIC,
@@ -426,7 +475,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
             }
         ]
         url = reverse('api:dataset-list')
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_OBSERVATION,
@@ -492,7 +541,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
             }
         ]
         url = reverse('api:dataset-list')
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_OBSERVATION,
@@ -552,7 +601,7 @@ class TestRecordsView(helpers.BaseUserTestCase):
 
     def _more_setup(self):
         self.project = self.project_1
-        self.client = self.custodian_1_client
+        self.client = self.data_engineer_1_client
         self.dataset = self._create_dataset_with_schema(self.project, self.client, self.schema_fields)
         self.url = reverse('api:dataset-records', kwargs={'pk': self.dataset.pk})
 

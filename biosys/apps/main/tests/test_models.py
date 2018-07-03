@@ -4,39 +4,36 @@ from django.test import TestCase
 
 from main.models import *
 
+from main.tests import factories
+
 
 class TestProject(TestCase):
-    fixtures = [
-        'test-users',
-    ]
-
-    def setUp(self):
-        pass
 
     def test_project_name_unique(self):
         """
         Test that we can't create two project with the same name
         """
         self.assertEqual(0, Project.objects.count())
+        program = factories.ProgramFactory.create()
         name = "Project#1"
-        p1 = Project(name=name)
+        p1 = Project(program=program, name=name)
         p1.save()
-        p2 = Project(name=name)
+        p2 = Project(program=program, name=name)
         with self.assertRaises(Exception):
             p2.save()
 
 
 class TestSite(TestCase):
     def setUp(self):
-        self.project = Project(name="UTest#1")
-        self.project.save()
+        self.program = factories.ProgramFactory.create()
+        self.project = factories.ProjectFactory.create(program=self.program)
 
     def test_site_code_unique_within_project(self):
         """
         Test that a site with the same code can be created on  different project but not on the same project
         """
         project1 = self.project
-        project2 = Project(name="jshdsakjdhsadkjah")
+        project2 = Project(name="jshdsakjdhsadkjah", program=self.program)
         project2.save()
         site1 = Site(
             project=project1,

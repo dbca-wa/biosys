@@ -3,14 +3,14 @@ import csv
 import tempfile
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
 from django.shortcuts import reverse
+from django.test import TestCase, override_settings
 from openpyxl import Workbook
-from rest_framework.test import APIClient
 from rest_framework import status
+from rest_framework.test import APIClient
 
-from main.models import Project, Dataset, Record
+from main.models import Dataset, Record
+from main.tests import factories
 from main.utils_auth import is_admin
 from main.utils_species import SpeciesFacade
 
@@ -77,10 +77,6 @@ class BaseUserTestCase(TestCase):
     This class also set the species facade to be the test one (not real herbie).
     Also provide some high level API utility function
     """
-    fixtures = [
-        'test-users',
-        'test-projects'
-    ]
     species_facade_class = LightSpeciesFacade
 
     @staticmethod
@@ -158,6 +154,12 @@ class BaseUserTestCase(TestCase):
             },
         ]
         schema = create_schema_from_fields(schema_fields)
+        # add Site Code foreign key
+        schema = add_model_field_foreign_key_to_schema(schema, {
+            'schema_field': 'Site Code',
+            'model': 'Site',
+            'model_field': 'code'
+        })
         return schema
 
     @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
@@ -167,32 +169,47 @@ class BaseUserTestCase(TestCase):
         SpeciesMixin.species_facade_class = self.species_facade_class
 
         password = 'password'
-        user_model = get_user_model()
-        self.admin_user = user_model.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
+        self.admin_user = factories.UserFactory.create(username='admin', is_superuser=True)
         self.assertTrue(is_admin(self.admin_user))
         self.admin_user.set_password(password)
         self.admin_user.save()
         self.admin_client = APIClient()
         self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
 
-        self.custodian_1_user = user_model.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
+        self.program_1 = factories.ProgramFactory.create(name='program_1')
+        self.program_2 = factories.ProgramFactory.create(name='program_2')
+
+        self.data_engineer_1_user = factories.UserFactory.create(username='data_engineer_1')
+        self.data_engineer_1_user.set_password(password)
+        self.data_engineer_1_user.save()
+        self.program_1.data_engineers.add(self.data_engineer_1_user)
+        self.data_engineer_1_client = APIClient()
+        self.assertTrue(self.data_engineer_1_client.login(username=self.data_engineer_1_user.username, password=password))
+
+        self.data_engineer_2_user = factories.UserFactory.create(username='data_engineer_2')
+        self.data_engineer_2_user.set_password(password)
+        self.data_engineer_2_user.save()
+        self.program_2.data_engineers.add(self.data_engineer_2_user)
+        self.data_engineer_2_client = APIClient()
+        self.assertTrue(self.data_engineer_2_client.login(username=self.data_engineer_2_user.username, password=password))
+
+        self.project_1 = factories.ProjectFactory.create(name="Project_1", program=self.program_1)
+        self.custodian_1_user = factories.UserFactory.create(username="custodian_1")
+        self.project_1.custodians.add(self.custodian_1_user)
         self.custodian_1_user.set_password(password)
         self.custodian_1_user.save()
         self.custodian_1_client = APIClient()
         self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
 
-        self.custodian_2_user = user_model.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
+        self.project_2 = factories.ProjectFactory.create(name="Project_2", program=self.program_2)
+        self.custodian_2_user = factories.UserFactory.create(username="custodian_2")
+        self.project_2.custodians.add(self.custodian_2_user)
         self.custodian_2_user.set_password(password)
         self.custodian_2_user.save()
         self.custodian_2_client = APIClient()
         self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
 
-        self.readonly_user = user_model.objects.filter(username="readonly").first()
+        self.readonly_user = factories.UserFactory.create(username='readonly')
         self.assertIsNotNone(self.custodian_2_user)
         self.readonly_user.set_password(password)
         self.readonly_user.save()
@@ -241,7 +258,7 @@ class BaseUserTestCase(TestCase):
         :return: the dataset object
         """
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         infer_url = reverse('api:infer-dataset')
         file_ = rows_to_xlsx_file(rows)
         with open(file_, 'rb') as fp:
@@ -422,7 +439,7 @@ def create_data_package_from_fields(fields):
     return create_data_package_from_schema(schema)
 
 
-def add_foreign_key_to_schema(schema, options):
+def add_model_field_foreign_key_to_schema(schema, options):
     """
     :param schema:
     :param options: expected format, e.g for a Site code foreign key:

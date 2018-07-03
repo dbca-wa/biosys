@@ -1,5 +1,4 @@
 import copy
-import datetime
 
 from django.contrib.gis.geos import GEOSGeometry
 from django.test import TestCase
@@ -7,6 +6,7 @@ from django.utils import timezone
 
 from main.models import Dataset, Project, Record
 from main.utils_data_package import *
+from main.tests import factories
 
 
 def clone(descriptor):
@@ -531,7 +531,9 @@ class TestObservationSchemaCast(TestCase):
 
         # create a db record with geometry = east/north and check geometry conversion
         # create dataset
-        project = Project.objects.create(
+        program = factories.ProgramFactory.create()
+        project = factories.ProjectFactory.create(
+            program=program,
             name="Test"
         )
         ds = Dataset.objects.create(
@@ -584,7 +586,9 @@ class TestObservationSchemaCast(TestCase):
 
         # create a db record with geometry = east/north and check geometry conversion
         # create dataset
-        project = Project.objects.create(
+        program = factories.ProgramFactory.create()
+        project = factories.ProjectFactory.create(
+            program=program,
             name="Test"
         )
         ds = Dataset.objects.create(

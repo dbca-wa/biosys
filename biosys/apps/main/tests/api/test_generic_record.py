@@ -13,12 +13,12 @@ from rest_framework.test import APIClient
 
 from main.models import Project, Site, Dataset, Record
 from main.tests.api import helpers
+from main.tests import factories
 from main.tests.test_data_package import clone
 from main.utils_auth import is_admin
 
 
-# TODO Use the helpers.BaseUserTestCase as base class for all tests and methods for generating schema (no fixtures)
-class TestPermissions(TestCase):
+class TestPermissions(helpers.BaseUserTestCase):
     """
     Test Permissions
     Get: authenticated
@@ -26,68 +26,34 @@ class TestPermissions(TestCase):
     Create: admin, custodians
     Delete: admin, custodians
     """
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-generic-records'
-    ]
-
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Site1").first()
-        self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
+        super(TestPermissions, self).setUp()
+        self.ds_1_rows = [
+            ['What', 'When', 'Who'],
+            ['Something', '2018-02-01', 'me']
+        ]
+        self.ds_1 = self._create_dataset_and_records_from_rows(self.ds_1_rows)
         self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
         self.record_1 = Record.objects.filter(dataset=self.ds_1).first()
+        self.record_1.site = factories.SiteFactory.create(project=self.project_1)
+        self.record_1.save()
         self.assertIsNotNone(self.record_1)
         self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
 
-        self.custodian_2_user = User.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.custodian_2_user.set_password(password)
-        self.custodian_2_user.save()
-        self.custodian_2_client = APIClient()
-        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
-        self.site_2 = Site.objects.filter(code="Site2").first()
-        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
+        self.ds_2_rows = [
+            ['Who', 'Height', 'Weight', 'Comments'],
+            ['Me', '1.86', '80', 'I wish']
+        ]
+        self.ds_2 = self._create_dataset_and_records_from_rows(self.ds_1_rows)
+        self.ds_2.project = self.project_2
+        self.ds_2.save()
         self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
         self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
-
-        self.readonly_user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
-        self.readonly_user.set_password(password)
-        self.readonly_user.save()
-        self.readonly_client = APIClient()
-        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
-
-        self.anonymous_client = APIClient()
 
     def test_get(self):
         urls = [
             reverse('api:record-list'),
-            reverse('api:record-detail', kwargs={'pk': 1})
+            reverse('api:record-detail', kwargs={'pk': self.record_1.pk})
         ]
         access = {
             "forbidden": [self.anonymous_client],
@@ -268,43 +234,31 @@ class TestPermissions(TestCase):
                 )
 
 
-class TestDataValidation(TestCase):
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-generic-records'
-    ]
+class TestDataValidation(helpers.BaseUserTestCase):
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Adolphus").first()
-        self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
+        super(TestDataValidation, self).setUp()
+        self.ds_1_rows = [
+            ['What', 'When', 'Who'],
+            ['Something', '2018-02-01', 'me']
+        ]
+        self.ds_1 = self._create_dataset_and_records_from_rows(self.ds_1_rows)
         self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
         self.record_1 = Record.objects.filter(dataset=self.ds_1).first()
+        self.record_1.site = factories.SiteFactory.create(project=self.project_1)
+        self.record_1.save()
         self.assertIsNotNone(self.record_1)
         self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-        self.assertIsNotNone(self.record_1.site)
-        self.assertEqual(self.site_1, self.record_1.site)
+
+        self.ds_2_rows = [
+            ['Who', 'Height', 'Weight', 'Comments'],
+            ['Me', '1.86', '80', 'I wish']
+        ]
+        self.ds_2 = self._create_dataset_and_records_from_rows(self.ds_1_rows)
+        self.ds_2.project = self.project_2
+        self.ds_2.save()
+        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
+        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
 
     def test_create_one_happy_path(self):
         """
@@ -318,7 +272,7 @@ class TestDataValidation(TestCase):
             "data": record.data
         }
         url = reverse('api:record-list')
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         count = Record.objects.count()
         self.assertEqual(
             client.post(url, data, format='json').status_code,
@@ -395,43 +349,40 @@ class TestDataValidation(TestCase):
         self.assertEqual(Record.objects.count(), count)
 
 
-class TestSiteExtraction(TestCase):
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-generic-records'
-    ]
+class TestSiteExtraction(helpers.BaseUserTestCase):
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Adolphus").first()
-        self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
+        super(TestSiteExtraction, self).setUp()
+        self.site_1 = factories.SiteFactory(project=self.project_1, code='COT')
+        self.ds_1_rows = [
+            ['What', 'When', 'Who', 'Site'],
+        ]
+        self.ds_1 = self._create_dataset_from_rows(self.ds_1_rows)
         self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = Record.objects.filter(dataset=self.ds_1).first()
-        self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-        self.assertIsNotNone(self.record_1.site)
-        self.assertEqual(self.site_1, self.record_1.site)
+        # add a site code foreign key
+        self.schema_1 = self.ds_1.schema_data
+        helpers.add_model_field_foreign_key_to_schema(
+            self.schema_1,
+            {
+                'schema_field': 'Site',
+                'model': 'Site',
+                'model_field': 'code'
+            }
+        )
+        self.ds_1.data_package = helpers.create_data_package_from_schema(self.schema_1)
+        self.ds_1.save()
+        self.ds_1.refresh_from_db()
+        self.assertTrue(self.ds_1.schema.has_fk_for_model('Site'))
+        # create one record with site
+        self.record_1 = self._create_record(
+            self.custodian_1_client,
+            self.ds_1,
+            {
+                'What': 'Something',
+                'When': '2018-06-30',
+                'Site': self.site_1.code
+            })
+        self.assertEqual(self.record_1.site.pk, self.site_1.pk)
 
     def test_create_with_site(self):
         """
@@ -460,13 +411,12 @@ class TestSiteExtraction(TestCase):
         self.assertEqual(Record.objects.first().site, expected_site)
 
     def test_update_site(self):
-        record = Record.objects.filter(site=self.site_1).first()
-        self.assertIsNotNone(record)
-        site = Site.objects.filter(name="Site1").first()
+        record = self.record_1
+        site = self.site_1
+        self.assertEqual(self.record_1.site.pk, self.site_1.pk)
         # need to test if the site belongs to the dataset project or the update won't happen
         self.assertIsNotNone(site)
         self.assertTrue(site.project == record.dataset.project)
-        self.assertNotEqual(record.site, site)
         # update site value
         schema = record.dataset.schema
         site_column = schema.get_fk_for_model('Site').data_field
@@ -486,38 +436,28 @@ class TestSiteExtraction(TestCase):
 
 
 class TestExport(helpers.BaseUserTestCase):
-    fixtures = helpers.BaseUserTestCase.fixtures + [
-        'test-sites',
-        'test-datasets',
-        'test-generic-records'
-    ]
 
-    def _more_setup(self):
-        self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
+    def setUp(self):
+        super(TestExport, self).setUp()
+        self.ds_1_rows = [
+            ['What', 'When', 'Who'],
+            ['Something', '2018-02-01', 'me']
+        ]
+        self.ds_1 = self._create_dataset_and_records_from_rows(self.ds_1_rows)
         self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
         self.record_1 = Record.objects.filter(dataset=self.ds_1).first()
         self.assertIsNotNone(self.record_1)
         self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
 
-        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
+        self.ds_2_rows = [
+            ['Who', 'Height', 'Weight', 'Comments'],
+            ['Me', '1.86', '80', 'I wish']
+        ]
+        self.ds_2 = self._create_dataset_and_records_from_rows(self.ds_1_rows)
+        self.ds_2.project = self.project_2
+        self.ds_2.save()
         self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
         self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
-
-    def _create_dataset_with_schema(self, project, client, schema):
-        resp = client.post(
-            reverse('api:dataset-list'),
-            data={
-                "name": "Test site code geometry",
-                "type": Dataset.TYPE_GENERIC,
-                "project": project.pk,
-                'data_package': helpers.create_data_package_from_schema(schema)
-            },
-            format='json')
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
-        self.assertIsNotNone(dataset)
-        return dataset
 
     def test_happy_path_no_filter(self):
         client = self.custodian_1_client
@@ -625,7 +565,7 @@ class TestExport(helpers.BaseUserTestCase):
         ]
         schema = helpers.create_schema_from_fields(schema_fields)
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         dataset = self._create_dataset_with_schema(project, client, schema)
 
         # create one record
@@ -1134,7 +1074,7 @@ class TestSchemaValidation(helpers.BaseUserTestCase):
         try:
             return self._create_dataset_with_schema(
                 self.project_1,
-                self.custodian_1_client,
+                self.data_engineer_1_client,
                 schema,
                 dataset_type=Dataset.TYPE_GENERIC
             )
@@ -1344,7 +1284,7 @@ class TestForeignKey(helpers.BaseUserTestCase):
         child_schema['foreignKeys'] = foreign_keys
         child_dataset = self._create_dataset_with_schema(
             self.project_1,
-            self.custodian_1_client,
+            self.data_engineer_1_client,
             child_schema
         )
         self.assertIsNotNone(child_dataset)
@@ -1460,7 +1400,7 @@ class TestForeignKey(helpers.BaseUserTestCase):
         child_schema['foreignKeys'] = foreign_keys
         child_dataset = self._create_dataset_with_schema(
             self.project_1,
-            self.custodian_1_client,
+            self.data_engineer_1_client,
             child_schema
         )
         self.assertIsNotNone(child_dataset)
@@ -1579,7 +1519,7 @@ class TestForeignKey(helpers.BaseUserTestCase):
         child_schema['foreignKeys'] = foreign_keys
         child_dataset = self._create_dataset_with_schema(
             self.project_1,
-            self.custodian_1_client,
+            self.data_engineer_1_client,
             child_schema
         )
         self.assertIsNotNone(child_dataset)
@@ -1645,4 +1585,3 @@ class TestForeignKey(helpers.BaseUserTestCase):
             data = resp.json()
             self.assertEqual(data['children'], expected_children_ids)
             self.assertEqual(data['parent'], expected_parent_id)
-

@@ -11,8 +11,24 @@ from drf_extra_fields.fields import Base64ImageField
 
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
-from main.models import Project, Site, Dataset, Record, Media
+from main.models import Program, Project, Site, Dataset, Record, Media
+from main.utils_auth import is_admin
 from main.utils_species import get_key_for_value
+
+
+class WhoAmISerializer(serializers.ModelSerializer):
+    is_admin = serializers.SerializerMethodField()
+    is_data_engineer = serializers.SerializerMethodField()
+
+    def get_is_admin(self, user):
+        return is_admin(user)
+
+    def get_is_data_engineer(self, user):
+        return Program.objects.filter(data_engineers__in=[user.pk]).count() > 0
+
+    class Meta:
+        model = get_user_model()
+        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'is_admin', 'is_data_engineer')
 
 
 class SimpleUserSerializer(serializers.ModelSerializer):
@@ -25,6 +41,12 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         exclude = ('password',)
+
+
+class ProgramSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Program
+        fields = '__all__'
 
 
 class ProjectSerializer(serializers.ModelSerializer):
