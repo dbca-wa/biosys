@@ -596,11 +596,11 @@ class Record(models.Model):
     # to store information about the source of the record, like excel filename, row number in file etc...
     source_info = JSONField(null=True, blank=True)
 
-    # flags about publishing status
-    published = models.BooleanField(default=False)
-    consumed = models.BooleanField(default=False)
+    # curation flags
+    validated = models.BooleanField(default=False)
+    locked = models.BooleanField(default=False)
 
-    # client id
+    # id provided by client (e.g mobile)
     client_id = models.CharField(max_length=1024, null=True, blank=True)
 
     created = models.DateTimeField(auto_now_add=True)

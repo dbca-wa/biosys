@@ -63,7 +63,7 @@ class DatasetAdmin(MainAppAdmin):
 @admin.register(Record)
 class RecordAdmin(MainAppAdmin):
     list_display = ['dataset', 'client_id', 'data']
-    list_filter = ['dataset', 'published', 'consumed']
+    list_filter = ['dataset', 'validated', 'locked']
 
 
 @admin.register(Media)
