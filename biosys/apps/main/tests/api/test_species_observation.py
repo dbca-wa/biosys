@@ -1800,9 +1800,9 @@ class TestCompositeSpeciesName(helpers.BaseUserTestCase):
 
 class TestPatch(helpers.BaseUserTestCase):
 
-    def test_patch_published(self):
+    def test_patch_validated(self):
         """
-        Test that we can patch just the 'published' flag
+        Test that we can patch just the 'validated' flag
         :return:
         """
         rows = [
@@ -1814,23 +1814,23 @@ class TestPatch(helpers.BaseUserTestCase):
         records = dataset.record_set.all()
         record = records.last()
         self.assertIsNotNone(record)
-        self.assertFalse(record.published)
+        self.assertFalse(record.validated)
         previous_data = json.dumps(record.data)
         # patch
         url = reverse('api:record-detail', kwargs={"pk": record.pk})
         client = self.custodian_1_client
         payload = {
-            'published': True
+            'validated': True
         }
         resp = client.patch(url, payload)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         record.refresh_from_db()
-        self.assertTrue(record.published)
+        self.assertTrue(record.validated)
         self.assertTrue(json.dumps(record.data), previous_data)
 
-    def test_patch_consumed(self):
+    def test_patch_locked(self):
         """
-        Test that we can patch just the 'consumed' flag
+        Test that we can patch just the 'locked' flag
         :return:
         """
         rows = [
@@ -1842,16 +1842,16 @@ class TestPatch(helpers.BaseUserTestCase):
         records = dataset.record_set.all()
         record = records.last()
         self.assertIsNotNone(record)
-        self.assertFalse(record.consumed)
+        self.assertFalse(record.locked)
         previous_data = json.dumps(record.data)
         # patch
         url = reverse('api:record-detail', kwargs={"pk": record.pk})
         client = self.custodian_1_client
         payload = {
-            'consumed': True
+            'locked': True
         }
         resp = client.patch(url, payload)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         record.refresh_from_db()
-        self.assertTrue(record.consumed)
+        self.assertTrue(record.locked)
         self.assertTrue(json.dumps(record.data), previous_data)
