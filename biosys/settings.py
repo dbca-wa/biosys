@@ -54,9 +54,10 @@ INSTALLED_APPS = (
     'django_filters',
     'corsheaders',
     'drf_yasg',
+    'reversion',
+    'storages',
 
     'django_extensions',
-    'reversion',
     'bootstrap3',
     'timezone_field'
 )
@@ -311,3 +312,32 @@ GRAPPELLI_ADMIN_TITLE = SITE_TITLE + ' administration'
 # Email settings
 EMAIL_HOST = env('EMAIL_HOST', 'email.host')
 EMAIL_PORT = env('EMAIL_PORT', 25)
+
+###################################################################################
+#  Static and media files settings
+#  Change this settings to host you static or media
+#  files on S3.
+#  For other settings or storage options refer to:
+#  https://django-storages.readthedocs.io/en/latest/index.html
+####################################################################################
+# static files
+# for static on S3 use 'main.backends.storages.S3StaticStorage'
+STATICFILES_STORAGE = env('STATICFILES_STORAGE', 'django.contrib.staticfiles.storage.StaticFilesStorage')
+# if using S3 the next setting specifies a bucket 'folder' for the static files
+STATICFILES_LOCATION = env('STATICFILES_LOCATION', 'static')
+# media files
+# for media on S3 use main.backends.storages.S3MediaStorage
+DEFAULT_FILE_STORAGE = env('DEFAULT_FILE_STORAGE', 'django.core.files.storage.FileSystemStorage')
+# if using S3 the next setting specifies a bucket 'folder' for the media files.
+MEDIAFILES_LOCATION = env('MEDIAFILES_LOCATION', 'media')
+
+# AWS settings
+AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME', 'BUCKET_NAME')
+AWS_S3_REGION_NAME = env('AWS_S3_REGION_NAME', 'ap-southeast-2')
+AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID', 'xxxxxxxxxxxxxxxxxxxx')
+AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY', 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy')
+S3_USE_SIGV4 = True
+
+# If using a CDN or a S3 static website tell django-storages the domain to use to refer to static files.
+# By default it is s3.<region>.amazonaws.com/<bucket>/...
+AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN', None)
