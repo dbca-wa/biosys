@@ -30,6 +30,9 @@ drf-yasg==1.7.4
 django-extra-fields==1.0.0
 Pillow==5.1.0
 
+# for S3 static/media storage
+django-storages==1.6.6
+boto3==1.7.50
 
 # dbca for SSO login
 git+https://github.com/dbca-wa/dpaw-utils.git@0.4.1
