@@ -235,76 +235,76 @@ SPECIES_FACADE_CLASS = env('SPECIES_FACADE_CLASS', None)
 
 # Logging settings
 # Ensure that the logs directory exists:
-LOG_FOLDER = env('LOG_FOLDER', os.path.join(BASE_DIR, 'logs'))
-if not os.path.exists(LOG_FOLDER):
-    os.mkdir(LOG_FOLDER)
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'precise': {
-            'format': '{%(asctime)s.%(msecs)d}  %(message)s [%(levelname)s %(name)s]',
-            'datefmt': '%H:%M:%S'
-        },
-        'default': {
-            'format': '%(asctime)s %(levelname)-8s [%(name)-15s] %(message)s',
-            'datefmt': '%Y/%m/%d %H:%M:%S',
-        },
-        'import_legacy': {
-            'format': '%(levelname)-8s %(message)s [%(asctime)s]',
-            'datefmt': '%Y/%m/%d %H:%M:%S',
-        }
-    },
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
-    },
-    'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        },
-        'file': {
-            'level': env('LOG_FILE_LEVEL', 'WARNING'),
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': os.path.join(LOG_FOLDER, 'biosys.log'),
-            'when': 'midnight',
-            'backupCount': 2,
-            'formatter': 'default',
-        },
-        'console': {
-            'level': env('LOG_CONSOLE_LEVEL', 'WARNING'),
-            'class': 'logging.StreamHandler',
-            'formatter': 'precise',
-        },
-        'import_lci': {
-            'level': env('LOG_LCI_LEVEL', 'ERROR'),
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOG_FOLDER, 'import_lci.log'),
-            'mode': 'w',
-            'formatter': 'import_legacy',
-        }
-    },
-    'loggers': {
-        '': {
-            'handlers': ['file', 'console'],
-            'level': 'WARNING',
-            'propagate': True
-        },
-        'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': False,
-        },
-        'import_lci': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False
-        }
-    }
-}
+# LOG_FOLDER = env('LOG_FOLDER', os.path.join(BASE_DIR, 'logs'))
+# if not os.path.exists(LOG_FOLDER):
+#     os.mkdir(LOG_FOLDER)
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'formatters': {
+#         'precise': {
+#             'format': '{%(asctime)s.%(msecs)d}  %(message)s [%(levelname)s %(name)s]',
+#             'datefmt': '%H:%M:%S'
+#         },
+#         'default': {
+#             'format': '%(asctime)s %(levelname)-8s [%(name)-15s] %(message)s',
+#             'datefmt': '%Y/%m/%d %H:%M:%S',
+#         },
+#         'import_legacy': {
+#             'format': '%(levelname)-8s %(message)s [%(asctime)s]',
+#             'datefmt': '%Y/%m/%d %H:%M:%S',
+#         }
+#     },
+#     'filters': {
+#         'require_debug_false': {
+#             '()': 'django.utils.log.RequireDebugFalse'
+#         }
+#     },
+#     'handlers': {
+#         'mail_admins': {
+#             'level': 'ERROR',
+#             'filters': ['require_debug_false'],
+#             'class': 'django.utils.log.AdminEmailHandler'
+#         },
+#         'file': {
+#             'level': env('LOG_FILE_LEVEL', 'WARNING'),
+#             'class': 'logging.handlers.TimedRotatingFileHandler',
+#             'filename': os.path.join(LOG_FOLDER, 'biosys.log'),
+#             'when': 'midnight',
+#             'backupCount': 2,
+#             'formatter': 'default',
+#         },
+#         'console': {
+#             'level': env('LOG_CONSOLE_LEVEL', 'WARNING'),
+#             'class': 'logging.StreamHandler',
+#             'formatter': 'precise',
+#         },
+#         'import_lci': {
+#             'level': env('LOG_LCI_LEVEL', 'ERROR'),
+#             'class': 'logging.FileHandler',
+#             'filename': os.path.join(LOG_FOLDER, 'import_lci.log'),
+#             'mode': 'w',
+#             'formatter': 'import_legacy',
+#         }
+#     },
+#     'loggers': {
+#         '': {
+#             'handlers': ['file', 'console'],
+#             'level': 'WARNING',
+#             'propagate': True
+#         },
+#         'django.request': {
+#             'handlers': ['mail_admins'],
+#             'level': 'ERROR',
+#             'propagate': False,
+#         },
+#         'import_lci': {
+#             'handlers': ['console'],
+#             'level': 'INFO',
+#             'propagate': False
+#         }
+#     }
+# }
 
 # Grappelli settings
 GRAPPELLI_ADMIN_TITLE = SITE_TITLE + ' administration'
