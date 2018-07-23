@@ -235,7 +235,7 @@ SPECIES_FACADE_CLASS = env('SPECIES_FACADE_CLASS', None)
 
 # Logging settings
 # Ensure that the logs directory exists:
-LOG_FOLDER = os.path.join(BASE_DIR, 'logs')
+LOG_FOLDER = env('LOG_FOLDER', os.path.join(BASE_DIR, 'logs'))
 if not os.path.exists(LOG_FOLDER):
     os.mkdir(LOG_FOLDER)
 LOGGING = {
