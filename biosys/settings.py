@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.join(PROJECT_DIR, 'apps'))
 
 # Security settings
 DEBUG = env('DEBUG', False)
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = env('SECRET_KEY', 'wjdh^hIO)jj5')
 CSRF_COOKIE_SECURE = env('CSRF_COOKIE_SECURE', False)
 SESSION_COOKIE_SECURE = env('SESSION_COOKIE_SECURE', False)
 ALLOWED_HOSTS = env('ALLOWED_HOSTS', [
