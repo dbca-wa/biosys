@@ -173,7 +173,7 @@ CORS_ORIGIN_REGEX_WHITELIST = env('CORS_ORIGIN_WHITELIST', [
 WSGI_APPLICATION = 'biosys.wsgi.application'
 
 # Database
-if env('RDS_NAME'):
+if env('RDS_DB_NAME'):
     # AWS settings found
     DATABASES = {
         'default': {
