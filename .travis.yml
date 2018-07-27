@@ -37,6 +37,6 @@ deploy:
   region: "ap-southeast-2"
   app: "eb-biosys"
   env: "eb-biosys-uat"
-  bucket_name: "elasticbeanstalk-ap-southeast-2-501507701749"
+  bucket_name: $AWS_BUCKET_NAME
   on:
     branch: uat
