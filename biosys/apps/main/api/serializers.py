@@ -179,7 +179,7 @@ class RecordSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_geometry(dataset, data):
-        return dataset.schema.cast_geometry(data, default_srid=dataset.project.datum or MODEL_SRID)
+        return dataset.schema.cast_geometry(data, default_srid=MODEL_SRID)
 
     @staticmethod
     def set_date(instance, validated_data, commit=True):
