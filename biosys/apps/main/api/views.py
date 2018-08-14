@@ -75,6 +75,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
 
 class ProjectPermission(BasePermission):
+
     def has_permission(self, request, view):
         user = request.user
         return \
@@ -230,6 +231,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
 
 class DatasetRecordsPermission(BasePermission):
+
     def has_permission(self, request, view):
         user = request.user
         return \
@@ -526,6 +528,7 @@ class DatasetUploadRecordsView(APIView, SpeciesMixin):
 
 
 class SpeciesView(APIView, SpeciesMixin):
+
     def get(self, request, *args, **kwargs):
         """
         Get a list of all species name present in the system
@@ -554,6 +557,7 @@ class SpeciesView(APIView, SpeciesMixin):
 
 
 class LogoutView(APIView):
+
     def get(self, request, *args, **kwargs):
         """
         Logout of the system.
@@ -577,7 +581,7 @@ class GeoConvertView(generics.GenericAPIView):
             geom_parser = schema.geometry_parser
             geometry = geom_parser.from_record_to_geometry(
                 record_data,
-                default_srid=dataset.project.datum or constants.MODEL_SRID
+                default_srid=constants.MODEL_SRID
             )
             # we output in WGS84
             geometry.transform(constants.MODEL_SRID)
@@ -592,9 +596,12 @@ class GeoConvertView(generics.GenericAPIView):
     def to_data(self, dataset, geometry, record_data):
         try:
             schema = dataset.schema
-            default_srid = dataset.project.datum or constants.MODEL_SRID
             geom_parser = schema.geometry_parser
-            record_data = geom_parser.from_geometry_to_record(geometry, record_data, default_srid=default_srid)
+            record_data = geom_parser.from_geometry_to_record(
+                geometry,
+                record_data,
+                default_srid=constants.MODEL_SRID
+            )
             serializer = self.serializer_class({
                 'data': record_data,
                 'geometry': geometry
@@ -618,8 +625,7 @@ class GeoConvertView(generics.GenericAPIView):
                 if geometry is None:
                     return Response("geometry is required.",
                                     status=status.HTTP_400_BAD_REQUEST)
-                if not geometry.srid:
-                    geometry.srid = constants.MODEL_SRID
+                geometry.srid = constants.MODEL_SRID
                 return self.to_data(dataset, geometry, record_data)
             else:
                 return Response("Output format not valid {}. Should be one of:{}"
