@@ -597,7 +597,11 @@ class GeoConvertView(generics.GenericAPIView):
         try:
             schema = dataset.schema
             geom_parser = schema.geometry_parser
-            record_data = geom_parser.from_geometry_to_record(geometry, record_data, default_srid=constants.MODEL_SRID)
+            record_data = geom_parser.from_geometry_to_record(
+                geometry,
+                record_data,
+                default_srid=constants.MODEL_SRID
+            )
             serializer = self.serializer_class({
                 'data': record_data,
                 'geometry': geometry
