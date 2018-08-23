@@ -78,3 +78,32 @@ To run unit tests or generate test coverage reports:
     python manage.py test -k -v2
     coverage run --source='.' manage.py test -k -v2
     coverage report -m
+
+## AWS Elastic Beanstalk deployment
+
+This project is set for Elastic Beanstalk deployment through the `.elasticbeanstalk` dir with the `.ebextensions\*` environment configuration.
+Note: the deployment is set tu use the 3.6 eb platform.  
+
+You have to install the eb cli:  
+`pip install awsebcli`  
+Note: It is recommended to install the eb cli in a different virtual env than the project.
+
+You have to have the right credentials set for you AWS account. (~/.aws/credentials)
+
+Example of how to create an environment:
+
+    # create a environment with a load balancer with 2 EC2 + a postgres RDS micro
+    eb create --scale 2 -db -db.engine postgres -db.i db.t2.micro
+    # same as above with no load balancer (single instance)
+    eb create --single -db -db.engine postgres -db.i db.t2.micro
+    
+Check environment
+    
+    eb status
+    
+Deploy :
+    
+        # example: deploy on staging
+        eb deploy eb-biosys-staging 
+    
+     

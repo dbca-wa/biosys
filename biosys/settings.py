@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.join(PROJECT_DIR, 'apps'))
 
 # Security settings
 DEBUG = env('DEBUG', False)
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = env('SECRET_KEY', 'wjdh^hIO)jj5')
 CSRF_COOKIE_SECURE = env('CSRF_COOKIE_SECURE', False)
 SESSION_COOKIE_SECURE = env('SESSION_COOKIE_SECURE', False)
 ALLOWED_HOSTS = env('ALLOWED_HOSTS', [
@@ -173,7 +173,23 @@ CORS_ORIGIN_REGEX_WHITELIST = env('CORS_ORIGIN_WHITELIST', [
 WSGI_APPLICATION = 'biosys.wsgi.application'
 
 # Database
-DATABASES = {'default': database.config()}
+if env('RDS_DB_NAME'):
+    # AWS settings found
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.contrib.gis.db.backends.postgis',
+            'NAME': env('RDS_DB_NAME'),
+            'USER': env('RDS_USERNAME'),
+            'PASSWORD': env('RDS_PASSWORD'),
+            'HOST': env('RDS_HOSTNAME'),
+            'PORT': env('RDS_PORT'),
+        }
+    }
+else:
+    # look for a DATABASE_URL
+    DATABASES = {
+        'default': database.config(name='DATABASE_URL', default='postgis://postgres:postgres@localhost/biosys')
+    }
 
 # Internationalization
 LANGUAGE_CODE = 'en-au'
@@ -235,7 +251,7 @@ SPECIES_FACADE_CLASS = env('SPECIES_FACADE_CLASS', None)
 
 # Logging settings
 # Ensure that the logs directory exists:
-LOG_FOLDER = os.path.join(BASE_DIR, 'logs')
+LOG_FOLDER = env('LOG_FOLDER', os.path.join(BASE_DIR, 'logs'))
 if not os.path.exists(LOG_FOLDER):
     os.mkdir(LOG_FOLDER)
 LOGGING = {
@@ -279,13 +295,6 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'precise',
         },
-        'import_lci': {
-            'level': env('LOG_LCI_LEVEL', 'ERROR'),
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOG_FOLDER, 'import_lci.log'),
-            'mode': 'w',
-            'formatter': 'import_legacy',
-        }
     },
     'loggers': {
         '': {
@@ -297,11 +306,6 @@ LOGGING = {
             'handlers': ['mail_admins'],
             'level': 'ERROR',
             'propagate': False,
-        },
-        'import_lci': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False
         }
     }
 }
