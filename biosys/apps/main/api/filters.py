@@ -110,6 +110,7 @@ class DatasetFilterSet(filters.FilterSet):
 class RecordFilterSet(filters.FilterSet):
     data__contains = JSONFilter(field_name='data', lookup_expr='contains', distinct=True)
     data__has_key = filters.CharFilter(field_name='data', lookup_expr='has_key', distinct=True)
+    geometry__within = filters.CharFilter(field_name='geometry', lookup_expr='within', distinct=True)
 
     class Meta:
         model = models.Record
