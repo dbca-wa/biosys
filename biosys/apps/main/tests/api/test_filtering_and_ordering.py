@@ -1,7 +1,7 @@
 import json
 
 from django.urls import reverse
-from django.contrib.gis.geos import Polygon, Point
+from django.contrib.gis.geos import Polygon, Point, MultiPolygon
 from rest_framework import status
 
 from main.models import Record, Dataset
@@ -492,7 +492,7 @@ class TestSpatialFiltering(helpers.BaseUserTestCase):
             ['Chubby Bat', '2018-08-23', -17.962075, 122.234554, 'Broome']
         ])
 
-    def test_get_record_happy(self):
+    def test_get_records_happy(self):
         """
         Test GET /records/ endpoint
         """
@@ -521,7 +521,7 @@ class TestSpatialFiltering(helpers.BaseUserTestCase):
         # check location
         self.assertEqual(
             sorted([r['data'].get('Where') for r in records]),
-            ['Cottesloe', 'Kings Park', 'Rottnest Island']
+            sorted([r[4] for r in expected_records])
         )
 
     def test_get_dataset_records_happy(self):
@@ -531,15 +531,16 @@ class TestSpatialFiltering(helpers.BaseUserTestCase):
         url = reverse('api:dataset-records', kwargs={'pk': self.perth_metro_ds.pk})
         client = self.custodian_1_client
 
-        # query with polygon of Perth roughly. That should exclude mandurah and all the north records
-        west = 115.0
+        # query with polygon that includes perth (not Mandurah) but also Carnavon and Coral Bay.
+        west = 113.0
         east = 116.0
-        north = -31.5
+        north = -23.0  # bit north of Coral Bay
         south = -32.1  # north of Mandurah
 
         query = {
             'geometry__within': Polygon.from_bbox((west, south, east, north)).geojson
         }
+        # We should get records from the dataset we query only
         expected_records = [
             ['Canis lupus', '2018-06-22', -32, 115.75, 'Cottesloe'],
             ['Quokka', '2018-04-01', -32.011935, 115.517554, 'Rottnest Island'],
@@ -553,12 +554,29 @@ class TestSpatialFiltering(helpers.BaseUserTestCase):
         # check location
         self.assertEqual(
             sorted([r['data'].get('Where') for r in records]),
-            ['Cottesloe', 'Kings Park', 'Rottnest Island']
+            sorted([r[4] for r in expected_records])
+        )
+
+        # same query but for the wa_north dataset
+        url = reverse('api:dataset-records', kwargs={'pk': self.wa_north_ds.pk})
+        expected_records = [
+            ['Canis lupus', '2018-06-22', -24.882248, 113.662995, 'Carnavon'],
+            ['Quokka', '2018-04-01', -23.142194, 113.772222, 'Coral Bay'],
+        ]
+        response = client.get(url, query)
+        self.assertEqual(200, response.status_code)
+        records = response.json()
+        self.assertIsInstance(records, list)
+        self.assertEqual(len(records), len(expected_records))
+        # check location
+        self.assertEqual(
+            sorted([r['data'].get('Where') for r in records]),
+            sorted([r[4] for r in expected_records])
         )
 
     def test_invalid_geometry(self):
         """
-        Passing a wrong geojson should not raise an exception but return a 4000
+        Passing a wrong geojson should not raise an exception but return a 400
         with a message explaining the issue.
         """
         url = reverse('api:record-list')
@@ -568,7 +586,7 @@ class TestSpatialFiltering(helpers.BaseUserTestCase):
         }
         try:
             response = client.get(url, query)
-        except Exception as e:
+        except:
             self.fail('A wrong geojson parameter should not raise an exception')
         self.assertEqual(400, response.status_code)
         error = response.json()
@@ -587,14 +605,14 @@ class TestSpatialFiltering(helpers.BaseUserTestCase):
         }
         try:
             response = client.get(url, query)
-        except Exception as e:
+        except:
             self.fail('A wrong geojson parameter should not raise an exception')
         self.assertEqual(400, response.status_code)
         error = response.json()
         # this should be a typical django exception with the message inside the 'detail' field
         self.assertIsInstance(error, dict)
         self.assertIn('detail', error)
-        # test that the error message contains at least the name of the error
+        # test that the error message contains at least the name of the filter
         self.assertIn('geometry__within', error['detail'])
 
     def test_as_point(self):
@@ -618,5 +636,94 @@ class TestSpatialFiltering(helpers.BaseUserTestCase):
         # check location
         self.assertEqual(
             sorted([r['data'].get('Where') for r in records]),
-            ['Cottesloe']
+            sorted([r[4] for r in expected_records])
+        )
+
+    def test_double_within(self):
+        """
+        Use case: client send two within (geometry__within=...&geometry__within=...)
+        Only the last within parameter in taken in account
+        """
+        # bbox with perth, carnavon and coral bay
+        west = 113.0
+        east = 130.0
+        north = -23.0  # bit north of Coral Bay
+        south = -32.1  # north of Mandurah
+        up_to_coral_bay = Polygon.from_bbox((west, south, east, north))
+
+        # a bbox that includes north of WA down to Carnavon
+        west = 113.0
+        east = 130.0
+        north = -10.0  # way north
+        south = -25.0  # bit south of carnavon
+        down_to_coral_bay = Polygon.from_bbox((west, south, east, north))
+
+        url = reverse('api:record-list')
+        client = self.custodian_1_client
+
+        # build url
+        url += '?geometry__within={}&geometry__within={}'.format(up_to_coral_bay, down_to_coral_bay)
+        # only north data
+        expected_records = [
+            ['Canis lupus', '2018-06-22', -24.882248, 113.662995, 'Carnavon'],
+            ['Quokka', '2018-04-01', -23.142194, 113.772222, 'Coral Bay'],
+            ['Eucalyptus robusta', '2017-11-23', -21.177125, 119.765361, 'Marble Bar'],
+            ['Chubby Bat', '2018-08-23', -17.962075, 122.234554, 'Broome']
+        ]
+        response = client.get(url)
+        self.assertEqual(200, response.status_code)
+        records = response.json()
+        self.assertIsInstance(records, list)
+        self.assertEqual(len(records), len(expected_records))
+        # check location
+        self.assertEqual(
+            sorted([r['data'].get('Where') for r in records]),
+            sorted([r[4] for r in expected_records])
+        )
+
+    def test_multipolygon(self):
+        """
+        Provide two polygons. Should return the records in one or the other.
+        Test that it doesn't return multiple times the same record if the polygon overlap.
+        """
+        # bbox with perth, carnavon and coral bay
+        west = 113.0
+        east = 130.0
+        north = -23.0  # bit north of Coral Bay
+        south = -32.1  # north of Mandurah
+        up_to_coral_bay = Polygon.from_bbox((west, south, east, north))
+
+        # a bbox that includes north of WA down to Carnavon
+        west = 113.0
+        east = 130.0
+        north = -10.0  # way north
+        south = -25.0  # bit south of carnavon
+        down_to_coral_bay = Polygon.from_bbox((west, south, east, north))
+        # Coral Bay and Carnavon are in both polygon
+
+        url = reverse('api:record-list')
+        client = self.custodian_1_client
+        query = {
+            'geometry__within': MultiPolygon(up_to_coral_bay, down_to_coral_bay).geojson
+        }
+        # should get all the records but mandurah
+        expected_records = [
+            ['Canis lupus', '2018-06-22', -32, 115.75, 'Cottesloe'],
+            ['Quokka', '2018-04-01', -32.011935, 115.517554, 'Rottnest Island'],
+            ['Eucalyptus robusta', '2017-11-23', -31.959765, 115.8322754, 'Kings Park'],
+            ['Canis lupus', '2018-06-22', -24.882248, 113.662995, 'Carnavon'],
+            ['Quokka', '2018-04-01', -23.142194, 113.772222, 'Coral Bay'],
+            ['Eucalyptus robusta', '2017-11-23', -21.177125, 119.765361, 'Marble Bar'],
+            ['Chubby Bat', '2018-08-23', -17.962075, 122.234554, 'Broome']
+        ]
+        response = client.get(url, query)
+        self.assertEqual(200, response.status_code)
+        records = response.json()
+        self.assertIsInstance(records, list)
+
+        self.assertEqual(len(records), len(expected_records))
+        # check location
+        self.assertEqual(
+            sorted([r['data'].get('Where') for r in records]),
+            sorted([r[4] for r in expected_records])
         )
