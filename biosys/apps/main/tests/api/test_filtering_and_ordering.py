@@ -1,7 +1,7 @@
 import json
 
 from django.urls import reverse
-from django.contrib.gis.geos import Polygon
+from django.contrib.gis.geos import Polygon, Point
 from rest_framework import status
 
 from main.models import Record, Dataset
@@ -554,4 +554,69 @@ class TestSpatialFiltering(helpers.BaseUserTestCase):
         self.assertEqual(
             sorted([r['data'].get('Where') for r in records]),
             ['Cottesloe', 'Kings Park', 'Rottnest Island']
+        )
+
+    def test_invalid_geometry(self):
+        """
+        Passing a wrong geojson should not raise an exception but return a 4000
+        with a message explaining the issue.
+        """
+        url = reverse('api:record-list')
+        client = self.custodian_1_client
+        query = {
+            'geometry__within': 'This is not geojson stupid!'
+        }
+        try:
+            response = client.get(url, query)
+        except Exception as e:
+            self.fail('A wrong geojson parameter should not raise an exception')
+        self.assertEqual(400, response.status_code)
+        error = response.json()
+        # this should be a typical django exception with the message inside the 'detail' field
+        self.assertIsInstance(error, dict)
+        self.assertIn('detail', error)
+        # test that the error message contains at least the name of the error
+        self.assertIn('geometry__within', error['detail'])
+
+        #######
+        # same test as above but for the /dataset/{id}/records/ end-point
+        url = reverse('api:dataset-records', kwargs={'pk': self.perth_metro_ds.pk})
+        client = self.custodian_1_client
+        query = {
+            'geometry__within': 'This is not geojson stupid!'
+        }
+        try:
+            response = client.get(url, query)
+        except Exception as e:
+            self.fail('A wrong geojson parameter should not raise an exception')
+        self.assertEqual(400, response.status_code)
+        error = response.json()
+        # this should be a typical django exception with the message inside the 'detail' field
+        self.assertIsInstance(error, dict)
+        self.assertIn('detail', error)
+        # test that the error message contains at least the name of the error
+        self.assertIn('geometry__within', error['detail'])
+
+    def test_as_point(self):
+        """
+        Use case: client send a single point
+        """
+        url = reverse('api:record-list')
+        client = self.custodian_1_client
+
+        query = {
+            'geometry__within': Point(115.75, -32.0).geojson
+        }
+        expected_records = [
+            ['Canis lupus', '2018-06-22', -32, 115.75, 'Cottesloe'],
+        ]
+        response = client.get(url, query)
+        self.assertEqual(200, response.status_code)
+        records = response.json()
+        self.assertIsInstance(records, list)
+        self.assertEqual(len(records), len(expected_records))
+        # check location
+        self.assertEqual(
+            sorted([r['data'].get('Where') for r in records]),
+            ['Cottesloe']
         )

@@ -4,10 +4,21 @@ import json
 from django.contrib.auth import get_user_model
 from django_filters import rest_framework as filters, constants
 from django.utils import six
+from rest_framework.exceptions import APIException
 
 from main import models
 
 logger = logging.getLogger(__name__)
+
+
+class FilterException(APIException):
+    """
+    An DRF APIException specific for filters.
+    When raised DRF will handle the response correctly.
+    """
+    status_code = 400
+    default_detail = 'There was an error while applying filters'
+    default_code = 'filter_error'
 
 
 class JSONFilter(filters.CharFilter):
@@ -27,13 +38,36 @@ class JSONFilter(filters.CharFilter):
                 value = json.loads(value)
             qs = super(JSONFilter, self).filter(qs, value)
         except Exception as e:
-            logger.error("Error while filtering {field}__{lookup} with value: {value}. {e}".format(
+            message = "Error while filtering {field}__{lookup} with value: '{value}'. {e}".format(
                 field=self.field_name,
                 lookup=self.lookup_expr,
                 value=value,
                 e=e
-            ))
+            )
+            raise FilterException(message)
+
         return qs
+
+
+class GeometryFilter(filters.CharFilter):
+    """
+    The purpose of this class is just to catch exception that can be raise while filtering the geometry.
+    Typical use case: client sends an invalid geojson for a geometry__within filter.
+    """
+
+    def filter(self, qs, value):
+        if value in constants.EMPTY_VALUES:
+            return qs
+        try:
+            return super(GeometryFilter, self).filter(qs, value)
+        except Exception as e:
+            message = "Error while filtering {field}__{lookup} with value: '{value}'. {e}".format(
+                field=self.field_name,
+                lookup=self.lookup_expr,
+                value=value,
+                e=e
+            )
+            raise FilterException(message)
 
 
 class UserFilterSet(filters.FilterSet):
@@ -110,7 +144,7 @@ class DatasetFilterSet(filters.FilterSet):
 class RecordFilterSet(filters.FilterSet):
     data__contains = JSONFilter(field_name='data', lookup_expr='contains', distinct=True)
     data__has_key = filters.CharFilter(field_name='data', lookup_expr='has_key', distinct=True)
-    geometry__within = filters.CharFilter(field_name='geometry', lookup_expr='within', distinct=True)
+    geometry__within = GeometryFilter(field_name='geometry', lookup_expr='within', distinct=True)
 
     class Meta:
         model = models.Record
