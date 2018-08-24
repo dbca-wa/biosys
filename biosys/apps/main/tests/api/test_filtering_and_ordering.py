@@ -642,7 +642,8 @@ class TestSpatialFiltering(helpers.BaseUserTestCase):
     def test_double_within(self):
         """
         Use case: client send two within (geometry__within=...&geometry__within=...)
-        Only the last within parameter in taken in account
+        We could expect that multiple within would act as an AND (record within p1 and within p2)
+        but with django-filters only the last parameter in taken in account
         """
         # bbox with perth, carnavon and coral bay
         west = 113.0
