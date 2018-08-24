@@ -231,6 +231,8 @@ class SpeciesMixin(object):
 
 class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesMixin):
     permission_classes = (IsAuthenticated, DatasetRecordsPermission)
+    # TODO: the filters don't appear in the swagger
+    filter_class = filters.RecordFilterSet
 
     def __init__(self, **kwargs):
         super(DatasetRecordsView, self).__init__(**kwargs)
