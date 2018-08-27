@@ -28,6 +28,7 @@ class ProjectFactory(factory.django.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: 'Project {}'.format(n))
     code = factory.Sequence(lambda n: 'PROJECT{}'.format(n))
+    program = factory.SubFactory(ProgramFactory)
 
 
 class SiteFactory(factory.django.DjangoModelFactory):

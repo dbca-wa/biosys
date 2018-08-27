@@ -179,6 +179,38 @@ class ProjectSitesUploadView(APIView):
         return Response(data, status=status_code)
 
 
+class ProjectMediaView(generics.ListAPIView, generics.CreateAPIView, generics.DestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = serializers.ProjectMediaSerializer
+    parser_classes = (FormParser, MultiPartParser)
+
+    def __init__(self, **kwargs):
+        super(ProjectMediaView, self).__init__(**kwargs)
+        self.project = None
+
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Intercept any request to set the project.
+        This is necessary for the ProjectMediaPermission
+        :param request:
+        """
+        self.project = get_object_or_404(models.Project, pk=kwargs.get('pk'))
+        return super(ProjectMediaView, self).dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        if self.project:
+            return self.project.projectmedia_set.all()
+        else:
+            return Project.objects.none()
+
+    def get_serializer(self, *args, **kwargs):
+        kwargs["many"] = True
+        ser = super(ProjectMediaView, self).get_serializer(*args, **kwargs)
+        if hasattr(ser, 'initial_data') and self.project:
+            ser.initial_data['project'] = self.project.pk
+        return ser
+
+
 class SiteViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Site.objects.all()
@@ -309,6 +341,30 @@ class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesM
             return Response("A list of record ids must be provided or 'all'", status=status.HTTP_400_BAD_REQUEST)
         qs.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DatasetMediaView(generics.ListAPIView, generics.CreateAPIView, generics.DestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = serializers.DatasetMediaSerializer
+
+    def __init__(self, **kwargs):
+        super(DatasetMediaView, self).__init__(**kwargs)
+        self.dataset = None
+
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Intercept any request to set the dataset.
+        This is necessary for the DatasetMediaPermission
+        :param request:
+        """
+        self.dataset = get_object_or_404(models.Dataset, pk=kwargs.get('pk'))
+        return super(DatasetMediaView, self).dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        if self.dataset:
+            return self.dataset.datasetmedia_set.all()
+        else:
+            return Dataset.objects.none()
 
 
 class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):

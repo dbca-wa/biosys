@@ -11,7 +11,7 @@ from drf_extra_fields.fields import Base64ImageField
 
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
-from main.models import Program, Project, Site, Dataset, Record, Media
+from main.models import Program, Project, Site, Dataset, Record, Media, DatasetMedia, ProjectMedia
 from main.utils_auth import is_admin
 from main.utils_species import get_key_for_value
 
@@ -333,6 +333,20 @@ class RecordSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Record
+        fields = '__all__'
+
+
+class ProjectMediaSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ProjectMedia
+        fields = '__all__'
+
+
+class DatasetMediaSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = DatasetMedia
         fields = '__all__'
 
 

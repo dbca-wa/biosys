@@ -15,15 +15,18 @@ router.register(r'datasets?', api_views.DatasetViewSet, 'dataset')
 router.register(r'records?', api_views.RecordViewSet, 'record')
 router.register(r'media', api_views.MediaViewSet, 'media')
 
+
 url_patterns = [
     url(r'auth-token/', obtain_auth_token, name="auth_token"),
     url(r'projects?/(?P<pk>\d+)/sites/?', api_views.ProjectSitesView.as_view(), name='project-sites'),  # bulk sites
     url(r'projects?/(?P<pk>\d+)/upload-sites/?', api_views.ProjectSitesUploadView.as_view(),
         name='upload-sites'),  # file upload for sites
+    url(r'projects?/(?P<pk>\d+)/media/?', api_views.ProjectMediaView.as_view(), name='project-media'),
     url(r'datasets?/(?P<pk>\d+)/records/?', api_views.DatasetRecordsView.as_view(), name='dataset-records'),
     # upload data files
     url(r'datasets?/(?P<pk>\d+)/upload-records/?', api_views.DatasetUploadRecordsView.as_view(),
         name='dataset-upload'),
+    url(r'datasets?/(?P<pk>\d+)/media/?', api_views.DatasetMediaView.as_view(), name='dataset-media'),
     url(r'statistics/?', api_views.StatisticsView.as_view(), name="statistics"),
     url(r'whoami/?', api_views.WhoamiView.as_view(), name="whoami"),
     url(r'species/?', api_views.SpeciesView.as_view(), name="species"),
