@@ -14,6 +14,8 @@ router.register(r'sites?', api_views.SiteViewSet, 'site')
 router.register(r'datasets?', api_views.DatasetViewSet, 'dataset')
 router.register(r'records?', api_views.RecordViewSet, 'record')
 router.register(r'media', api_views.MediaViewSet, 'media')
+router.register(r'project-media', api_views.ProjectMediaViewSet, 'project-media')
+router.register(r'dataset-media', api_views.DatasetMediaViewSet, 'dataset-media')
 
 
 url_patterns = [
@@ -21,7 +23,6 @@ url_patterns = [
     url(r'projects?/(?P<pk>\d+)/sites/?', api_views.ProjectSitesView.as_view(), name='project-sites'),  # bulk sites
     url(r'projects?/(?P<pk>\d+)/upload-sites/?', api_views.ProjectSitesUploadView.as_view(),
         name='upload-sites'),  # file upload for sites
-    url(r'projects?/(?P<pk>\d+)/media/?', api_views.ProjectMediaView.as_view(), name='project-media'),
     url(r'datasets?/(?P<pk>\d+)/records/?', api_views.DatasetRecordsView.as_view(), name='dataset-records'),
     # upload data files
     url(r'datasets?/(?P<pk>\d+)/upload-records/?', api_views.DatasetUploadRecordsView.as_view(),

@@ -834,7 +834,7 @@ def get_project_media_path(instance, filename):
     :return: string
     """
     try:
-        return 'project_{project}'.format(
+        return 'project_{project}/{filename}'.format(
             project=instance.project.id,
             filename=filename
         )
@@ -848,10 +848,9 @@ class ProjectMedia(models.Model):
     file = models.FileField(upload_to=get_project_media_path)
     project = models.ForeignKey(Project, blank=False, null=False, on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
-    last_modified = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name_plural = "created_media"
+        verbose_name_plural = "project_media"
 
     def __str__(self):
         return self.filename
@@ -863,6 +862,10 @@ class ProjectMedia(models.Model):
     @property
     def filename(self):
         return path.basename(self.path)
+
+    @property
+    def filesize(self):
+        return self.file.size
 
     def is_data_engineer(self, user):
         return self.project.is_data_engineer(user)
@@ -926,7 +929,7 @@ def get_dataset_media_path(instance, filename):
     :return: string
     """
     try:
-        return 'project_{project}/dataset_{dataset}'.format(
+        return 'project_{project}/dataset_{dataset}/{filename}'.format(
             project=instance.project.id,
             dataset=instance.dataset.id,
             filename=filename
@@ -941,7 +944,6 @@ class DatasetMedia(models.Model):
     file = models.FileField(upload_to=get_dataset_media_path)
     dataset = models.ForeignKey(Dataset, blank=False, null=False, on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
-    last_modified = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name_plural = "dataset_media"
@@ -956,6 +958,10 @@ class DatasetMedia(models.Model):
     @property
     def filename(self):
         return path.basename(self.path)
+
+    @property
+    def filesize(self):
+        return self.file.size
 
     @property
     def project(self):

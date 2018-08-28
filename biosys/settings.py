@@ -25,6 +25,7 @@ SESSION_COOKIE_SECURE = env('SESSION_COOKIE_SECURE', False)
 ALLOWED_HOSTS = env('ALLOWED_HOSTS', [
     'localhost',
     '127.0.0.1',
+    '10.0.2.2',
     'biosys.dbca.wa.gov.au',
     'biosys.dbca.wa.gov.au.',
     'biosys-uat.dbca.wa.gov.au',
@@ -199,7 +200,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 if not os.path.exists(os.path.join(BASE_DIR, 'media')):
     os.mkdir(os.path.join(BASE_DIR, 'media'))
 # Absolute filesystem path to the directory that will hold user-uploaded files.
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = env('MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
 MEDIA_URL = '/media/'

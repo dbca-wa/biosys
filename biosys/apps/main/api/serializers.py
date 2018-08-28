@@ -340,14 +340,14 @@ class ProjectMediaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProjectMedia
-        fields = '__all__'
+        fields = ('id', 'file', 'project', 'created', 'filesize')
 
 
 class DatasetMediaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DatasetMedia
-        fields = '__all__'
+        fields = ('id', 'file', 'dataset', 'created', 'filesize')
 
 
 class Base64MediaSerializer(serializers.ModelSerializer):
