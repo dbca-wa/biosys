@@ -39,7 +39,7 @@ class SiteFactory(factory.django.DjangoModelFactory):
     code = factory.Sequence(lambda n: 'SITE{}'.format(n))
 
 
-class DataSetFactory(factory.django.DjangoModelFactory):
+class DatasetFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = models.Dataset
 
@@ -61,3 +61,21 @@ class MediaFactory(factory.django.DjangoModelFactory):
         model = models.Media
 
     file = factory.django.FileField(from_path=CHUBBY_BAT_IMAGE_PATH)
+
+
+class ProjectMediaFactory(factory.django.DjangoModelFactory):
+
+    class Meta:
+        model = models.ProjectMedia
+
+    file = factory.django.FileField(from_path=CHUBBY_BAT_IMAGE_PATH)
+    project = factory.SubFactory(ProjectFactory)
+
+
+class DatasetMediaFactory(factory.django.DjangoModelFactory):
+
+    class Meta:
+        model = models.DatasetMedia
+
+    file = factory.django.FileField(from_path=CHUBBY_BAT_IMAGE_PATH)
+    dataset = factory.SubFactory(DatasetFactory)

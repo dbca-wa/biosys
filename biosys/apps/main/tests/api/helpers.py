@@ -221,14 +221,15 @@ class BaseUserTestCase(TestCase):
         if hasattr(self, '_more_setup') and callable(self._more_setup):
             self._more_setup()
 
-    def _create_dataset_with_schema(self, project, client, schema, dataset_type=Dataset.TYPE_GENERIC):
+    def _create_dataset_with_schema(self, project, client, schema, dataset_type=Dataset.TYPE_GENERIC,
+                                    dataset_name="Test site code geometry"):
         if isinstance(schema, list):
             # a list of fields instead of a schema?
             schema = create_schema_from_fields(schema)
         resp = client.post(
             reverse('api:dataset-list'),
             data={
-                "name": "Test site code geometry",
+                "name": dataset_name,
                 "type": dataset_type,
                 "project": project.pk,
                 'data_package': create_data_package_from_schema(schema)

@@ -336,6 +336,16 @@ class RecordSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class Base64ProjectMediaSerializer(serializers.ModelSerializer):
+    # Only image supported for base 64
+    # TODO: investigate extending drf_extra_fields.fields.Base64FileField for video support
+    file = Base64ImageField(required=True)
+
+    class Meta:
+        model = ProjectMedia
+        fields = ('id', 'file', 'project', 'created', 'filesize')
+
+
 class ProjectMediaSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -343,11 +353,22 @@ class ProjectMediaSerializer(serializers.ModelSerializer):
         fields = ('id', 'file', 'project', 'created', 'filesize')
 
 
+class Base64DatasetMediaSerializer(serializers.ModelSerializer):
+    # Only image supported for base 64
+    # TODO: investigate extending drf_extra_fields.fields.Base64FileField for video support
+    file = Base64ImageField(required=True)
+
+    class Meta:
+        model = DatasetMedia
+        fields = ('id', 'file', 'dataset', 'created', 'filesize')
+
+
 class DatasetMediaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DatasetMedia
         fields = ('id', 'file', 'dataset', 'created', 'filesize')
+
 
 
 class Base64MediaSerializer(serializers.ModelSerializer):

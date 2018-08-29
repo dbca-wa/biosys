@@ -31,7 +31,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             }
         ]
         self.data_package = helpers.create_data_package_from_fields(self.fields)
-        self.ds = factories.DataSetFactory(
+        self.ds = factories.DatasetFactory(
                     project=self.project_1,
                     type=Dataset.TYPE_GENERIC,
                     data_package=self.data_package)

@@ -172,6 +172,7 @@ class DatasetMediaFilterSet(filters.FilterSet):
             'dataset__id': ['exact', 'in'],
             'dataset__name': ['exact'],
             'dataset__code': ['exact'],
+            'dataset__project': ['exact', 'in'],
             'dataset__project__id': ['exact', 'in'],
             'dataset__project__name': ['exact'],
             'dataset__project__code': ['exact'],

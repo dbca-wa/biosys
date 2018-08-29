@@ -27,7 +27,6 @@ url_patterns = [
     # upload data files
     url(r'datasets?/(?P<pk>\d+)/upload-records/?', api_views.DatasetUploadRecordsView.as_view(),
         name='dataset-upload'),
-    url(r'datasets?/(?P<pk>\d+)/media/?', api_views.DatasetMediaView.as_view(), name='dataset-media'),
     url(r'statistics/?', api_views.StatisticsView.as_view(), name="statistics"),
     url(r'whoami/?', api_views.WhoamiView.as_view(), name="whoami"),
     url(r'species/?', api_views.SpeciesView.as_view(), name="species"),

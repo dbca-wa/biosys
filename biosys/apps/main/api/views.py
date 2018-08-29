@@ -179,37 +179,6 @@ class ProjectSitesUploadView(APIView):
         return Response(data, status=status_code)
 
 
-class ProjectMediaView(generics.ListAPIView, generics.CreateAPIView, generics.DestroyAPIView):
-    permission_classes = (IsAuthenticated,)
-    serializer_class = serializers.ProjectMediaSerializer
-    parser_classes = (FormParser, MultiPartParser)
-
-    def __init__(self, **kwargs):
-        super(ProjectMediaView, self).__init__(**kwargs)
-        self.project = None
-
-    def dispatch(self, request, *args, **kwargs):
-        """
-        Intercept any request to set the project.
-        This is necessary for the ProjectMediaPermission
-        :param request:
-        """
-        self.project = get_object_or_404(models.Project, pk=kwargs.get('pk'))
-        return super(ProjectMediaView, self).dispatch(request, *args, **kwargs)
-
-    def get_queryset(self):
-        if self.project:
-            return self.project.projectmedia_set.all()
-        else:
-            return Project.objects.none()
-
-    def get_serializer(self, *args, **kwargs):
-        ser = super(ProjectMediaView, self).get_serializer(*args, **kwargs)
-        if hasattr(ser, 'initial_data') and self.project:
-            ser.initial_data['project'] = self.project.pk
-        return ser
-
-
 class SiteViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Site.objects.all()
@@ -342,37 +311,6 @@ class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesM
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class DatasetMediaView(generics.ListAPIView, generics.CreateAPIView, generics.DestroyAPIView):
-    permission_classes = (IsAuthenticated,)
-    serializer_class = serializers.DatasetMediaSerializer
-    parser_classes = (FormParser, MultiPartParser)
-
-    def __init__(self, **kwargs):
-        super(DatasetMediaView, self).__init__(**kwargs)
-        self.dataset = None
-
-    def dispatch(self, request, *args, **kwargs):
-        """
-        Intercept any request to set the dataset.
-        This is necessary for the DatasetMediaPermission
-        :param request:
-        """
-        self.dataset = get_object_or_404(models.Dataset, pk=kwargs.get('pk'))
-        return super(DatasetMediaView, self).dispatch(request, *args, **kwargs)
-
-    def get_queryset(self):
-        if self.dataset:
-            return self.dataset.datasetmedia_set.all()
-        else:
-            return Dataset.objects.none()
-
-    def get_serializer(self, *args, **kwargs):
-        ser = super(DatasetMediaView, self).get_serializer(*args, **kwargs)
-        if hasattr(ser, 'initial_data') and self.dataset:
-            ser.initial_data['dataset'] = self.dataset.pk
-        return ser
-
-
 class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
     # TODO: implement a patch for the data JSON field. Ability to partially update some of the data properties.
     permission_classes = (IsAuthenticated, DRYPermissions)
@@ -490,11 +428,11 @@ class ProjectMediaViewSet(viewsets.ModelViewSet):
     parser_classes = (FormParser, MultiPartParser, JSONParser)
 
     def get_serializer_class(self):
-        # if self.request.content_type.startswith('application/json'):
-        #     return serializers.Base64MediaSerializer
-        # else:
-        #     # multipart form serializer
-        return serializers.ProjectMediaSerializer
+        if self.request.content_type.startswith('application/json'):
+            return serializers.Base64ProjectMediaSerializer
+        else:
+            # multipart form serializer
+            return serializers.ProjectMediaSerializer
 
 
 class DatasetMediaViewSet(viewsets.ModelViewSet):
@@ -504,11 +442,11 @@ class DatasetMediaViewSet(viewsets.ModelViewSet):
     parser_classes = (FormParser, MultiPartParser, JSONParser)
 
     def get_serializer_class(self):
-        # if self.request.content_type.startswith('application/json'):
-        #     return serializers.Base64MediaSerializer
-        # else:
-        #     # multipart form serializer
-        return serializers.DatasetMediaSerializer
+        if self.request.content_type.startswith('application/json'):
+            return serializers.Base64DatasetMediaSerializer
+        else:
+            # multipart form serializer
+            return serializers.DatasetMediaSerializer
 
 
 class StatisticsView(APIView):
