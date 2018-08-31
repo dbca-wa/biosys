@@ -14,6 +14,9 @@ router.register(r'sites?', api_views.SiteViewSet, 'site')
 router.register(r'datasets?', api_views.DatasetViewSet, 'dataset')
 router.register(r'records?', api_views.RecordViewSet, 'record')
 router.register(r'media', api_views.MediaViewSet, 'media')
+router.register(r'project-media', api_views.ProjectMediaViewSet, 'project-media')
+router.register(r'dataset-media', api_views.DatasetMediaViewSet, 'dataset-media')
+
 
 url_patterns = [
     url(r'auth-token/', obtain_auth_token, name="auth_token"),

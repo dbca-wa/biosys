@@ -185,3 +185,31 @@ class MediaFilterSet(filters.FilterSet):
             'record__dataset__project__name': ['exact'],
             'record__dataset__project__code': ['exact'],
         }
+
+
+class ProjectMediaFilterSet(filters.FilterSet):
+    class Meta:
+        model = models.ProjectMedia
+        fields = {
+            'id': ['exact', 'in'],
+            'project': ['exact', 'in'],
+            'project__id': ['exact', 'in'],
+            'project__name': ['exact'],
+            'project__code': ['exact'],
+        }
+
+
+class DatasetMediaFilterSet(filters.FilterSet):
+    class Meta:
+        model = models.DatasetMedia
+        fields = {
+            'id': ['exact', 'in'],
+            'dataset': ['exact', 'in'],
+            'dataset__id': ['exact', 'in'],
+            'dataset__name': ['exact'],
+            'dataset__code': ['exact'],
+            'dataset__project': ['exact', 'in'],
+            'dataset__project__id': ['exact', 'in'],
+            'dataset__project__name': ['exact'],
+            'dataset__project__code': ['exact'],
+        }

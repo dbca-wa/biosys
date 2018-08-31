@@ -423,6 +423,34 @@ class MediaViewSet(viewsets.ModelViewSet):
             return serializers.MediaSerializer
 
 
+class ProjectMediaViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
+    queryset = models.ProjectMedia.objects.all()
+    filter_class = filters.ProjectMediaFilterSet
+    parser_classes = (FormParser, MultiPartParser, JSONParser)
+
+    def get_serializer_class(self):
+        if self.request.content_type.startswith('application/json'):
+            return serializers.Base64ProjectMediaSerializer
+        else:
+            # multipart form serializer
+            return serializers.ProjectMediaSerializer
+
+
+class DatasetMediaViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
+    queryset = models.DatasetMedia.objects.all()
+    filter_class = filters.DatasetMediaFilterSet
+    parser_classes = (FormParser, MultiPartParser, JSONParser)
+
+    def get_serializer_class(self):
+        if self.request.content_type.startswith('application/json'):
+            return serializers.Base64DatasetMediaSerializer
+        else:
+            # multipart form serializer
+            return serializers.DatasetMediaSerializer
+
+
 class StatisticsView(APIView):
     permission_classes = (IsAuthenticated,)
 

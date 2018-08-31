@@ -822,3 +822,198 @@ class Media(models.Model):
 
     def has_object_destroy_permission(self, request):
         return is_admin(request.user) or self.is_custodian(request.user) or self.is_data_engineer(request.user)
+
+
+def get_project_media_path(instance, filename):
+    """
+    The function used in ProjectMedia file field to build the path of the uploaded file.
+    see model below
+    https://docs.djangoproject.com/en/1.11/ref/models/fields/#filefield
+    :param instance:
+    :param filename:
+    :return: string
+    """
+    try:
+        return 'project_{project}/{filename}'.format(
+            project=instance.project.id,
+            filename=filename
+        )
+    except Exception as e:
+        logger.exception('Error while building the project media file name')
+        return 'unknown/{}'.format(filename)
+
+
+@python_2_unicode_compatible
+class ProjectMedia(models.Model):
+    file = models.FileField(upload_to=get_project_media_path)
+    project = models.ForeignKey(Project, blank=False, null=False, on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "project_media"
+
+    def __str__(self):
+        return self.filename
+
+    @property
+    def path(self):
+        return self.file.path
+
+    @property
+    def filename(self):
+        return path.basename(self.path)
+
+    @property
+    def filesize(self):
+        return self.file.size
+
+    def is_data_engineer(self, user):
+        return self.project.is_data_engineer(user)
+
+    # API permissions
+    @staticmethod
+    def has_read_permission(request):
+        return True
+
+    def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_metadata_permission(request):
+        return True
+
+    def has_object_metadata_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_create_permission(request):
+        """
+        Data engineer and admin only
+        Check that the user is a data engineer of the project pk passed in the POST data.
+        :param request:
+        :return:
+        """
+        result = False
+        user = request.user
+        if is_admin(user):
+            result = True
+        elif 'project' in request.data:
+            project = Project.objects.filter(pk=request.data['project']).first()
+            result = project is not None and project.is_data_engineer(user)
+        return result
+
+    @staticmethod
+    def has_update_permission(request):
+        """
+        Update not allowed
+        :param request:
+        :return:
+        """
+        return False
+
+    @staticmethod
+    def has_destroy_permission(request):
+        return True
+
+    def has_object_destroy_permission(self, request):
+        return is_admin(request.user) or self.is_data_engineer(request.user)
+
+
+def get_dataset_media_path(instance, filename):
+    """
+    The function used in DatasetMedia file field to build the path of the uploaded file.
+    see model below
+    https://docs.djangoproject.com/en/1.11/ref/models/fields/#filefield
+    :param instance:
+    :param filename:
+    :return: string
+    """
+    try:
+        return 'project_{project}/dataset_{dataset}/{filename}'.format(
+            project=instance.project.id,
+            dataset=instance.dataset.id,
+            filename=filename
+        )
+    except Exception as e:
+        logger.exception('Error while building the dataset media file name')
+        return 'unknown/{}'.format(filename)
+
+
+@python_2_unicode_compatible
+class DatasetMedia(models.Model):
+    file = models.FileField(upload_to=get_dataset_media_path)
+    dataset = models.ForeignKey(Dataset, blank=False, null=False, on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "dataset_media"
+
+    def __str__(self):
+        return self.filename
+
+    @property
+    def path(self):
+        return self.file.path
+
+    @property
+    def filename(self):
+        return path.basename(self.path)
+
+    @property
+    def filesize(self):
+        return self.file.size
+
+    @property
+    def project(self):
+        return self.dataset.project
+
+    def is_data_engineer(self, user):
+        return self.dataset.is_data_engineer(user)
+
+    # API permissions
+    @staticmethod
+    def has_read_permission(request):
+        return True
+
+    def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_metadata_permission(request):
+        return True
+
+    def has_object_metadata_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_create_permission(request):
+        """
+        Data engineer and admin only
+        Check that the user is a data engineer of the dataset pk passed in the POST data.
+        :param request:
+        :return:
+        """
+        result = False
+        user = request.user
+        if is_admin(user):
+            result = True
+        elif 'dataset' in request.data:
+            dataset = Dataset.objects.filter(pk=request.data['dataset']).first()
+            result = dataset is not None and dataset.is_data_engineer(user)
+        return result
+
+    @staticmethod
+    def has_update_permission(request):
+        """
+        Update not allowed
+        :param request:
+        :return:
+        """
+        return False
+
+    @staticmethod
+    def has_destroy_permission(request):
+        return True
+
+    def has_object_destroy_permission(self, request):
+        return is_admin(request.user) or self.is_data_engineer(request.user)
