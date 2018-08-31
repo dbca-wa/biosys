@@ -888,8 +888,8 @@ class ProjectMedia(models.Model):
     @staticmethod
     def has_create_permission(request):
         """
-        Custodian and admin only
-        Check that the user is a custodian of the project pk passed in the POST data.
+        Data engineer and admin only
+        Check that the user is a data engineer of the project pk passed in the POST data.
         :param request:
         :return:
         """
@@ -988,8 +988,8 @@ class DatasetMedia(models.Model):
     @staticmethod
     def has_create_permission(request):
         """
-        Custodian and admin only
-        Check that the user is a custodian of the dataset pk passed in the POST data.
+        Data engineer and admin only
+        Check that the user is a data engineer of the dataset pk passed in the POST data.
         :param request:
         :return:
         """
