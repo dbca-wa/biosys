@@ -674,6 +674,7 @@ class InferDatasetView(APIView):
             # upload handlers of the request.
             request.upload_handlers = [TemporaryFileUploadHandler(request)]
             file_obj = request.data.get('file')
+            infer_dataset_type = to_bool(request.data.get('infer_dataset_type', True))
             if file_obj is None:
                 response_data = {
                     'errors': 'Missing file'
@@ -688,12 +689,13 @@ class InferDatasetView(APIView):
             builder = DataPackageBuilder.infer_from_file(
                 file_obj.temporary_file_path(),
                 name=dataset_name,
-                format_=file_format
+                format_=file_format,
+                infer_dataset_type=infer_dataset_type
             )
             if builder.valid:
                 response_data = {
                     'name': builder.title,  # use the data-package title instead of name (name is a slug)
-                    'type': builder.infer_biosys_type(),
+                    'type': builder.dataset_type,
                     'data_package': builder.descriptor
                 }
                 return Response(response_data, status=status.HTTP_200_OK)

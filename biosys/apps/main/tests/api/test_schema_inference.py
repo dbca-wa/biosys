@@ -344,6 +344,47 @@ class TestGenericSchema(InferTestBase):
             self.assertFalse(field.required)
             self.assertEqual(field.format, 'default')
 
+    def test_infer_dataset_param(self):
+        """
+        Test that when the param infer_dataset_type is set to False the type in generic even if we have a
+        valid observation type
+        """
+        columns = ['What', 'Latitude', 'Longitude']
+        rows = [
+            columns,
+            ['Observation1', -32.0, 117.75],
+            ['Observation with lat/long as string', '-32.0', '115.75']
+        ]
+        client = self.custodian_1_client
+        file_ = helpers.rows_to_xlsx_file(rows)
+        with open(file_, 'rb') as fp:
+            # no param: should infer the type
+            payload = {
+                'file': fp,
+            }
+            resp = client.post(self.url, data=payload, format='multipart')
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
+            received = resp.json()
+            self.assertEqual(Dataset.TYPE_OBSERVATION, received.get('type'))
+
+            # with param: return generic.
+            fp.seek(0)
+            payload = {
+                'file': fp,
+                'infer_dataset_type': False
+            }
+            resp = client.post(self.url, data=payload, format='multipart')
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
+            received = resp.json()
+            self.assertEqual(Dataset.TYPE_GENERIC, received.get('type'))
+            schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
+            schema = utils_data_package.GenericSchema(schema_descriptor)
+            lat_field = schema.get_field_by_name('Latitude')
+            lon_field = schema.get_field_by_name('Longitude')
+            # no required constraints
+            self.assertFalse(lat_field.required)
+            self.assertFalse(lon_field.required)
+
 
 class TestObservationSchema(InferTestBase):
 
