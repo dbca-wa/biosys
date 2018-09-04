@@ -9,6 +9,7 @@ from tableschema import validate as tableschema_validate
 from tableschema import exceptions as tableschema_exceptions
 from django.conf import settings
 from django.contrib.gis.db import models
+from django.contrib.gis.db.models import Extent
 from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ValidationError
 from django.utils.encoding import python_2_unicode_compatible
@@ -194,6 +195,10 @@ class Project(models.Model):
         return self.geometry.centroid if self.geometry else None
 
     @property
+    def extent(self):
+        return self.geometry.extent if self.geometry else None
+
+    @property
     def dataset_count(self):
         return self.projects.count()
 
@@ -342,7 +347,14 @@ class Dataset(models.Model):
 
     @property
     def record_count(self):
-        return self.record_model.objects.filter(dataset=self).count()
+        return self.record_queryset.count()
+
+    @property
+    def extent(self):
+        if self.type != Dataset.TYPE_GENERIC:
+            return self.record_queryset.aggregate(Extent('geometry'))['geometry__extent']
+        else:
+            return None
 
     @property
     def schema_class(self):
