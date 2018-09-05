@@ -52,6 +52,7 @@ class ProgramSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     timezone = serializers.CharField(required=False)
     centroid = serializers_gis.GeometryField(required=False, read_only=True)
+    extent = serializers.ListField(required=False, read_only=True)
     dataset_count = serializers.IntegerField(required=False, read_only=True)
     site_count = serializers.IntegerField(required=False, read_only=True)
     record_count = serializers.IntegerField(required=False, read_only=True)
@@ -71,6 +72,7 @@ class SiteSerializer(serializers.ModelSerializer):
 
 class DatasetSerializer(serializers.ModelSerializer):
     record_count = serializers.IntegerField(required=False, read_only=True)
+    extent = serializers.ListField(required=False, read_only=True)
 
     class DataPackageValidator:
         def __init__(self):
