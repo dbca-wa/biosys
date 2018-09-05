@@ -351,10 +351,7 @@ class Dataset(models.Model):
 
     @property
     def extent(self):
-        if self.type != Dataset.TYPE_GENERIC:
-            return self.record_queryset.aggregate(Extent('geometry'))['geometry__extent']
-        else:
-            return None
+        return self.record_queryset.aggregate(Extent('geometry'))['geometry__extent']
 
     @property
     def schema_class(self):
