@@ -1648,6 +1648,57 @@ class TestCompositeSpeciesName(helpers.BaseUserTestCase):
         schema = helpers.create_schema_from_fields(schema_fields)
         return schema
 
+    @staticmethod
+    def schema_with_genus_and_species_name_no_required():
+        schema_fields = [
+            {
+                "name": "SpeciesName",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": "speciesName"
+                }
+            },
+
+            {
+                "name": "Genus",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": "genus"
+                }
+            },
+            {
+                "name": "Species",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+                "biosys": {
+                    "type": "species"
+                }
+            },
+            {
+                "name": "When",
+                "type": "date",
+                "constraints": helpers.REQUIRED_CONSTRAINTS,
+                "format": "any",
+                "biosys": {
+                    'type': 'observationDate'
+                }
+            },
+            {
+                "name": "Latitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Longitude",
+                "type": "number",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+        ]
+        schema = helpers.create_schema_from_fields(schema_fields)
+        return schema
+
     def _more_setup(self):
         # set the HerbieFacade class
         from main.api.views import SpeciesMixin
@@ -1796,6 +1847,14 @@ class TestCompositeSpeciesName(helpers.BaseUserTestCase):
             self.assertIn('Species', errors)
             msg = errors.get('Species')
             self.assertEqual(msg, expected_row_report['errors']['Species'])
+
+    def test_species_name_and_genus_requirement(self):
+        """
+        If the schema has speciesName and genus/species we should not impose any requirement
+        User should be able to choose one or the other way to enter a pscies.
+        """
+        schema = self.schema_with_genus_and_species_name_no_required()
+        self.assert_create_dataset(schema)
 
 
 class TestPatch(helpers.BaseUserTestCase):

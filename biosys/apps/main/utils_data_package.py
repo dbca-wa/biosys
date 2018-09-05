@@ -1305,8 +1305,8 @@ class SpeciesNameParser(object):
           req   req
         |species_name| name_id |
           not req      not req
-        |genus|species|species_name|
-          req   req     not req
+        | genus | species | species_name |
+          not r.  not r.   not r.
         | genus |species|species_name|name_id|
           not r.  not r.  not req      not req
 
@@ -1317,7 +1317,7 @@ class SpeciesNameParser(object):
             errors.append(format_required_message(self.species_name_field))
         if self.is_name_id_only and not self.name_id_field.required:
             errors.append(format_required_message(self.name_id_field))
-        if self.has_genus_and_species and not self.has_name_id:
+        if self.is_genus_and_species_only:
             if not self.genus_field.required:
                 errors.append(format_required_message(self.genus_field))
             if not self.species_field.required:
