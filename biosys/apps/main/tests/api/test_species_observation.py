@@ -1851,7 +1851,7 @@ class TestCompositeSpeciesName(helpers.BaseUserTestCase):
     def test_species_name_and_genus_requirement(self):
         """
         If the schema has speciesName and genus/species we should not impose any requirement
-        User should be able to choose one or the other way to enter a pscies.
+        User should be able to choose one or the other way to enter a species.
         """
         schema = self.schema_with_genus_and_species_name_no_required()
         self.assert_create_dataset(schema)
