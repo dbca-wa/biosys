@@ -47,14 +47,12 @@ All species information are in the properties field.
 from __future__ import absolute_import, unicode_literals, print_function, division
 
 import logging
-
 import requests
-from django.conf import settings
+from confy import env
+
 from django.utils import six
 
 logger = logging.getLogger(__name__)
-
-BASE_URL = settings.HERBIE_SPECIES_WFS_URL
 
 
 def get_key_for_value(dict_, value, default=None):
@@ -105,6 +103,10 @@ class SpeciesFacade(object):
 
 
 class HerbieFacade(SpeciesFacade):
+    BASE_URL = env('HERBIE_SPECIES_WFS_URL',
+                   'https://kmi.dbca.wa.gov.au/geoserver/ows?service=wfs&version=1.1.0'
+                   '&request=GetFeature&typeNames=public:herbie_hbvspecies_public&outputFormat=application/json')
+
     @staticmethod
     def _add_attributes_filter_to_params(properties, params=None):
         """
@@ -123,7 +125,7 @@ class HerbieFacade(SpeciesFacade):
 
     @staticmethod
     def _query_species(params=None):
-        r = requests.get(BASE_URL, params=params)
+        r = requests.get(HerbieFacade.BASE_URL, params=params)
         r.raise_for_status()
         try:
             return [f['properties'] for f in r.json()['features']]

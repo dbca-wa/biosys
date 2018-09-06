@@ -10,6 +10,9 @@ services:
 branches:
     only:
         - master
+        - uat
+        - staging
+        - production
 env:
     global:
         - SECRET_KEY=SecretKeyForTravis
@@ -26,3 +29,14 @@ before_script:
 script:
     - python manage.py test
 
+deploy:
+  provider: elasticbeanstalk
+  access_key_id: $AWS_ACCESS_KEY
+  secret_access_key:
+    secure: "$AWS_SECRET_KEY"
+  region: "ap-southeast-2"
+  app: "eb-biosys"
+  env: "eb-biosys-uat"
+  bucket_name: $AWS_BUCKET_NAME
+  on:
+    branch: uat

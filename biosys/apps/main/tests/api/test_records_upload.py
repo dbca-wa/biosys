@@ -1,13 +1,13 @@
-from os import path
 import datetime
+from os import path
 
-from django.core.urlresolvers import reverse
 from django.contrib.gis.geos import Point
+from django.core.urlresolvers import reverse
 from django.utils import timezone
-from django_dynamic_fixture import G
 from rest_framework import status
 
-from main.models import Dataset, Site, Record
+from main.models import Dataset, Site
+from main.tests import factories
 from main.tests.api import helpers
 
 
@@ -31,7 +31,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             }
         ]
         self.data_package = helpers.create_data_package_from_fields(self.fields)
-        self.ds = G(Dataset,
+        self.ds = factories.DatasetFactory(
                     project=self.project_1,
                     type=Dataset.TYPE_GENERIC,
                     data_package=self.data_package)
@@ -45,7 +45,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
         ]
         file_ = helpers.rows_to_csv_file(csv_data)
         client = self.custodian_1_client
-        self.assertEquals(0, self.ds.record_queryset.count())
+        self.assertEqual(0, self.ds.record_queryset.count())
         file_name = path.basename(file_)
         with open(file_) as fp:
             data = {
@@ -53,10 +53,10 @@ class TestGenericRecord(helpers.BaseUserTestCase):
                 'strict': True  # upload in strict mode
             }
             resp = client.post(self.url, data=data, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             # The records should be saved in order of the row
             qs = self.ds.record_queryset.order_by('pk')
-            self.assertEquals(len(csv_data) - 1, qs.count())
+            self.assertEqual(len(csv_data) - 1, qs.count())
 
             index = 0
             record = qs[index]
@@ -64,7 +64,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
                 'Column A': 'A1',
                 'Column B': 'B1',
             }
-            self.assertEquals(expected_data, record.data)
+            self.assertEqual(expected_data, record.data)
             # test that source_info contains the file_name and row_counter
             source_info = record.source_info
             self.assertIsNotNone(source_info)
@@ -80,7 +80,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
                 'Column A': 'A2',
                 'Column B': 'B2',
             }
-            self.assertEquals(expected_data, record.data)
+            self.assertEqual(expected_data, record.data)
             # test that source_info contains the file_name and row_counter
             source_info = record.source_info
             self.assertIsNotNone(source_info)
@@ -90,8 +90,8 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             }
             self.assertEqual(source_info, expected_info)
 
-            self.assertEquals(self.project_1.record_count, len(csv_data) - 1)
-            self.assertEquals(self.ds.record_count, len(csv_data) - 1)
+            self.assertEqual(self.project_1.record_count, len(csv_data) - 1)
+            self.assertEqual(self.ds.record_count, len(csv_data) - 1)
 
     def test_upload_xlsx_happy_path(self):
         csv_data = [
@@ -101,7 +101,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
         ]
         file_ = helpers.rows_to_xlsx_file(csv_data)
         client = self.custodian_1_client
-        self.assertEquals(0, self.ds.record_queryset.count())
+        self.assertEqual(0, self.ds.record_queryset.count())
         file_name = path.basename(file_)
         with open(file_, 'rb') as fp:
             data = {
@@ -109,10 +109,10 @@ class TestGenericRecord(helpers.BaseUserTestCase):
                 'strict': True  # upload in strict mode
             }
             resp = client.post(self.url, data=data, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             # The records should be saved in order of the row
             qs = self.ds.record_queryset.order_by('pk')
-            self.assertEquals(len(csv_data) - 1, qs.count())
+            self.assertEqual(len(csv_data) - 1, qs.count())
 
             index = 0
             record = qs[index]
@@ -120,7 +120,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
                 'Column A': 'A1',
                 'Column B': 'B1',
             }
-            self.assertEquals(expected_data, record.data)
+            self.assertEqual(expected_data, record.data)
             # test that source_info contains the file_name and row_counter
             source_info = record.source_info
             self.assertIsNotNone(source_info)
@@ -136,7 +136,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
                 'Column A': 'A2',
                 'Column B': 'B2',
             }
-            self.assertEquals(expected_data, record.data)
+            self.assertEqual(expected_data, record.data)
             # test that source_info contains the file_name and row_counter
             source_info = record.source_info
             self.assertIsNotNone(source_info)
@@ -146,8 +146,8 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             }
             self.assertEqual(source_info, expected_info)
 
-            self.assertEquals(self.project_1.record_count, len(csv_data) - 1)
-            self.assertEquals(self.ds.record_count, len(csv_data) - 1)
+            self.assertEqual(self.project_1.record_count, len(csv_data) - 1)
+            self.assertEqual(self.ds.record_count, len(csv_data) - 1)
 
     def test_upload_blank_column(self):
         """ Blank column should be ignored"""
@@ -158,7 +158,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
         ]
         file_ = helpers.rows_to_xlsx_file(csv_data)
         client = self.custodian_1_client
-        self.assertEquals(0, self.ds.record_queryset.count())
+        self.assertEqual(0, self.ds.record_queryset.count())
         file_name = path.basename(file_)
         with open(file_, 'rb') as fp:
             data = {
@@ -166,17 +166,17 @@ class TestGenericRecord(helpers.BaseUserTestCase):
                 'strict': True  # upload in strict mode
             }
             resp = client.post(self.url, data=data, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             # The records should be saved in order of the row
             qs = self.ds.record_queryset.order_by('pk')
-            self.assertEquals(len(csv_data) - 1, qs.count())
+            self.assertEqual(len(csv_data) - 1, qs.count())
             index = 0
             record = qs[index]
             expected_data = {
                 'Column A': 'A1',
                 'Column B': 'B1',
             }
-            self.assertEquals(expected_data, record.data)
+            self.assertEqual(expected_data, record.data)
             # test that source_info contains the file_name and row_counter
             source_info = record.source_info
             self.assertIsNotNone(source_info)
@@ -192,7 +192,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
                 'Column A': 'A2',
                 'Column B': 'B2',
             }
-            self.assertEquals(expected_data, record.data)
+            self.assertEqual(expected_data, record.data)
             # test that source_info contains the file_name and row_counter
             source_info = record.source_info
             self.assertIsNotNone(source_info)
@@ -202,8 +202,8 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             }
             self.assertEqual(source_info, expected_info)
 
-            self.assertEquals(self.project_1.record_count, len(csv_data) - 1)
-            self.assertEquals(self.ds.record_count, len(csv_data) - 1)
+            self.assertEqual(self.project_1.record_count, len(csv_data) - 1)
+            self.assertEqual(self.ds.record_count, len(csv_data) - 1)
 
     def test_unicode(self):
         """
@@ -215,17 +215,17 @@ class TestGenericRecord(helpers.BaseUserTestCase):
         ]
         file_ = helpers.rows_to_xlsx_file(csv_data)
         client = self.custodian_1_client
-        self.assertEquals(0, self.ds.record_queryset.count())
+        self.assertEqual(0, self.ds.record_queryset.count())
         with open(file_, 'rb') as fp:
             data = {
                 'file': fp,
                 'strict': False
             }
             resp = client.post(self.url, data=data, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             # The records should be saved in order of the row
             qs = self.ds.record_queryset.order_by('pk')
-            self.assertEquals(len(csv_data) - 1, qs.count())
+            self.assertEqual(len(csv_data) - 1, qs.count())
 
             index = 0
             record = qs[index]
@@ -233,7 +233,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
                 'Column A': u'Some char: \u1234',
                 'Column B': u'The euro char: \u20ac',
             }
-            self.assertEquals(expected_data, record.data)
+            self.assertEqual(expected_data, record.data)
 
     def test_headers_are_trimmed_csv(self):
         """
@@ -245,7 +245,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             fields
         ])
         schema = dataset.schema
-        self.assertEquals(schema.headers, fields)
+        self.assertEqual(schema.headers, fields)
 
         # upload record
         csv_data = [
@@ -261,13 +261,13 @@ class TestGenericRecord(helpers.BaseUserTestCase):
                 'strict': True  # upload in strict mode
             }
             resp = client.post(url, data=data, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
 
             # verify stored data
             record = dataset.record_queryset.first()
-            self.assertEquals(record.data.get('What'), 'Something')
-            self.assertEquals(record.data.get('When'), '2018-02-01')
-            self.assertEquals(record.data.get('Who'), 'me')
+            self.assertEqual(record.data.get('What'), 'Something')
+            self.assertEqual(record.data.get('When'), '2018-02-01')
+            self.assertEqual(record.data.get('Who'), 'me')
             # verify that the fields with space doesn't exists
             for f in csv_data[0]:
                 self.assertIsNone(record.data.get(f))
@@ -281,7 +281,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             fields
         ])
         schema = dataset.schema
-        self.assertEquals(schema.headers, fields)
+        self.assertEqual(schema.headers, fields)
 
         # upload record
         csv_data = [
@@ -297,13 +297,13 @@ class TestGenericRecord(helpers.BaseUserTestCase):
                 'strict': True  # upload in strict mode
             }
             resp = client.post(url, data, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
 
             # verify stored data
             record = dataset.record_queryset.first()
-            self.assertEquals(record.data.get('What'), 'Something')
-            self.assertEquals(record.data.get('When'), '2018-02-01')
-            self.assertEquals(record.data.get('Who'), 'me')
+            self.assertEqual(record.data.get('What'), 'Something')
+            self.assertEqual(record.data.get('When'), '2018-02-01')
+            self.assertEqual(record.data.get('Who'), 'me')
             # verify that the fields with space doesn't exists
             for f in csv_data[0]:
                 self.assertIsNone(record.data.get(f))
@@ -319,7 +319,7 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             fields
         ])
         schema = dataset.schema
-        self.assertEquals(schema.headers, fields)
+        self.assertEqual(schema.headers, fields)
         # create record with trailing and heading space
         data = {
             'What  ': 'Something',
@@ -408,7 +408,7 @@ class TestObservation(helpers.BaseUserTestCase):
         self.client = self.custodian_1_client
         self.dataset = self._create_dataset_with_schema(
             self.project,
-            self.client,
+            self.data_engineer_1_client,
             self.all_fields_nothing_required,
             Dataset.TYPE_OBSERVATION
         )
@@ -423,10 +423,10 @@ class TestObservation(helpers.BaseUserTestCase):
         }
         url = reverse('api:site-list')
         resp = self.client.post(url, data=payload, format='json')
-        self.assertEquals(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         self.site = Site.objects.filter(pk=resp.json().get('id')).first()
         self.assertIsNotNone(self.site)
-        self.assertEquals(self.site.code, 'COT')
+        self.assertEqual(self.site.code, 'COT')
 
     def test_site_no_date(self):
         csv_data = [
@@ -441,13 +441,13 @@ class TestObservation(helpers.BaseUserTestCase):
                 'strict': True  # upload in strict mode
             }
             resp = client.post(self.url, data=data, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             records = self.dataset.record_queryset.all()
             self.assertEqual(len(records), 1)
             record = records[0]
             self.assertEqual(record.site, self.site)
             self.assertIsNone(record.datetime)
-            self.assertEquals(record.geometry, self.site.geometry)
+            self.assertEqual(record.geometry, self.site.geometry)
 
     def test_site_with_date(self):
         csv_data = [
@@ -462,11 +462,11 @@ class TestObservation(helpers.BaseUserTestCase):
                 'strict': True  # upload in strict mode
             }
             resp = client.post(self.url, data=data, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             records = self.dataset.record_queryset.all()
             self.assertEqual(len(records), 1)
             record = records[0]
             self.assertEqual(record.site, self.site)
             expected_date = datetime.date(2017, 6, 4)
             self.assertEqual(timezone.localtime(record.datetime).date(), expected_date)
-            self.assertEquals(record.geometry, self.site.geometry)
+            self.assertEqual(record.geometry, self.site.geometry)

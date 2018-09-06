@@ -1,25 +1,22 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
+import datetime
+import decimal
 import json
 import logging
 import re
-import datetime
 
 from dateutil.parser import parse as date_parse
 from django.contrib.gis.geos import Point
 from django.utils import six
 from django.utils.encoding import python_2_unicode_compatible
 from future.utils import raise_with_traceback
-from tableschema import Schema as TableSchema
 from tableschema import Field as TableField
-from openpyxl import Workbook
-from openpyxl.styles import Font
-from openpyxl.writer.write_only import WriteOnlyCell
+from tableschema import Schema as TableSchema
 
 from main.constants import MODEL_SRID, SUPPORTED_DATUMS, get_datum_srid, is_supported_datum, get_australian_zone_srid, \
     is_projected_srid, get_datum_and_zone
 
-COLUMN_HEADER_FONT = Font(bold=True)
 YYYY_MM_DD_REGEX = re.compile(r'^\d{4}-\d{2}-\d{2}')
 
 logger = logging.getLogger(__name__)
@@ -248,6 +245,10 @@ class SchemaField:
         return self.type == 'date'
 
     @property
+    def is_numeric(self):
+        return self.type in ['number', 'integer']
+
+    @property
     def format(self):
         return self.descriptor['format']
 
@@ -404,6 +405,11 @@ class SchemaForeignKey:
         return self.fields[0] if self.fields else None
 
     @property
+    def parent_data_field_name(self):
+        # TODO: only one FK supported for now.
+        return self.reference_fields[0] if self.reference_fields else None
+
+    @property
     def reference(self):
         return self.descriptor.get('reference', {})
 
@@ -460,6 +466,10 @@ class GenericSchema(object):
     def required_fields(self):
         return [f for f in self.fields if f.required]
 
+    @property
+    def numeric_fields(self):
+        return [f for f in self.fields if f.is_numeric]
+
     def get_field_by_name(self, name):
         for f in self.fields:
             if f.name == name:
@@ -497,6 +507,33 @@ class GenericSchema(object):
                 'error': error
             }
         return result
+
+    def cast_numbers(self, row, raise_error=False):
+        """
+        Replace the numeric fields value by a json serializable python number. An int or float
+        :param row: a dict of (field_name, value)
+        :param raise_error: if True any casting error will raise an exception
+        :return:  in place replacement {field_name: value} where the numeric fields are casted into python numbers
+        """
+        for field in self.numeric_fields:
+            if field.name in row:
+                value = row[field.name]
+                try:
+                    python_value = field.cast(value)
+                    # The frictionless cast will cast a number to a python Decimal(), which is not json serializable
+                    # by default. Cast it to a float or int. We want to keep it as entered as possible. E.g if entered
+                    # 0 we don't want 0.0 or vice versa
+                    if isinstance(python_value, decimal.Decimal):
+                        if str(value).find('.') > 0:
+                            python_value = float(python_value)
+                        else:
+                            python_value = int(python_value)
+                    row[field.name] = python_value
+                except Exception as e:
+                    if raise_error:
+                        raise e
+                    pass
+        return row
 
     def rows_validator(self, rows):
         for row in rows:
@@ -924,30 +961,40 @@ class GeometryParser(object):
         :param default_srid:
         :return:
         """
-        result = default_srid
+        # parse datum and zone
+        datum_val = None
+        zone_val = None
         if self.datum_field:
             datum_val = record.get(self.datum_field.name)
-            if not datum_val:
-                return default_srid
-            if self.zone_field:
-                zone_val = record.get(self.zone_field.name)
-                if not zone_val:
-                    return default_srid
+        if self.zone_field:
+            zone_val = record.get(self.zone_field.name)
+            if zone_val:
                 try:
                     int(zone_val)
                 except ValueError:
                     msg = "Invalid Zone '{}'. Should be an integer.".format(zone_val)
                     raise InvalidDatumError(msg)
-                try:
-                    result = get_australian_zone_srid(datum_val, zone_val)
-                except Exception as e:
-                    raise InvalidDatumError(e)
+        # get the srid from values
+        if datum_val and zone_val:
+            # projected. Only Australia is supported.
+            try:
+                result = get_australian_zone_srid(datum_val, zone_val)
+            except Exception as e:
+                msg = "Invalid Datum/Zone '{datum}/{zone}: {error}'.".format(
+                    datum=datum_val,
+                    zone=zone_val,
+                    error=e
+                )
+                raise InvalidDatumError(msg)
+        elif datum_val:
+            if not is_supported_datum(datum_val):
+                msg = "Invalid Datum '{}'. Should be one of: {}".format(datum_val, SUPPORTED_DATUMS)
+                raise InvalidDatumError(msg)
             else:
-                if not is_supported_datum(datum_val):
-                    msg = "Invalid Datum '{}'. Should be one of: {}".format(datum_val, SUPPORTED_DATUMS)
-                    raise InvalidDatumError(msg)
-                else:
-                    result = get_datum_srid(datum_val)
+                result = get_datum_srid(datum_val)
+        else:
+            # no datum
+            result = default_srid
         return result
 
     def cast_geometry(self, record, default_srid=MODEL_SRID):
@@ -964,25 +1011,27 @@ class GeometryParser(object):
         if self.is_easting_northing:
             x = record.get(self.easting_field.name)
             y = record.get(self.northing_field.name)
-        if (not x or not y) and self.is_lat_long:
+        if (is_blank_value(x) or is_blank_value(y)) and self.is_lat_long:
             x = record.get(self.longitude_field.name)
             y = record.get(self.latitude_field.name)
-        if x and y:
+        if not is_blank_value(x) and not is_blank_value(y):
             srid = self.cast_srid(record, default_srid=default_srid)
             geometry = Point(x=float(x), y=float(y), srid=srid)
         if geometry is None and self.site_code_field is not None:
             # extract geometry from site
             from main.models import Site  # import here to avoid cyclic import problem
             site_code = self.get_site_code(record)
-            site = Site.objects.filter(code=site_code, geometry__isnull=False).first()
+            site = Site.objects.filter(code=site_code).first()
+            if site_code and site is None:
+                raise Exception('The site {} does not exist'.format(site_code))
             geometry = site.geometry if site is not None else None
             if geometry is None and self.is_site_code_only:
-                raise Exception('The site {} does not exist or has no geometry'.format(site_code))
+                raise Exception('The site {} has no geometry'.format(site_code))
         if geometry is not None:
             return geometry
         else:
             # problem
-            raise Exception('No lat/long eating/northing or site code found!')
+            raise Exception('No Latitude/Longitude Easting/Northing or Site Code found!')
 
     def from_record_to_geometry(self, record, default_srid=MODEL_SRID):
         return self.cast_geometry(record, default_srid=default_srid)
@@ -1256,8 +1305,8 @@ class SpeciesNameParser(object):
           req   req
         |species_name| name_id |
           not req      not req
-        |genus|species|species_name|
-          req   req     not req
+        | genus | species | species_name |
+          not r.  not r.   not r.
         | genus |species|species_name|name_id|
           not r.  not r.  not req      not req
 
@@ -1268,7 +1317,7 @@ class SpeciesNameParser(object):
             errors.append(format_required_message(self.species_name_field))
         if self.is_name_id_only and not self.name_id_field.required:
             errors.append(format_required_message(self.name_id_field))
-        if self.has_genus_and_species and not self.has_name_id:
+        if self.is_genus_and_species_only:
             if not self.genus_field.required:
                 errors.append(format_required_message(self.genus_field))
             if not self.species_field.required:
@@ -1276,52 +1325,3 @@ class SpeciesNameParser(object):
         return errors
 
 
-class Exporter:
-    def __init__(self, dataset, records=None):
-        self.ds = dataset
-        self.schema = GenericSchema(dataset.schema_data)
-        self.headers = self.schema.headers
-        self.warnings = []
-        self.errors = []
-        self.records = records if records else []
-
-    def row_it(self, cast=True):
-        for record in self.records:
-            row = []
-            for field in self.schema.fields:
-                value = record.data.get(field.name, '')
-                if cast:
-                    # Cast to native python type
-                    try:
-                        value = field.cast(value)
-                    except Exception:
-                        pass
-                # TODO: remove that when running in Python3
-                if isinstance(value, six.string_types) and not isinstance(value, six.text_type):
-                    value = six.u(value)
-                row.append(value)
-            yield row
-
-    def csv_it(self):
-        yield self.headers
-        for row in self.row_it(cast=False):
-            yield row
-
-    def _to_worksheet(self, ws):
-        ws.title = self.ds.name
-        # write headers
-        headers = []
-        for header in self.headers:
-            cell = WriteOnlyCell(ws, value=header)
-            cell.font = COLUMN_HEADER_FONT
-            headers.append(cell)
-        ws.append(headers)
-        for row in self.row_it():
-            ws.append(row)
-        return ws
-
-    def to_workbook(self):
-        wb = Workbook(write_only=True)
-        ws = wb.create_sheet()
-        self._to_worksheet(ws)
-        return wb

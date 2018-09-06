@@ -1,27 +1,27 @@
-from django.contrib.auth import get_user_model
 from django.shortcuts import reverse
 from django.test import TestCase
-from django_dynamic_fixture import G
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from main.models import Project, Site
+from main.models import Project
+
+from main.tests import factories
 from main.tests.api import helpers
 
 
-class TestWhoAmI(TestCase):
+class TestWhoAmI(helpers.BaseUserTestCase):
     def setUp(self):
+        super(TestWhoAmI, self).setUp()
         self.url = reverse('api:whoami')
 
     def test_get(self):
-        anonymous = APIClient()
-        client = anonymous
-        self.assertIn(
+        client = self.anonymous_client
+        self.assertEqual(
             client.get(self.url).status_code,
-            [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+            status.HTTP_200_OK
         )
 
-        user = G(get_user_model())
+        user = factories.UserFactory()
         user.set_password('password')
         user.save()
         client = APIClient()
@@ -43,11 +43,7 @@ class TestWhoAmI(TestCase):
         self.assertFalse('password' in data)
 
     def test_not_allowed_methods(self):
-        user = G(get_user_model())
-        user.set_password('password')
-        user.save()
-        client = APIClient()
-        self.assertTrue(client.login(username=user.username, password='password'))
+        client = self.readonly_client
         self.assertEqual(
             client.post(self.url, {}).status_code,
             status.HTTP_405_METHOD_NOT_ALLOWED
@@ -74,7 +70,7 @@ class TestStatistics(TestCase):
             [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
         )
 
-        user = G(get_user_model())
+        user = factories.UserFactory.create()
         user.set_password('password')
         user.save()
         client = APIClient()
@@ -101,33 +97,35 @@ class TestStatistics(TestCase):
             },
             'sites': {'total': 0},
         }
-        self.assertEquals(expected, resp.json())
+        self.assertEqual(expected, resp.json())
 
         # create one project
-        project = G(Project)
-        self.assertEquals(1, Project.objects.count())
+        program = factories.ProgramFactory.create()
+        project = factories.ProjectFactory.create(program=program)
         expected['projects']['total'] = 1
         resp = client.get(self.url)
         self.assertEqual(
             resp.status_code,
             status.HTTP_200_OK
         )
-        self.assertEquals(expected, resp.json())
+        self.assertEqual(expected, resp.json())
 
         # create some sites
         count = 3
-        for i in range(0, count):
-            G(Site, project=project)
+        factories.SiteFactory.create_batch(
+            count,
+            project=project
+        )
         expected['sites']['total'] = count
         resp = client.get(self.url)
         self.assertEqual(
             resp.status_code,
             status.HTTP_200_OK
         )
-        self.assertEquals(expected, resp.json())
+        self.assertEqual(expected, resp.json())
 
     def test_not_allowed_methods(self):
-        user = G(get_user_model())
+        user = factories.UserFactory.create()
         user.set_password('password')
         user.save()
         client = APIClient()
@@ -159,12 +157,12 @@ class TestSpecies(TestCase):
     def test_get(self):
         anonymous = APIClient()
         client = anonymous
-        self.assertIn(
+        self.assertEqual(
             client.get(self.url).status_code,
-            [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+            status.HTTP_200_OK
         )
 
-        user = G(get_user_model())
+        user = factories.UserFactory.create()
         user.set_password('password')
         user.save()
         client = APIClient()
@@ -176,7 +174,7 @@ class TestSpecies(TestCase):
         )
 
     def test_not_allowed_methods(self):
-        user = G(get_user_model())
+        user = factories.UserFactory.create()
         user.set_password('password')
         user.save()
         client = APIClient()

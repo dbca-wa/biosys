@@ -1,24 +1,20 @@
+import json
 import re
 from os import path
-import unittest
 
-from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
-from django.test import TestCase, override_settings
 from django.utils import six
 from openpyxl import load_workbook
 from openpyxl.cell import Cell
 from rest_framework import status
-from rest_framework.test import APIClient
 
-from main.models import Project, Site, Dataset, Record
+from main.models import Dataset, Record
+from main.tests import factories
 from main.tests.api import helpers
 from main.tests.test_data_package import clone
-from main.utils_auth import is_admin
 
 
-# TODO Use the helpers.BaseUserTestCase as base class for all tests and methods for generating schema (no fixtures)
-class TestPermissions(TestCase):
+class TestPermissions(helpers.BaseUserTestCase):
     """
     Test Permissions
     Get: authenticated
@@ -26,68 +22,34 @@ class TestPermissions(TestCase):
     Create: admin, custodians
     Delete: admin, custodians
     """
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-generic-records'
-    ]
-
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Site1").first()
-        self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
+        super(TestPermissions, self).setUp()
+        self.ds_1_rows = [
+            ['What', 'When', 'Who'],
+            ['Something', '2018-02-01', 'me']
+        ]
+        self.ds_1 = self._create_dataset_and_records_from_rows(self.ds_1_rows)
         self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
         self.record_1 = Record.objects.filter(dataset=self.ds_1).first()
+        self.record_1.site = factories.SiteFactory.create(project=self.project_1)
+        self.record_1.save()
         self.assertIsNotNone(self.record_1)
         self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
 
-        self.custodian_2_user = User.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.custodian_2_user.set_password(password)
-        self.custodian_2_user.save()
-        self.custodian_2_client = APIClient()
-        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
-        self.site_2 = Site.objects.filter(code="Site2").first()
-        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
+        self.ds_2_rows = [
+            ['Who', 'Height', 'Weight', 'Comments'],
+            ['Me', '1.86', '80', 'I wish']
+        ]
+        self.ds_2 = self._create_dataset_and_records_from_rows(self.ds_1_rows)
+        self.ds_2.project = self.project_2
+        self.ds_2.save()
         self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
         self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
-
-        self.readonly_user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
-        self.readonly_user.set_password(password)
-        self.readonly_user.save()
-        self.readonly_client = APIClient()
-        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
-
-        self.anonymous_client = APIClient()
 
     def test_get(self):
         urls = [
             reverse('api:record-list'),
-            reverse('api:record-detail', kwargs={'pk': 1})
+            reverse('api:record-detail', kwargs={'pk': self.record_1.pk})
         ]
         access = {
             "forbidden": [self.anonymous_client],
@@ -268,43 +230,31 @@ class TestPermissions(TestCase):
                 )
 
 
-class TestDataValidation(TestCase):
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-generic-records'
-    ]
+class TestDataValidation(helpers.BaseUserTestCase):
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Adolphus").first()
-        self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
+        super(TestDataValidation, self).setUp()
+        self.ds_1_rows = [
+            ['What', 'When', 'Who'],
+            ['Something', '2018-02-01', 'me']
+        ]
+        self.ds_1 = self._create_dataset_and_records_from_rows(self.ds_1_rows)
         self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
         self.record_1 = Record.objects.filter(dataset=self.ds_1).first()
+        self.record_1.site = factories.SiteFactory.create(project=self.project_1)
+        self.record_1.save()
         self.assertIsNotNone(self.record_1)
         self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-        self.assertIsNotNone(self.record_1.site)
-        self.assertEquals(self.site_1, self.record_1.site)
+
+        self.ds_2_rows = [
+            ['Who', 'Height', 'Weight', 'Comments'],
+            ['Me', '1.86', '80', 'I wish']
+        ]
+        self.ds_2 = self._create_dataset_and_records_from_rows(self.ds_1_rows)
+        self.ds_2.project = self.project_2
+        self.ds_2.save()
+        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
+        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
 
     def test_create_one_happy_path(self):
         """
@@ -318,13 +268,13 @@ class TestDataValidation(TestCase):
             "data": record.data
         }
         url = reverse('api:record-list')
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         count = Record.objects.count()
         self.assertEqual(
             client.post(url, data, format='json').status_code,
             status.HTTP_201_CREATED
         )
-        self.assertEquals(Record.objects.count(), count + 1)
+        self.assertEqual(Record.objects.count(), count + 1)
 
     def test_empty_not_allowed(self):
         record = self.record_1
@@ -341,7 +291,7 @@ class TestDataValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(Record.objects.count(), count)
+        self.assertEqual(Record.objects.count(), count)
 
     def test_create_column_not_in_schema(self):
         """
@@ -364,7 +314,7 @@ class TestDataValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(Record.objects.count(), count)
+        self.assertEqual(Record.objects.count(), count)
 
     def test_update_column_not_in_schema(self):
         """
@@ -387,51 +337,48 @@ class TestDataValidation(TestCase):
             client.put(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(Record.objects.count(), count)
+        self.assertEqual(Record.objects.count(), count)
         self.assertEqual(
             client.patch(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(Record.objects.count(), count)
+        self.assertEqual(Record.objects.count(), count)
 
 
-class TestSiteExtraction(TestCase):
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-generic-records'
-    ]
+class TestSiteExtraction(helpers.BaseUserTestCase):
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Adolphus").first()
-        self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
+        super(TestSiteExtraction, self).setUp()
+        self.site_1 = factories.SiteFactory(project=self.project_1, code='COT')
+        self.ds_1_rows = [
+            ['What', 'When', 'Who', 'Site'],
+        ]
+        self.ds_1 = self._create_dataset_from_rows(self.ds_1_rows)
         self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = Record.objects.filter(dataset=self.ds_1).first()
-        self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-        self.assertIsNotNone(self.record_1.site)
-        self.assertEquals(self.site_1, self.record_1.site)
+        # add a site code foreign key
+        self.schema_1 = self.ds_1.schema_data
+        helpers.add_model_field_foreign_key_to_schema(
+            self.schema_1,
+            {
+                'schema_field': 'Site',
+                'model': 'Site',
+                'model_field': 'code'
+            }
+        )
+        self.ds_1.data_package = helpers.create_data_package_from_schema(self.schema_1)
+        self.ds_1.save()
+        self.ds_1.refresh_from_db()
+        self.assertTrue(self.ds_1.schema.has_fk_for_model('Site'))
+        # create one record with site
+        self.record_1 = self._create_record(
+            self.custodian_1_client,
+            self.ds_1,
+            {
+                'What': 'Something',
+                'When': '2018-06-30',
+                'Site': self.site_1.code
+            })
+        self.assertEqual(self.record_1.site.pk, self.site_1.pk)
 
     def test_create_with_site(self):
         """
@@ -441,7 +388,7 @@ class TestSiteExtraction(TestCase):
         """
         # clear all records
         Record.objects.all().delete()
-        self.assertEquals(Record.objects.count(), 0)
+        self.assertEqual(Record.objects.count(), 0)
         record = self.record_1
         data = {
             "dataset": record.dataset.pk,
@@ -456,17 +403,16 @@ class TestSiteExtraction(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_201_CREATED
         )
-        self.assertEquals(Record.objects.count(), 1)
-        self.assertEquals(Record.objects.first().site, expected_site)
+        self.assertEqual(Record.objects.count(), 1)
+        self.assertEqual(Record.objects.first().site, expected_site)
 
     def test_update_site(self):
-        record = Record.objects.filter(site=self.site_1).first()
-        self.assertIsNotNone(record)
-        site = Site.objects.filter(name="Site1").first()
+        record = self.record_1
+        site = self.site_1
+        self.assertEqual(self.record_1.site.pk, self.site_1.pk)
         # need to test if the site belongs to the dataset project or the update won't happen
         self.assertIsNotNone(site)
         self.assertTrue(site.project == record.dataset.project)
-        self.assertNotEquals(record.site, site)
         # update site value
         schema = record.dataset.schema
         site_column = schema.get_fk_for_model('Site').data_field
@@ -486,38 +432,28 @@ class TestSiteExtraction(TestCase):
 
 
 class TestExport(helpers.BaseUserTestCase):
-    fixtures = helpers.BaseUserTestCase.fixtures + [
-        'test-sites',
-        'test-datasets',
-        'test-generic-records'
-    ]
 
-    def _more_setup(self):
-        self.ds_1 = Dataset.objects.filter(name="Generic1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
+    def setUp(self):
+        super(TestExport, self).setUp()
+        self.ds_1_rows = [
+            ['What', 'When', 'Who'],
+            ['Something', '2018-02-01', 'me']
+        ]
+        self.ds_1 = self._create_dataset_and_records_from_rows(self.ds_1_rows)
         self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
         self.record_1 = Record.objects.filter(dataset=self.ds_1).first()
         self.assertIsNotNone(self.record_1)
         self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
 
-        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
+        self.ds_2_rows = [
+            ['Who', 'Height', 'Weight', 'Comments'],
+            ['Me', '1.86', '80', 'I wish']
+        ]
+        self.ds_2 = self._create_dataset_and_records_from_rows(self.ds_1_rows)
+        self.ds_2.project = self.project_2
+        self.ds_2.save()
         self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
         self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
-
-    def _create_dataset_with_schema(self, project, client, schema):
-        resp = client.post(
-            reverse('api:dataset-list'),
-            data={
-                "name": "Test site code geometry",
-                "type": Dataset.TYPE_GENERIC,
-                "project": project.pk,
-                'data_package': helpers.create_data_package_from_schema(schema)
-            },
-            format='json')
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        dataset = Dataset.objects.filter(id=resp.json().get('id')).first()
-        self.assertIsNotNone(dataset)
-        return dataset
 
     def test_happy_path_no_filter(self):
         client = self.custodian_1_client
@@ -533,7 +469,7 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         # check headers
         self.assertEqual(resp.get('content-type'),
                          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -543,22 +479,22 @@ class TestExport(helpers.BaseUserTestCase):
         match = re.match('attachment; filename=(.+)', content_disposition)
         self.assertIsNotNone(match)
         filename, ext = path.splitext(match.group(1))
-        self.assertEquals(ext, '.xlsx')
+        self.assertEqual(ext, '.xlsx')
         filename.startswith(dataset.name)
         # read content
         wb = load_workbook(six.BytesIO(resp.content), read_only=True)
         # one datasheet named from dataset
-        sheet_names = wb.get_sheet_names()
-        self.assertEquals(1, len(sheet_names))
-        self.assertEquals(dataset.name, sheet_names[0])
-        ws = wb.get_sheet_by_name(dataset.name)
+        sheet_names = wb.sheetnames
+        self.assertEqual(1, len(sheet_names))
+        self.assertEqual(dataset.name, sheet_names[0])
+        ws = wb[dataset.name]
         rows = list(ws.rows)
         expected_records = Record.objects.filter(dataset=dataset)
-        self.assertEquals(len(rows), expected_records.count() + 1)
+        self.assertEqual(len(rows), expected_records.count() + 1)
         headers = [c.value for c in rows[0]]
         schema = dataset.schema
         # all the columns of the schema should be in the excel
-        self.assertEquals(schema.headers, headers)
+        self.assertEqual(schema.headers, headers)
 
     def test_permission_ok_for_not_custodian(self):
         """Export is a read action. Should be authorised for every logged-in user."""
@@ -573,7 +509,7 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
     def test_permission_denied_if_not_logged_in(self):
         """Must be logged-in."""
@@ -588,7 +524,7 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_excel_type(self):
         schema_fields = [
@@ -625,7 +561,7 @@ class TestExport(helpers.BaseUserTestCase):
         ]
         schema = helpers.create_schema_from_fields(schema_fields)
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         dataset = self._create_dataset_with_schema(project, client, schema)
 
         # create one record
@@ -655,10 +591,10 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         # load workbook
         wb = load_workbook(six.BytesIO(resp.content))
-        ws = wb.get_sheet_by_name(dataset.name)
+        ws = wb[dataset.name]
         rows = list(ws.rows)
         self.assertEqual(len(rows), 2)
         cells = rows[1]
@@ -672,216 +608,13 @@ class TestExport(helpers.BaseUserTestCase):
         self.assertEqual(boolean.data_type, Cell.TYPE_BOOL)
 
 
-class TestFilteringAndOrdering(helpers.BaseUserTestCase):
-
-    def test_filter_dataset(self):
-        dataset1 = self._create_dataset_and_records_from_rows([
-            ['What', 'When', 'Who'],
-            ['Crashed the db', '2018-02-14', 'Serge'],
-            ['Restored the db', '2018-02-14', 'Shay']
-        ])
-
-        dataset2 = self._create_dataset_and_records_from_rows([
-            ['What', 'When', 'Latitude', 'Longitude'],
-            ['Canis lupus', '2018-02-14', -32.0, 115.75],
-            ['Chubby bat', '2017-05-18', -34.4, 116.78]
-        ])
-
-        client = self.custodian_1_client
-        url = reverse('api:record-list')
-
-        # no filters
-        resp = client.get(url)
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
-        records = resp.json()
-        self.assertEquals(len(records), 4)
-        expected_whats = sorted(['Crashed the db', 'Restored the db', 'Canis lupus', 'Chubby bat'])
-        self.assertEquals(sorted([r['data']['What'] for r in records]), expected_whats)
-
-        # dataset__id
-        expected_dataset = dataset1
-        url = reverse('api:record-list')
-        resp = client.get(url, {'dataset__id': expected_dataset.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
-        records = resp.json()
-        self.assertEquals(len(records), 2)
-        expected_whats = sorted(['Crashed the db', 'Restored the db'])
-        self.assertEquals(sorted([r['data']['What'] for r in records]), expected_whats)
-
-        # dataset__name
-        expected_dataset = dataset2
-        resp = client.get(url, {'dataset__name': expected_dataset.name})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
-        records = resp.json()
-        self.assertEquals(len(records), 2)
-        expected_whats = sorted(['Canis lupus', 'Chubby bat'])
-        self.assertEquals(sorted([r['data']['What'] for r in records]), expected_whats)
-
-    def test_search_in_json_data(self):
-        """
-        Test that if we provide a dataset and a search parameters we can search through the data json field
-        :return:
-        """
-        dataset1 = self._create_dataset_and_records_from_rows([
-            ['What', 'When', 'Who'],
-            ['Crashed the db', '2018-02-14', 'Serge'],
-            ['Restored the db', '2018-02-14', 'Shay']
-        ])
-
-        dataset2 = self._create_dataset_and_records_from_rows([
-            ['What', 'When', 'Latitude', 'Longitude'],
-            ['Canis lupus', '2018-02-14', -32.0, 115.75],
-            ['Chubby bat', '2017-05-18', -34.4, 116.78],
-            ['Chubby Serge', '2017-05-18', -34.4, 116.78]
-        ])
-
-        client = self.custodian_1_client
-        url = reverse('api:record-list')
-
-        # search Serge in dataset1
-        resp = client.get(url, {'search': 'Serge', 'dataset__id': dataset1.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
-        records = resp.json()
-        self.assertEquals(len(records), 1)
-        record = records[0]
-        expected_data = sorted(['Crashed the db', '2018-02-14', 'Serge'])
-        self.assertEquals(sorted(list(record['data'].values())), expected_data)
-
-        # search serge in dataset2 case insensitive
-        resp = client.get(url, {'search': 'Serge', 'dataset__id': dataset2.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
-        records = resp.json()
-        self.assertEquals(len(records), 1)
-        record = records[0]
-        expected_data = sorted(['Chubby Serge', '2017-05-18', '-34.4', '116.78'])
-        self.assertEquals(sorted(list(record['data'].values())), expected_data)
-
-    def test_string_ordering_in_json_data(self):
-        """
-        Test that if we provide a dataset and an order parameter (field) we can order through the data json field
-        for string
-        :return:
-        """
-        dataset = self._create_dataset_and_records_from_rows([
-            ['What', 'When', 'Latitude', 'Longitude'],
-            ['Canis lupus', '2018-02-14', -32.0, 115.75],
-            ['Zebra', '2017-01-01', -34.7, 115.75],
-            ['Chubby bat', '2017-05-18', -34.4, 116.78],
-            ['Alligator', '2017-05-18', -34.4, 116.78]
-        ])
-
-        client = self.custodian_1_client
-        url = reverse('api:record-list')
-
-        # order by What asc
-        ordering = 'What'
-        resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
-        records = resp.json()
-        self.assertEquals(len(records), 4)
-        expected_whats = sorted(['Alligator', 'Canis lupus', 'Chubby bat', 'Zebra'])
-        self.assertEquals([r['data']['What'] for r in records], expected_whats)
-
-        # order by What desc
-        ordering = '-What'
-        resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
-        records = resp.json()
-        self.assertEquals(len(records), 4)
-        expected_whats = sorted(['Alligator', 'Canis lupus', 'Chubby bat', 'Zebra'], reverse=True)
-        self.assertEquals([r['data']['What'] for r in records], expected_whats)
-
-        # test that the ordering is case sensitive
-        ordering = 'what'
-        resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
-        records = resp.json()
-        self.assertEquals(len(records), 4)
-        expected_whats = sorted(['Alligator', 'Canis lupus', 'Chubby bat', 'Zebra'])
-        self.assertNotEquals([r['data']['What'] for r in records], expected_whats)
-
-    def test_server_side_ordering_row_number(self):
-        """
-        Test that we can order by the source_info['row'] (row number in the csv or xlsx) and that the
-        sort in numeric based not char based (10 is after 9)
-        """
-        # create 11 records (data not important)
-        rows = [
-            ['When', 'Species', 'How Many', 'Latitude', 'Longitude', 'Comments'],
-            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
-            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
-            ['2018-02-10', 'Unknown', 2, -32.0, 115.75, 'Canis?'],
-            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
-            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
-            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
-            ['2018-02-10', 'Unknown', 2, -32.0, 115.75, 'Canis?'],
-            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
-            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
-            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
-            ['2018-02-10', 'Unknown', 2, -32.0, 115.75, 'Canis?'],
-        ]
-        dataset = self._create_dataset_and_records_from_rows(rows)
-        client = self.custodian_1_client
-        url = reverse('api:record-list')
-        ordering = 'row'
-        resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        json_response = resp.json()
-        self.assertEquals(len(json_response), 11)
-
-        # row start at 2
-        sorted_rows = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-
-        record_rows = [record['source_info']['row'] for record in json_response]
-        self.assertEqual(record_rows, sorted_rows)
-
-        # check is request ordered by family in descending order is ordered by family in reverse alphabetical order
-        ordering = '-row'
-        resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        json_response = resp.json()
-        self.assertEquals(len(json_response), 11)
-
-        record_rows = [record['source_info']['row'] for record in json_response]
-        self.assertEqual(record_rows, list(reversed(sorted_rows)))
-
-    # Because all fields are currently stored as string in the json field, we expect the next test to fail.
-    # When the feature is implemented just remove the decorator below.
-    @unittest.expectedFailure
-    def test_numeric_ordering_in_json_data(self):
-        """
-        Assuming we have a schema that contains a numeric field (integer or number types).
-        Querying an order on this field should return a numerical order not string (10, after 9)
-        """
-        dataset = self._create_dataset_and_records_from_rows([
-            ['What', 'How Many'],
-            ['Canis lupus', 7],
-            ['Zebra', 1],
-            ['Chubby bat', 9],
-            ['Alligator', 10]
-        ])
-        # check that we have a field of type integer
-        self.assertEquals(dataset.schema.get_field_by_name('How Many').type, 'integer')
-
-        client = self.custodian_1_client
-        url = reverse('api:record-list')
-
-        ordering = 'How Many'
-        resp = client.get(url, {'ordering': ordering, 'dataset__id': dataset.pk})
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
-        records = resp.json()
-        self.assertEquals(len(records), 4)
-        expected = [('Zebra', 1), ('Canis lupus', 7), ('Chubby bat', 9), ('Alligator', 10)]
-        self.assertEquals([(r['data']['What'], r['data']['How Many']) for r in records], expected)
-
-
 class TestSchemaValidation(helpers.BaseUserTestCase):
 
     def assert_create_dataset(self, schema):
         try:
             return self._create_dataset_with_schema(
                 self.project_1,
-                self.custodian_1_client,
+                self.data_engineer_1_client,
                 schema,
                 dataset_type=Dataset.TYPE_GENERIC
             )
@@ -928,7 +661,7 @@ class TestSchemaValidation(helpers.BaseUserTestCase):
             ['  ', '   ', '  ', '  '],
         ]
         resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk, strict=True)
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
     def test_required_date_with_format_any(self):
         """
@@ -956,10 +689,10 @@ class TestSchemaValidation(helpers.BaseUserTestCase):
             ['   ', 'something'],
         ]
         resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk, strict=True)
-        self.assertEquals(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         received = resp.json()
         self.assertIsInstance(received, list)
-        self.assertEquals(len(received), 3)
+        self.assertEqual(len(received), 3)
         # this what an report should look like
         expected_row_report = {
             'row': 3,
@@ -970,5 +703,425 @@ class TestSchemaValidation(helpers.BaseUserTestCase):
             errors = row_report.get('errors')
             self.assertIn('DateAny', errors)
             msg = errors.get('DateAny')
-            self.assertEquals(msg, expected_row_report['errors']['DateAny'])
+            self.assertEqual(msg, expected_row_report['errors']['DateAny'])
 
+
+class TestPatch(helpers.BaseUserTestCase):
+
+    def test_patch_validated(self):
+        """
+        Test that we can patch just the 'validated' flag
+        :return:
+        """
+        rows = [
+            ['What', 'Comments'],
+            ['Chubby bat', 'It is huge!']
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
+        self.assertEqual(dataset.type, Dataset.TYPE_GENERIC)
+        records = dataset.record_set.all()
+        record = records.last()
+        self.assertIsNotNone(record)
+        self.assertFalse(record.validated)
+        previous_data = json.dumps(record.data)
+        # patch
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
+        client = self.custodian_1_client
+        payload = {
+            'validated': True
+        }
+        resp = client.patch(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        record.refresh_from_db()
+        self.assertTrue(record.validated)
+        self.assertTrue(json.dumps(record.data), previous_data)
+
+    def test_patch_locked(self):
+        """
+        Test that we can patch just the 'locked' flag
+        :return:
+        """
+        rows = [
+            ['What', 'Comments'],
+            ['Chubby bat', 'It is huge!']
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
+        self.assertEqual(dataset.type, Dataset.TYPE_GENERIC)
+        records = dataset.record_set.all()
+        record = records.last()
+        self.assertIsNotNone(record)
+        self.assertFalse(record.locked)
+        previous_data = json.dumps(record.data)
+        # patch
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
+        client = self.custodian_1_client
+        payload = {
+            'locked': True
+        }
+        resp = client.patch(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        record.refresh_from_db()
+        self.assertTrue(record.locked)
+        self.assertTrue(json.dumps(record.data), previous_data)
+
+
+class TestForeignKey(helpers.BaseUserTestCase):
+    """
+    Tests are about a dataset schema declaring one of its field as a foreign key to another dataset schema field
+    When declaring a FK in the schema you have to define a resource name. This name is supposed to be a dataset name.
+    or the resource name.
+    Note: in order to get children records the parent dataset schema MUST declare a 'primaryKey' property.
+    """
+
+    def setUp(self):
+        super(TestForeignKey, self).setUp()
+        # delete all datasets
+        Dataset.objects.all().delete()
+
+    def test_fk_with_dataset_name(self):
+        """
+        Test that the parent children works when the declared FK refer to a dataset name.
+        :return:
+        """
+        # Create a parent dataset with some records
+        parent_dataset = self._create_dataset_and_records_from_rows([
+            ['Survey ID', 'Where', 'When', 'Who'],
+            ['ID-001', 'King\'s Park', '2018-07-15', 'Tim Reynolds'],
+            ['ID-002', 'Cottesloe', '2018-07-11', 'SLB'],
+            ['ID-003', 'Somewhere', '2018-07-13', 'Phil Bill']
+        ])
+        parent_dataset.data_package['resources'][0]['schema']['primaryKey'] = 'Survey ID'
+        parent_dataset.save()
+        parent_records = parent_dataset.record_set.all()
+        self.assertEqual(parent_records.count(), 3)
+
+        # Create a child/related schema
+        child_schema = helpers.create_schema_from_fields([
+            {
+                "name": "Survey ID",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "What",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Comments",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+            }
+        ])
+        # declaring a foreign key pointing to the dataset name
+        foreign_keys = [{
+            'fields': 'Survey ID',
+            'reference': {
+                'fields': 'Survey ID',
+                'resource': parent_dataset.name
+            }
+        }]
+        child_schema['foreignKeys'] = foreign_keys
+        child_dataset = self._create_dataset_with_schema(
+            self.project_1,
+            self.data_engineer_1_client,
+            child_schema
+        )
+        self.assertIsNotNone(child_dataset)
+        # post some records for survey ID--001
+        rows = [
+            ['Survey ID', 'What', 'Comments'],
+            ['ID-001', 'Canis lupus', 'doggy, doggy'],
+            ['ID-001', 'A frog', 'kiss'],
+            ['ID-001', 'A tooth brush', 'I should stop drinking'],
+        ]
+        self._upload_records_from_rows(rows, child_dataset.id, strict=False)
+        children_records = child_dataset.record_set.all()
+        self.assertEqual(children_records.count(), 3)
+
+        # test serialisation of parent records
+        id_001 = parent_records.filter(data__contains={'Survey ID': 'ID-001'}).first()
+        expected_children_ids = [r.id for r in children_records]
+        expected_parent_id = None
+        self.assertIsNotNone(id_001)
+        url = reverse('api:record-detail', kwargs={'pk': id_001.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        id_002 = parent_records.filter(data__contains={'Survey ID': 'ID-002'}).first()
+        expected_children_ids = []
+        expected_parent_id = None
+        self.assertIsNotNone(id_002)
+        url = reverse('api:record-detail', kwargs={'pk': id_002.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        id_003 = parent_records.filter(data__contains={'Survey ID': 'ID-003'}).first()
+        expected_children_ids = []
+        expected_parent_id = None
+        self.assertIsNotNone(id_003)
+        url = reverse('api:record-detail', kwargs={'pk': id_003.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        #
+        # test serialisation of children records
+        # they all have the same parent and no children
+        #
+        expected_children_ids = None
+        expected_parent_id = id_001.pk
+        client = self.custodian_1_client
+        for record in children_records:
+            url = reverse('api:record-detail', kwargs={'pk': record.pk})
+            resp = client.get(url)
+            self.assertEqual(resp.status_code, status.HTTP_200_OK)
+            data = resp.json()
+            self.assertEqual(data['children'], expected_children_ids)
+            self.assertEqual(data['parent'], expected_parent_id)
+
+    def test_fk_with_dataset_code(self):
+        """
+        This is the same test as above but this time the foreign key is declared with the parent dataset code instead
+        of name
+        :return:
+        """
+        # Create a parent dataset with some records
+        parent_dataset = self._create_dataset_and_records_from_rows([
+            ['Survey ID', 'Where', 'When', 'Who'],
+            ['ID-001', 'King\'s Park', '2018-07-15', 'Tim Reynolds'],
+            ['ID-002', 'Cottesloe', '2018-07-11', 'SLB'],
+            ['ID-003', 'Somewhere', '2018-07-13', 'Phil Bill']
+        ])
+        parent_dataset.data_package['resources'][0]['schema']['primaryKey'] = 'Survey ID'
+        parent_dataset.save()
+        parent_dataset.code = 'Survey'
+        parent_dataset.save()
+        parent_records = parent_dataset.record_set.all()
+        self.assertEqual(parent_records.count(), 3)
+
+        # Create a child/related schema
+        child_schema = helpers.create_schema_from_fields([
+            {
+                "name": "Survey ID",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "What",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Comments",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+            }
+        ])
+        # declaring a foreign key pointing to the dataset name
+        foreign_keys = [{
+            'fields': 'Survey ID',
+            'reference': {
+                'fields': 'Survey ID',
+                'resource': parent_dataset.code
+            }
+        }]
+        child_schema['foreignKeys'] = foreign_keys
+        child_dataset = self._create_dataset_with_schema(
+            self.project_1,
+            self.data_engineer_1_client,
+            child_schema
+        )
+        self.assertIsNotNone(child_dataset)
+        # post some records for survey ID--001
+        rows = [
+            ['Survey ID', 'What', 'Comments'],
+            ['ID-001', 'Canis lupus', 'doggy, doggy'],
+            ['ID-001', 'A frog', 'kiss'],
+            ['ID-001', 'A tooth brush', 'I should stop drinking'],
+        ]
+        self._upload_records_from_rows(rows, child_dataset.id, strict=False)
+        children_records = child_dataset.record_set.all()
+        self.assertEqual(children_records.count(), 3)
+
+        # test serialisation of parent records
+        id_001 = parent_records.filter(data__contains={'Survey ID': 'ID-001'}).first()
+        expected_children_ids = [r.id for r in children_records]
+        expected_parent_id = None
+        self.assertIsNotNone(id_001)
+        url = reverse('api:record-detail', kwargs={'pk': id_001.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        id_002 = parent_records.filter(data__contains={'Survey ID': 'ID-002'}).first()
+        expected_children_ids = []
+        expected_parent_id = None
+        self.assertIsNotNone(id_002)
+        url = reverse('api:record-detail', kwargs={'pk': id_002.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        id_003 = parent_records.filter(data__contains={'Survey ID': 'ID-003'}).first()
+        expected_children_ids = []
+        expected_parent_id = None
+        self.assertIsNotNone(id_003)
+        url = reverse('api:record-detail', kwargs={'pk': id_003.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        #
+        # test serialisation of children records
+        # they all have the same parent and no children
+        #
+        expected_children_ids = None
+        expected_parent_id = id_001.pk
+        client = self.custodian_1_client
+        for record in children_records:
+            url = reverse('api:record-detail', kwargs={'pk': record.pk})
+            resp = client.get(url)
+            self.assertEqual(resp.status_code, status.HTTP_200_OK)
+            data = resp.json()
+            self.assertEqual(data['children'], expected_children_ids)
+            self.assertEqual(data['parent'], expected_parent_id)
+
+    def test_fk_with_dataset_resource_name(self):
+        """
+        This is the same test as above but this time the foreign key is declared with the parent dataset resource name
+        :return:
+        """
+        # Create a parent dataset with some records
+        parent_dataset = self._create_dataset_and_records_from_rows([
+            ['Survey ID', 'Where', 'When', 'Who'],
+            ['ID-001', 'King\'s Park', '2018-07-15', 'Tim Reynolds'],
+            ['ID-002', 'Cottesloe', '2018-07-11', 'SLB'],
+            ['ID-003', 'Somewhere', '2018-07-13', 'Phil Bill']
+        ])
+        parent_dataset.data_package['resources'][0]['schema']['primaryKey'] = 'Survey ID'
+        parent_dataset.save()
+        parent_dataset.name = 'Survey'
+        parent_dataset.code = 'SURV'
+        parent_dataset.save()
+        self.assertTrue(parent_dataset.resource_name)  # not None or empty string
+        self.assertNotEqual(parent_dataset.resource_name, parent_dataset.name)
+        self.assertNotEqual(parent_dataset.resource_name, parent_dataset.code)
+        parent_records = parent_dataset.record_set.all()
+        self.assertEqual(parent_records.count(), 3)
+
+        # Create a child/related schema
+        child_schema = helpers.create_schema_from_fields([
+            {
+                "name": "Survey ID",
+                "type": "string",
+                "constraints": helpers.REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "What",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
+            },
+            {
+                "name": "Comments",
+                "type": "string",
+                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
+            }
+        ])
+        # declaring a foreign key pointing to the dataset name
+        foreign_keys = [{
+            'fields': 'Survey ID',
+            'reference': {
+                'fields': 'Survey ID',
+                'resource': parent_dataset.resource_name
+            }
+        }]
+        child_schema['foreignKeys'] = foreign_keys
+        child_dataset = self._create_dataset_with_schema(
+            self.project_1,
+            self.data_engineer_1_client,
+            child_schema
+        )
+        self.assertIsNotNone(child_dataset)
+        # post some records for survey ID--001
+        rows = [
+            ['Survey ID', 'What', 'Comments'],
+            ['ID-001', 'Canis lupus', 'doggy, doggy'],
+            ['ID-001', 'A frog', 'kiss'],
+            ['ID-001', 'A tooth brush', 'I should stop drinking'],
+        ]
+        self._upload_records_from_rows(rows, child_dataset.id, strict=False)
+        children_records = child_dataset.record_set.all()
+        self.assertEqual(children_records.count(), 3)
+
+        # test serialisation of parent records
+        id_001 = parent_records.filter(data__contains={'Survey ID': 'ID-001'}).first()
+        expected_children_ids = [r.id for r in children_records]
+        expected_parent_id = None
+        self.assertIsNotNone(id_001)
+        url = reverse('api:record-detail', kwargs={'pk': id_001.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        id_002 = parent_records.filter(data__contains={'Survey ID': 'ID-002'}).first()
+        expected_children_ids = []
+        expected_parent_id = None
+        self.assertIsNotNone(id_002)
+        url = reverse('api:record-detail', kwargs={'pk': id_002.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        id_003 = parent_records.filter(data__contains={'Survey ID': 'ID-003'}).first()
+        expected_children_ids = []
+        expected_parent_id = None
+        self.assertIsNotNone(id_003)
+        url = reverse('api:record-detail', kwargs={'pk': id_003.pk})
+        client = self.custodian_1_client
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(sorted(data['children']), sorted(expected_children_ids))
+        self.assertEqual(data['parent'], expected_parent_id)
+
+        #
+        # test serialisation of children records
+        # they all have the same parent and no children
+        #
+        expected_children_ids = None
+        expected_parent_id = id_001.pk
+        client = self.custodian_1_client
+        for record in children_records:
+            url = reverse('api:record-detail', kwargs={'pk': record.pk})
+            resp = client.get(url)
+            self.assertEqual(resp.status_code, status.HTTP_200_OK)
+            data = resp.json()
+            self.assertEqual(data['children'], expected_children_ids)
+            self.assertEqual(data['parent'], expected_parent_id)

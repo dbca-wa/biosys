@@ -1,10 +1,7 @@
-from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
-from django.test import TestCase, override_settings
 from rest_framework import status
-from rest_framework.test import APIClient
 
-from main.models import Project, Site, Dataset
+from main.models import Dataset
 from main.tests.api import helpers
 from main.tests.test_data_package import (
     clone,
@@ -12,78 +9,35 @@ from main.tests.test_data_package import (
     LAT_LONG_OBSERVATION_DATA_PACKAGE,
     SPECIES_OBSERVATION_DATA_PACKAGE,
 )
-from main.utils_auth import is_admin
 
 
-class TestPermissions(TestCase):
+class TestPermissions(helpers.BaseUserTestCase):
     """
     Test Permissions
     Get: authenticated
-    Update: admin, custodians
-    Create: admin, custodians
-    Delete: admin, custodians
+    Update: admin, data_engineer
+    Create: admin, data_engineer
+    Delete: admin, data_engineer
     """
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-    ]
-
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
-    def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Site1").first()
-        self.ds_1 = Dataset.objects.filter(name="Bats1", project=self.project_1).first()
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-
-        self.custodian_2_user = User.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.custodian_2_user.set_password(password)
-        self.custodian_2_user.save()
-        self.custodian_2_client = APIClient()
-        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
-        self.site_2 = Site.objects.filter(code="Site2").first()
-        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
-
-        self.readonly_user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
-        self.readonly_user.set_password(password)
-        self.readonly_user.save()
-        self.readonly_client = APIClient()
-        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
-
-        self.anonymous_client = APIClient()
 
     def test_get(self):
+        dataset = self._create_dataset_with_schema(self.project_1, self.data_engineer_1_client, helpers.GENERIC_SCHEMA)
         urls = [
             reverse('api:dataset-list'),
-            reverse('api:dataset-detail', kwargs={'pk': 1})
+            reverse('api:dataset-detail', kwargs={'pk': dataset.pk})
         ]
         access = {
-            "forbidden": [self.anonymous_client],
-            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+            "forbidden": [
+                self.anonymous_client
+            ],
+            "allowed": [
+                self.readonly_client,
+                self.custodian_1_client,
+                self.custodian_2_client,
+                self.data_engineer_1_client,
+                self.data_engineer_2_client,
+                self.admin_client
+            ]
         }
         for client in access['forbidden']:
             for url in urls:
@@ -101,20 +55,30 @@ class TestPermissions(TestCase):
 
     def test_create(self):
         """
-        Admin and custodians
+        Admin and data engineers
         :return:
         """
+        data_package = clone(GENERIC_DATA_PACKAGE)
         project = self.project_1
         urls = [reverse('api:dataset-list')]
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_GENERIC,
             "project": project.pk,
-            'data_package': self.ds_1.data_package
+            'data_package': data_package
         }
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
-            "allowed": [self.admin_client, self.custodian_1_client]
+            "forbidden": [
+                self.anonymous_client,
+                self.readonly_client,
+                self.custodian_2_client,
+                self.custodian_1_client,
+                self.data_engineer_2_client
+            ],
+            "allowed": [
+                self.admin_client,
+                self.data_engineer_1_client
+            ]
         }
         for client in access['forbidden']:
             for url in urls:
@@ -128,8 +92,9 @@ class TestPermissions(TestCase):
                 # name must be unique
                 data['name'] += '1'
                 count = Dataset.objects.count()
+                resp = client.post(url, data, format='json')
                 self.assertEqual(
-                    client.post(url, data, format='json').status_code,
+                    resp.status_code,
                     status.HTTP_201_CREATED
                 )
                 self.assertEqual(Dataset.objects.count(), count + 1)
@@ -150,18 +115,25 @@ class TestPermissions(TestCase):
                 "name": "New1 for Unit test",
                 "type": Dataset.TYPE_GENERIC,
                 "project": project.pk,
-                'data_package': self.ds_1.data_package
+                'data_package': clone(GENERIC_DATA_PACKAGE)
             },
             {
                 "name": "New2 for Unit test",
                 "type": Dataset.TYPE_GENERIC,
                 "project": project.pk,
-                'data_package': self.ds_1.data_package
+                'data_package': clone(GENERIC_DATA_PACKAGE)
             }
         ]
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client, self.admin_client,
-                          self.custodian_1_client],
+            "forbidden": [
+                self.anonymous_client,
+                self.readonly_client,
+                self.custodian_2_client,
+                self.admin_client,
+                self.custodian_1_client,
+                self.data_engineer_1_client,
+                self.data_engineer_2_client
+            ],
             "allowed": []
         }
         for client in access['forbidden']:
@@ -185,10 +157,10 @@ class TestPermissions(TestCase):
 
     def test_update(self):
         """
-        admin + custodian of project for site 1
+        admin + data engineer of project for site 1
         :return:
         """
-        ds = self.ds_1
+        ds = self._create_dataset_with_schema(self.project_1, self.data_engineer_1_client, helpers.GENERIC_SCHEMA)
         previous_name = ds.name
         updated_name = previous_name + "-updated"
         urls = [reverse('api:dataset-detail', kwargs={'pk': ds.pk})]
@@ -196,10 +168,18 @@ class TestPermissions(TestCase):
             "name": updated_name,
         }
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
-            "allowed": [self.admin_client, self.custodian_1_client]
+            "forbidden": [
+                self.anonymous_client,
+                self.readonly_client,
+                self.custodian_2_client,
+                self.custodian_1_client,
+                self.data_engineer_2_client
+            ],
+            "allowed": [
+                self.admin_client,
+                self.data_engineer_1_client
+            ]
         }
-
         for client in access['forbidden']:
             for url in urls:
                 self.assertIn(
@@ -223,12 +203,21 @@ class TestPermissions(TestCase):
         Currently admin + custodian
         :return:
         """
-        ds = self.ds_1
+        ds = self._create_dataset_with_schema(self.project_1, self.data_engineer_1_client, helpers.GENERIC_SCHEMA)
         urls = [reverse('api:dataset-detail', kwargs={'pk': ds.pk})]
         data = None
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
-            "allowed": [self.admin_client, self.custodian_1_client]
+            "forbidden": [
+                self.anonymous_client,
+                self.readonly_client,
+                self.custodian_2_client,
+                self.custodian_1_client,
+                self.data_engineer_2_client
+            ],
+            "allowed": [
+                self.admin_client,
+                self.data_engineer_1_client
+            ]
         }
 
         for client in access['forbidden']:
@@ -246,7 +235,7 @@ class TestPermissions(TestCase):
                     client.delete(url, data, format='json').status_code,
                     status.HTTP_204_NO_CONTENT
                 )
-                self.assertTrue(Dataset.objects.count(), count - 1)
+                self.assertEqual(Dataset.objects.count(), count - 1)
 
     def test_options(self):
         urls = [
@@ -255,7 +244,14 @@ class TestPermissions(TestCase):
         ]
         access = {
             "forbidden": [self.anonymous_client],
-            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+            "allowed": [
+                self.readonly_client,
+                self.custodian_1_client,
+                self.custodian_2_client,
+                self.admin_client,
+                self.data_engineer_1_client,
+                self.data_engineer_2_client
+            ]
         }
         for client in access['forbidden']:
             for url in urls:
@@ -279,12 +275,12 @@ class TestPermissions(TestCase):
         url = reverse('api:dataset-list')
         client = self.admin_client
         resp = client.options(url)
-        self.assertEquals(status.HTTP_200_OK, resp.status_code)
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
         data = resp.json()
         choices = data.get('actions', {}).get('POST', {}).get('type', {}).get('choices', None)
         self.assertTrue(choices)
         expected = [{'value': d[0], 'display_name': d[1]} for d in Dataset.TYPE_CHOICES]
-        self.assertEquals(expected, choices)
+        self.assertEqual(expected, choices)
 
 
 class TestDataPackageValidation(helpers.BaseUserTestCase):
@@ -297,7 +293,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
 
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_GENERIC,
@@ -314,7 +310,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
 
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_OBSERVATION,
@@ -331,7 +327,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
 
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_SPECIES_OBSERVATION,
@@ -350,7 +346,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         """
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_GENERIC,
@@ -368,8 +364,8 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         :return:
         """
         project = self.project_1
-        client = self.custodian_1_client
-        ds = self._create_dataset_with_schema(project, client, helpers.GENERIC_SCHEMA)
+        client = self.data_engineer_1_client
+        ds = self._create_dataset_with_schema(project, self.data_engineer_1_client, helpers.GENERIC_SCHEMA)
         url = reverse('api:dataset-detail', kwargs={"pk": ds.pk})
         data = {
             "name": "New for Unit test",
@@ -390,7 +386,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         """
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_GENERIC,
@@ -409,8 +405,8 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         :return:
         """
         project = self.project_1
-        client = self.custodian_1_client
-        ds = self._create_dataset_with_schema(project, client, helpers.GENERIC_SCHEMA)
+        client = self.data_engineer_1_client
+        ds = self._create_dataset_with_schema(project, self.data_engineer_1_client, helpers.GENERIC_SCHEMA)
         url = reverse('api:dataset-detail', kwargs={"pk": ds.pk})
         data = {
             "name": "New for Unit test",
@@ -428,7 +424,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         data_package['resources'][0]['schema'] = {}
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_GENERIC,
@@ -449,7 +445,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
 
         project = self.project_1
         # project datum is not a Zone one
-        self.assertEquals(project.datum, 4326)
+        self.assertEqual(project.datum, 4326)
         self.assertFalse(is_projected_srid(project.datum))
 
         fields_no_zone = [
@@ -479,7 +475,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
             }
         ]
         url = reverse('api:dataset-list')
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_OBSERVATION,
@@ -491,7 +487,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         # check error message
         resp_data = resp.json()
         errors = resp_data.get('data_package')
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
         self.assertIn('Northing/easting coordinates require a zone', errors[0])
 
         # change the project datum
@@ -510,7 +506,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
 
         project = self.project_1
         # project datum is not a Zone one
-        self.assertEquals(project.datum, 4326)
+        self.assertEqual(project.datum, 4326)
         self.assertFalse(is_projected_srid(project.datum))
 
         fields = [
@@ -545,7 +541,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
             }
         ]
         url = reverse('api:dataset-list')
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         data = {
             "name": "New for Unit test",
             "type": Dataset.TYPE_OBSERVATION,
@@ -557,7 +553,7 @@ class TestDataPackageValidation(helpers.BaseUserTestCase):
         # check error message
         resp_data = resp.json()
         errors = resp_data.get('data_package')
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
         self.assertIn('Northing/easting coordinates require a zone', errors[0])
 
         # add required constraints
@@ -605,7 +601,7 @@ class TestRecordsView(helpers.BaseUserTestCase):
 
     def _more_setup(self):
         self.project = self.project_1
-        self.client = self.custodian_1_client
+        self.client = self.data_engineer_1_client
         self.dataset = self._create_dataset_with_schema(self.project, self.client, self.schema_fields)
         self.url = reverse('api:dataset-records', kwargs={'pk': self.dataset.pk})
 
@@ -804,7 +800,7 @@ class TestDatasetRecordsSearchAndOrdering(helpers.BaseUserTestCase):
         resp = self.client.get(url + '?ordering=row', format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         json_response = resp.json()
-        self.assertEquals(len(json_response), 11)
+        self.assertEqual(len(json_response), 11)
 
         # row start at 2
         sorted_rows = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -816,7 +812,7 @@ class TestDatasetRecordsSearchAndOrdering(helpers.BaseUserTestCase):
         resp = self.client.get(url + '?ordering=-row', format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         json_response = resp.json()
-        self.assertEquals(len(json_response), 11)
+        self.assertEqual(len(json_response), 11)
 
         record_rows = [record['source_info']['row'] for record in json_response]
         self.assertEqual(record_rows, list(reversed(sorted_rows)))

@@ -19,24 +19,22 @@ sys.path.insert(0, os.path.join(PROJECT_DIR, 'apps'))
 
 # Security settings
 DEBUG = env('DEBUG', False)
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = env('SECRET_KEY', 'wjdh^hIO)jj5')
 CSRF_COOKIE_SECURE = env('CSRF_COOKIE_SECURE', False)
 SESSION_COOKIE_SECURE = env('SESSION_COOKIE_SECURE', False)
-if not DEBUG:
-    # Localhost, UAT and Production hosts
-    ALLOWED_HOSTS = [
-        'localhost',
-        '127.0.0.1',
-        'biosys.dbca.wa.gov.au',
-        'biosys.dbca.wa.gov.au.',
-        'biosys-uat.dbca.wa.gov.au',
-        'biosys-uat.dbca.wa.gov.au.',
-    ]
+ALLOWED_HOSTS = env('ALLOWED_HOSTS', [
+    'localhost',
+    '127.0.0.1',
+    'biosys.dbca.wa.gov.au',
+    'biosys.dbca.wa.gov.au.',
+    'biosys-uat.dbca.wa.gov.au',
+    'biosys-uat.dbca.wa.gov.au.',
+])
 
 # Application definition
 # The variables below are added to all responses in biosys/context_processors.py
 SITE_TITLE = 'BioSys - WA Biological Survey Database'
-APPLICATION_VERSION_NO = '4.0.0'
+APPLICATION_VERSION_NO = '5.0.0'
 
 INSTALLED_APPS = (
     'grappelli',  # Must be before django.contrib.admin
@@ -50,14 +48,16 @@ INSTALLED_APPS = (
     'django.contrib.postgres',
 
     'rest_framework',
-    'rest_framework_swagger',
     'rest_framework.authtoken',
     'dry_rest_permissions',
     'rest_framework_gis',
+    'django_filters',
     'corsheaders',
+    'drf_yasg',
+    'reversion',
+    'storages',
 
     'django_extensions',
-    'reversion',
     'bootstrap3',
     'timezone_field'
 )
@@ -69,7 +69,7 @@ PROJECT_APPS = (
 
 INSTALLED_APPS += PROJECT_APPS
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -79,9 +79,14 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.gzip.GZipMiddleware',
-    'dpaw_utils.middleware.SSOLoginMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-)
+]
+
+EXTRA_MIDDLEWARE = env('EXTRA_MIDDLEWARE', [
+    'dpaw_utils.middleware.SSOLoginMiddleware'
+])
+
+MIDDLEWARE += EXTRA_MIDDLEWARE
 
 ROOT_URLCONF = 'biosys.urls'
 
@@ -113,24 +118,28 @@ LOGIN_URL = '/login/'
 LOGOUT_URL = '/logout/'
 LOGIN_REDIRECT_URL = '/'
 
+AUTHENTICATION_BACKENDS = env('AUTHENTICATION_BACKENDS', [
+    'django.contrib.auth.backends.ModelBackend',
+])
+EXPORTER_CLASS = env('EXPORTER_CLASS', 'main.api.exporters.DefaultExporter')
+
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
+    'DEFAULT_AUTHENTICATION_CLASSES': env('REST_FRAMEWORK_DEFAULT_AUTHENTICATION_CLASSES', [
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.BasicAuthentication',
         'main.api.authentication.NoCsrfSessionAuthentication',
-    ],
+    ]),
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
     'DEFAULT_PERMISSION_CLASSES': [
-        # 'rest_framework.permissions.DjangoModelPermissions' # this permission breaks the explorer.
-        'rest_framework.permissions.IsAuthenticated',
+        env('REST_FRAMEWORK_DEFAULT_PERMISSION_CLASS', 'rest_framework.permissions.AllowAny'),
     ],
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
         # 'rest_framework.renderers.BrowsableAPIRenderer', # commented because we use the swagger explorer
     ),
     'DEFAULT_FILTER_BACKENDS': [
-        'rest_framework.filters.DjangoFilterBackend',
+        'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.OrderingFilter'
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
@@ -148,7 +157,7 @@ SWAGGER_SETTINGS = {
             'name': 'Authorization'
         }
     },
-    'USE_SESSION_AUTH': True,
+    'USE_SESSION_AUTH': env('SWAGGER_USE_SESSION_AUTH', False),
     'APIS_SORTER': 'alpha',
 }
 
@@ -164,7 +173,23 @@ CORS_ORIGIN_REGEX_WHITELIST = env('CORS_ORIGIN_WHITELIST', [
 WSGI_APPLICATION = 'biosys.wsgi.application'
 
 # Database
-DATABASES = {'default': database.config()}
+if env('RDS_DB_NAME'):
+    # AWS settings found
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.contrib.gis.db.backends.postgis',
+            'NAME': env('RDS_DB_NAME'),
+            'USER': env('RDS_USERNAME'),
+            'PASSWORD': env('RDS_PASSWORD'),
+            'HOST': env('RDS_HOSTNAME'),
+            'PORT': env('RDS_PORT'),
+        }
+    }
+else:
+    # look for a DATABASE_URL
+    DATABASES = {
+        'default': database.config(name='DATABASE_URL', default='postgis://postgres:postgres@localhost/biosys')
+    }
 
 # Internationalization
 LANGUAGE_CODE = 'en-au'
@@ -190,7 +215,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 if not os.path.exists(os.path.join(BASE_DIR, 'media')):
     os.mkdir(os.path.join(BASE_DIR, 'media'))
 # Absolute filesystem path to the directory that will hold user-uploaded files.
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = env('MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
 MEDIA_URL = '/media/'
@@ -219,13 +244,14 @@ BOOTSTRAP3 = {
     'set_placeholder': False,
 }
 
-HERBIE_SPECIES_WFS_URL = env('HERBIE_SPECIES_WFS_URL',
-                             'https://kmi.dbca.wa.gov.au/geoserver/ows?service=wfs&version=1.1.0&'
-                             'request=GetFeature&typeNames=public:herbie_hbvspecies_public&outputFormat=application/json')
+# The class that should provide a mapping between the species scientific name and the species name_id.
+# To use the WA Herbarium web service set SPECIES_FACADE_CLASS='main.utils_species.HerbieFacade'
+# in the environment file.
+SPECIES_FACADE_CLASS = env('SPECIES_FACADE_CLASS', None)
 
 # Logging settings
 # Ensure that the logs directory exists:
-LOG_FOLDER = os.path.join(BASE_DIR, 'logs')
+LOG_FOLDER = env('LOG_FOLDER', os.path.join(BASE_DIR, 'logs'))
 if not os.path.exists(LOG_FOLDER):
     os.mkdir(LOG_FOLDER)
 LOGGING = {
@@ -269,13 +295,6 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'precise',
         },
-        'import_lci': {
-            'level': env('LOG_LCI_LEVEL', 'ERROR'),
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOG_FOLDER, 'import_lci.log'),
-            'mode': 'w',
-            'formatter': 'import_legacy',
-        }
     },
     'loggers': {
         '': {
@@ -287,18 +306,9 @@ LOGGING = {
             'handlers': ['mail_admins'],
             'level': 'ERROR',
             'propagate': False,
-        },
-        'import_lci': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False
         }
     }
 }
-
-AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
-)
 
 # Grappelli settings
 GRAPPELLI_ADMIN_TITLE = SITE_TITLE + ' administration'
@@ -306,3 +316,32 @@ GRAPPELLI_ADMIN_TITLE = SITE_TITLE + ' administration'
 # Email settings
 EMAIL_HOST = env('EMAIL_HOST', 'email.host')
 EMAIL_PORT = env('EMAIL_PORT', 25)
+
+###################################################################################
+#  Static and media files settings
+#  Change this settings to host you static or media
+#  files on S3.
+#  For other settings or storage options refer to:
+#  https://django-storages.readthedocs.io/en/latest/index.html
+####################################################################################
+# static files
+# for static on S3 use 'main.backends.storages.S3StaticStorage'
+STATICFILES_STORAGE = env('STATICFILES_STORAGE', 'django.contrib.staticfiles.storage.StaticFilesStorage')
+# if using S3 the next setting specifies a bucket 'folder' for the static files
+STATICFILES_LOCATION = env('STATICFILES_LOCATION', 'static')
+# media files
+# for media on S3 use main.backends.storages.S3MediaStorage
+DEFAULT_FILE_STORAGE = env('DEFAULT_FILE_STORAGE', 'django.core.files.storage.FileSystemStorage')
+# if using S3 the next setting specifies a bucket 'folder' for the media files.
+MEDIAFILES_LOCATION = env('MEDIAFILES_LOCATION', 'media')
+
+# AWS settings
+AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME', 'BUCKET_NAME')
+AWS_S3_REGION_NAME = env('AWS_S3_REGION_NAME', 'ap-southeast-2')
+AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID', 'xxxxxxxxxxxxxxxxxxxx')
+AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY', 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy')
+S3_USE_SIGV4 = True
+
+# If using a CDN or a S3 static website tell django-storages the domain to use to refer to static files.
+# By default it is s3.<region>.amazonaws.com/<bucket>/...
+AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN', None)

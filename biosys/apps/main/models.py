@@ -9,10 +9,12 @@ from tableschema import validate as tableschema_validate
 from tableschema import exceptions as tableschema_exceptions
 from django.conf import settings
 from django.contrib.gis.db import models
+from django.contrib.gis.db.models import Extent
 from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ValidationError
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.text import Truncator
+from django.db.models.query_utils import Q
 from timezone_field import TimeZoneField
 
 from main.constants import DATUM_CHOICES, MODEL_SRID
@@ -23,8 +25,70 @@ logger = logging.getLogger(__name__)
 
 
 @python_2_unicode_compatible
+class Program(models.Model):
+    name = models.CharField(max_length=300, null=False, blank=False, unique=True,
+                            verbose_name="Name", help_text="Enter a name for the program (required).")
+    code = models.CharField(max_length=30, null=True, blank=True,
+                            verbose_name="Code",
+                            help_text="Provide a brief code or acronym for this program.")
+
+    description = models.TextField(null=True, blank=True,
+                                   verbose_name="Description", help_text="")
+
+    data_engineers = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        help_text="Users that can create/update projects and dataset schema within this program."
+    )
+
+    def is_data_engineer(self, user):
+        return user in self.data_engineers.all()
+
+    # API permissions
+    @staticmethod
+    def has_read_permission(request):
+        return True
+
+    def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_metadata_permission(request):
+        return True
+
+    def has_object_metadata_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_create_permission(request):
+        return is_admin(request.user)
+
+    @staticmethod
+    def has_update_permission(request):
+        return is_admin(request.user)
+
+    @staticmethod
+    def has_object_update_permission(request):
+        return is_admin(request.user)
+
+    @staticmethod
+    def has_destroy_permission(request):
+        return is_admin(request.user)
+
+    @staticmethod
+    def has_object_destroy_permission(request):
+        return is_admin(request.user)
+
+    def __str__(self):
+        return self.name
+
+
+@python_2_unicode_compatible
 class Project(models.Model):
     DEFAULT_TIMEZONE = settings.TIME_ZONE
+
+    program = models.ForeignKey(Program, blank=False, null=False, on_delete=models.CASCADE,
+                                help_text="The program this project belongs to.")
 
     name = models.CharField(max_length=300, null=False, blank=False, unique=True,
                             verbose_name="Name", help_text="Enter a name for the project (required).")
@@ -61,6 +125,9 @@ class Project(models.Model):
     def is_custodian(self, user):
         return user in self.custodians.all()
 
+    def is_data_engineer(self, user):
+        return self.program.is_data_engineer(user)
+
     # API permissions
     @staticmethod
     def has_read_permission(request):
@@ -78,7 +145,19 @@ class Project(models.Model):
 
     @staticmethod
     def has_create_permission(request):
-        return True
+        """
+        Admin or data_engineer of the program the project would belong to.
+        Check that the user is a data_engineer of the program pk passed in the POST data.
+        :param request:
+        :return:
+        """
+        result = False
+        if is_admin(request.user):
+            result = True
+        elif 'program' in request.data:
+            program = Program.objects.filter(pk=request.data['program']).first()
+            result = program is not None and program.is_data_engineer(request.user)
+        return result
 
     @staticmethod
     def has_update_permission(request):
@@ -90,18 +169,34 @@ class Project(models.Model):
         return True
 
     def has_object_update_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        """
+        Admin or program data_engineer or project custodian
+        :param request:
+        :return:
+        """
+        user = request.user
+        return is_admin(user) or self.program.is_data_engineer(user)
 
     @staticmethod
     def has_destroy_permission(request):
         return True
 
     def has_object_destroy_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        """
+        Admin or program data_engineer or project custodian
+        :param request:
+        :return:
+        """
+        user = request.user
+        return is_admin(user) or self.program.is_data_engineer(user)
 
     @property
     def centroid(self):
         return self.geometry.centroid if self.geometry else None
+
+    @property
+    def extent(self):
+        return self.geometry.extent if self.geometry else None
 
     @property
     def dataset_count(self):
@@ -125,7 +220,8 @@ class Project(models.Model):
 @python_2_unicode_compatible
 class Site(models.Model):
     project = models.ForeignKey('Project', null=False, blank=False,
-                                verbose_name="Project", help_text="Select the project this site is part of (required)")
+                                verbose_name="Project", help_text="Select the project this site is part of (required)",
+                                on_delete=models.CASCADE)
     name = models.CharField(max_length=150, blank=True,
                             verbose_name="Name",
                             help_text="Enter a more descriptive name for this site, if one exists.")
@@ -140,6 +236,9 @@ class Site(models.Model):
 
     def is_custodian(self, user):
         return self.project.is_custodian(user)
+
+    def is_data_engineer(self, user):
+        return self.project.is_data_engineer(user)
 
     # API permissions
     @staticmethod
@@ -159,17 +258,18 @@ class Site(models.Model):
     @staticmethod
     def has_create_permission(request):
         """
-        Custodian and admin only
+        Custodian and admin and data engineer
         Check that the user is a custodian of the project pk passed in the POST data.
         :param request:
         :return:
         """
         result = False
-        if is_admin(request.user):
+        user = request.user
+        if is_admin(user):
             result = True
         elif 'project' in request.data:
             project = Project.objects.filter(pk=request.data['project']).first()
-            result = project is not None and project.is_custodian(request.user)
+            result = project is not None and project.is_custodian(user) or project.is_data_engineer(user)
         return result
 
     @staticmethod
@@ -182,14 +282,16 @@ class Site(models.Model):
         return True
 
     def has_object_update_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        user = request.user
+        return is_admin(user) or self.is_custodian(user) or self.is_data_engineer(user)
 
     @staticmethod
     def has_destroy_permission(request):
         return True
 
     def has_object_destroy_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        user = request.user
+        return is_admin(user) or self.is_custodian(user) or self.project.is_data_engineer(user)
 
     @property
     def centroid(self):
@@ -214,7 +316,7 @@ class Dataset(models.Model):
         (TYPE_SPECIES_OBSERVATION, 'Species observation')
     ]
     project = models.ForeignKey('Project', null=False, blank=False, related_name='projects',
-                                related_query_name='project')
+                                related_query_name='project', on_delete=models.CASCADE)
     name = models.CharField(max_length=200, null=False, blank=False)
     code = models.CharField(max_length=50, blank=True)
     type = models.CharField(max_length=100, null=False, blank=False, choices=TYPE_CHOICES, default=TYPE_GENERIC)
@@ -245,7 +347,11 @@ class Dataset(models.Model):
 
     @property
     def record_count(self):
-        return self.record_model.objects.filter(dataset=self).count()
+        return self.record_queryset.count()
+
+    @property
+    def extent(self):
+        return self.record_queryset.aggregate(Extent('geometry'))['geometry__extent']
 
     @property
     def schema_class(self):
@@ -269,8 +375,64 @@ class Dataset(models.Model):
         return self.resources[0]
 
     @property
+    def resource_name(self):
+        return self.resource['name']
+
+    @property
     def resources(self):
         return self.data_package.get('resources', [])
+
+    @property
+    def foreign_keys(self):
+        # note: don't use the self.schema (schema object) it is too slow.
+        return self.schema_data.get('foreignKeys', [])
+
+    @property
+    def has_foreign_keys(self):
+        return bool(self.foreign_keys)
+
+    @property
+    def foreign_keys_resource_names(self):
+        """
+        Return a list of all the resource names referenced as foreign key in the schema
+        :return:
+        """
+        # note: don't use the self.schema (schema object) it is too slow.
+        result = []
+        for fk in (self.foreign_keys or []):
+            resource_name = fk.get('reference', {}).get('resource')
+            if resource_name:
+                result.append(resource_name)
+        return result
+
+    @property
+    def get_parent_dataset(self):
+        """
+        If the schema declared some foreign keys, lookup for the first dataset that matches a foreign key.
+        Rules:
+        - it must belong to the same project
+        - the resource name referenced in the foreign key must match a dataset name, code or datapackage
+        first resource name.
+        :return: a matching dataset or None
+        """
+        fk_resource_names = self.foreign_keys_resource_names
+        if fk_resource_names:
+            initial_queryset = Dataset.objects.filter(project=self.project)
+            resource_name_query = Q(name__in=fk_resource_names) | \
+                                  Q(code__in=fk_resource_names) | \
+                                  Q(data_package__resources__0__name__in=fk_resource_names)
+            # TODO: we support only one FK
+            return initial_queryset.filter(resource_name_query).first()
+        else:
+            return None
+
+    @property
+    def has_primary_key(self):
+        """
+        Check uf this dataset has a declared primaryKey in its schema
+        :return:
+        """
+        return bool(self.schema_data.get('primaryKey'))
 
     @staticmethod
     def validate_data_package(data_package, dataset_type, project=None):
@@ -333,6 +495,42 @@ class Dataset(models.Model):
     def is_custodian(self, user):
         return self.project.is_custodian(user)
 
+    def is_data_engineer(self, user):
+        return self.project.is_data_engineer(user)
+
+    def has_foreign_key_to(self, dataset):
+        """
+        Check if this dataset has declared a foreign key to the given dataset
+        We check the resources name against the dataset name, code and resource name
+        :return: True if FK found.
+        """
+        for resource_name in self.foreign_keys_resource_names:
+            if resource_name in [dataset.name, dataset.code, dataset.resource_name]:
+                return True
+        return False
+
+    def get_children_datasets(self):
+        """
+        Return all the datasets within the project that have declared a foreign key to this dataset.
+        :return: a list (NOT a QuerySet) of dataset
+        """
+        # TODO: use a proper json field lookup for foreign key to return a queryset
+        return [ds for ds in Dataset.objects.filter(project=self.project) if ds.has_foreign_key_to(self)]
+
+    def get_fk_lookup_fields_for_dataset(self, dataset):
+        """
+        Traverse this dataset declared foreign keys and find the first one that matches the given dataset.
+        If found it will return a tuple (parent_field, child_field) for a mapping between the child_field (our field)
+        and it's parent (from the given dataset)
+        :return: a tuple (parent_field, child_field) if a fk to the given dataset is found or (None, None)
+        """
+        for fk in self.schema.foreign_keys:
+            if fk.reference_resource in [dataset.name, dataset.code, dataset.resource_name]:
+                parent_field = fk.parent_data_field_name
+                child_field = fk.data_field
+                return parent_field, child_field
+        return None, None
+
     # API permissions
     @staticmethod
     def has_read_permission(request):
@@ -351,17 +549,18 @@ class Dataset(models.Model):
     @staticmethod
     def has_create_permission(request):
         """
-        Custodian and admin only
+        Data engineers and admin only
         Check that the user is a custodian of the project pk passed in the POST data
         :param request:
         :return:
         """
         result = False
-        if is_admin(request.user):
+        user = request.user
+        if is_admin(user):
             result = True
         elif 'project' in request.data:
             project = Project.objects.filter(pk=request.data['project']).first()
-            result = project is not None and project.is_custodian(request.user)
+            result = project is not None and project.is_data_engineer(user)
         return result
 
     @staticmethod
@@ -374,14 +573,16 @@ class Dataset(models.Model):
         return True
 
     def has_object_update_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        user = request.user
+        return is_admin(user) or self.is_data_engineer(user)
 
     @staticmethod
     def has_destroy_permission(request):
         return True
 
     def has_object_destroy_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        user = request.user
+        return is_admin(user) or self.project.is_data_engineer(user)
 
     class Meta:
         unique_together = ('project', 'name')
@@ -390,9 +591,9 @@ class Dataset(models.Model):
 
 @python_2_unicode_compatible
 class Record(models.Model):
-    dataset = models.ForeignKey(Dataset, null=False, blank=False)
+    dataset = models.ForeignKey(Dataset, null=False, blank=False, on_delete=models.CASCADE)
     data = JSONField()
-    site = models.ForeignKey(Site, null=True, blank=True)
+    site = models.ForeignKey(Site, null=True, blank=True, on_delete=models.SET_NULL)
     # Fields for Observation and Species Observation
     datetime = models.DateTimeField(null=True, blank=True)
     geometry = models.GeometryField(srid=MODEL_SRID, spatial_index=True, null=True, blank=True)
@@ -403,6 +604,14 @@ class Record(models.Model):
                                   verbose_name="Name ID", help_text="The unique ID from the species database")
     # to store information about the source of the record, like excel filename, row number in file etc...
     source_info = JSONField(null=True, blank=True)
+
+    # curation flags
+    validated = models.BooleanField(default=False)
+    locked = models.BooleanField(default=False)
+
+    # id provided by client (e.g mobile)
+    client_id = models.CharField(max_length=1024, null=True, blank=True)
+
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
 
@@ -413,8 +622,54 @@ class Record(models.Model):
     def data_with_id(self):
         return dict({'id': self.id}, **self.data)
 
+    @property
+    def parents(self):
+        """
+        If the record dataset schema has a declared foreign key, look for the parents of this record.
+        :return: a Record queryset or Record.objects.none()
+        """
+        if self.dataset.has_foreign_keys:
+            parent_dataset = self.dataset.get_parent_dataset
+            if parent_dataset:
+                parent_field, child_field = self.dataset.get_fk_lookup_fields_for_dataset(parent_dataset)
+                if parent_field and child_field:
+                    child_value = self.data[child_field]
+                    if child_value:
+                        query = Q(dataset=parent_dataset) & Q(data__contains={parent_field: child_value})
+                        return Record.objects.filter(query)
+            return Record.objects.none()
+        else:
+            return None
+
+    @property
+    def children(self):
+        """
+        If a dataset schema has a declared foreign key to the dataset of this record, look for children
+        Important note: Only a dataset with a declared 'primaryKey' in schema can be used for children lookup.
+        :return: a Record queryset or None if the dataset has no declared primaryKey
+        """
+        if self.dataset.has_primary_key:
+            children_datasets = self.dataset.get_children_datasets()
+            if children_datasets:
+                query = None
+                for ds in children_datasets:
+                    parent_field, child_field = ds.get_fk_lookup_fields_for_dataset(self.dataset)
+                    if parent_field and child_field:
+                        parent_value = self.data[parent_field]
+                        if parent_value:
+                            dataset_query = Q(dataset=ds, data__contains={child_field: parent_value})
+                            query = query | dataset_query if query else dataset_query
+                if query:
+                    return Record.objects.filter(query)
+            return Record.objects.none()
+        else:
+            return None
+
     def is_custodian(self, user):
         return self.dataset.is_custodian(user)
+
+    def is_data_engineer(self, user):
+        return self.dataset.is_data_engineer(user)
 
     # API permissions
     @staticmethod
@@ -440,11 +695,12 @@ class Record(models.Model):
         :return:
         """
         result = False
-        if is_admin(request.user):
+        user = request.user
+        if is_admin(user):
             result = True
         elif 'dataset' in request.data:
             ds = Dataset.objects.filter(pk=request.data['dataset']).first()
-            result = ds is not None and ds.is_custodian(request.user)
+            result = ds is not None and ds.is_custodian(user) or ds.is_data_engineer(user)
         return result
 
     @staticmethod
@@ -457,28 +713,54 @@ class Record(models.Model):
         return True
 
     def has_object_update_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        user = request.user
+        return is_admin(user) or self.is_custodian(user) or self.is_data_engineer(user)
 
     @staticmethod
     def has_destroy_permission(request):
         return True
 
     def has_object_destroy_permission(self, request):
-        return is_admin(request.user) or self.is_custodian(request.user)
+        user = request.user
+        return is_admin(user) or self.is_custodian(user) or self.is_data_engineer(user)
 
     class Meta:
         ordering = ['id']
 
 
+def get_media_path(instance, filename):
+    """
+    The function used in Media file field to build the path of the uploaded file.
+    see model below
+    https://docs.djangoproject.com/en/1.11/ref/models/fields/#filefield
+    :param instance:
+    :param filename:
+    :return: string
+    """
+    try:
+        return 'project_{project}/dataset_{dataset}/record_{record}/{filename}'.format(
+            project=instance.project.id,
+            dataset=instance.dataset.id,
+            record=instance.record.id,
+            filename=filename
+        )
+    except Exception as e:
+        logger.exception('Error while building the media file name')
+        return 'unknown/{}'.format(filename)
+
+
 @python_2_unicode_compatible
-class DatasetFile(models.Model):
-    file = models.FileField(upload_to='%Y/%m/%d')
-    uploaded_date = models.DateTimeField(auto_now_add=True)
-    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
-    dataset = models.ForeignKey(Dataset, blank=False, null=True)
+class Media(models.Model):
+    file = models.FileField(upload_to=get_media_path)
+    record = models.ForeignKey(Record, blank=False, null=False, on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "media"
 
     def __str__(self):
-        return self.file.name
+        return self.filename
 
     @property
     def path(self):
@@ -487,3 +769,260 @@ class DatasetFile(models.Model):
     @property
     def filename(self):
         return path.basename(self.path)
+
+    @property
+    def dataset(self):
+        return self.record.dataset
+
+    @property
+    def project(self):
+        return self.dataset.project
+
+    def is_custodian(self, user):
+        return self.record.is_custodian(user)
+
+    def is_data_engineer(self, user):
+        return self.record.is_data_engineer(user)
+
+    # API permissions
+    @staticmethod
+    def has_read_permission(request):
+        return True
+
+    def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_metadata_permission(request):
+        return True
+
+    def has_object_metadata_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_create_permission(request):
+        """
+        Custodian and admin only
+        Check that the user is a custodian of the dataset pk passed in the POST data.
+        :param request:
+        :return:
+        """
+        result = False
+        user = request.user
+        if is_admin(user):
+            result = True
+        elif 'record' in request.data:
+            record = Record.objects.filter(pk=request.data['record']).first()
+            result = record is not None and record.is_custodian(user) or record.is_data_engineer(user)
+        return result
+
+    @staticmethod
+    def has_update_permission(request):
+        """
+        Update not allowed
+        :param request:
+        :return:
+        """
+        return False
+
+    @staticmethod
+    def has_destroy_permission(request):
+        return True
+
+    def has_object_destroy_permission(self, request):
+        return is_admin(request.user) or self.is_custodian(request.user) or self.is_data_engineer(request.user)
+
+
+def get_project_media_path(instance, filename):
+    """
+    The function used in ProjectMedia file field to build the path of the uploaded file.
+    see model below
+    https://docs.djangoproject.com/en/1.11/ref/models/fields/#filefield
+    :param instance:
+    :param filename:
+    :return: string
+    """
+    try:
+        return 'project_{project}/{filename}'.format(
+            project=instance.project.id,
+            filename=filename
+        )
+    except Exception as e:
+        logger.exception('Error while building the project media file name')
+        return 'unknown/{}'.format(filename)
+
+
+@python_2_unicode_compatible
+class ProjectMedia(models.Model):
+    file = models.FileField(upload_to=get_project_media_path)
+    project = models.ForeignKey(Project, blank=False, null=False, on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "project_media"
+
+    def __str__(self):
+        return self.filename
+
+    @property
+    def path(self):
+        return self.file.path
+
+    @property
+    def filename(self):
+        return path.basename(self.path)
+
+    @property
+    def filesize(self):
+        return self.file.size
+
+    def is_data_engineer(self, user):
+        return self.project.is_data_engineer(user)
+
+    # API permissions
+    @staticmethod
+    def has_read_permission(request):
+        return True
+
+    def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_metadata_permission(request):
+        return True
+
+    def has_object_metadata_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_create_permission(request):
+        """
+        Data engineer and admin only
+        Check that the user is a data engineer of the project pk passed in the POST data.
+        :param request:
+        :return:
+        """
+        result = False
+        user = request.user
+        if is_admin(user):
+            result = True
+        elif 'project' in request.data:
+            project = Project.objects.filter(pk=request.data['project']).first()
+            result = project is not None and project.is_data_engineer(user)
+        return result
+
+    @staticmethod
+    def has_update_permission(request):
+        """
+        Update not allowed
+        :param request:
+        :return:
+        """
+        return False
+
+    @staticmethod
+    def has_destroy_permission(request):
+        return True
+
+    def has_object_destroy_permission(self, request):
+        return is_admin(request.user) or self.is_data_engineer(request.user)
+
+
+def get_dataset_media_path(instance, filename):
+    """
+    The function used in DatasetMedia file field to build the path of the uploaded file.
+    see model below
+    https://docs.djangoproject.com/en/1.11/ref/models/fields/#filefield
+    :param instance:
+    :param filename:
+    :return: string
+    """
+    try:
+        return 'project_{project}/dataset_{dataset}/{filename}'.format(
+            project=instance.project.id,
+            dataset=instance.dataset.id,
+            filename=filename
+        )
+    except Exception as e:
+        logger.exception('Error while building the dataset media file name')
+        return 'unknown/{}'.format(filename)
+
+
+@python_2_unicode_compatible
+class DatasetMedia(models.Model):
+    file = models.FileField(upload_to=get_dataset_media_path)
+    dataset = models.ForeignKey(Dataset, blank=False, null=False, on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "dataset_media"
+
+    def __str__(self):
+        return self.filename
+
+    @property
+    def path(self):
+        return self.file.path
+
+    @property
+    def filename(self):
+        return path.basename(self.path)
+
+    @property
+    def filesize(self):
+        return self.file.size
+
+    @property
+    def project(self):
+        return self.dataset.project
+
+    def is_data_engineer(self, user):
+        return self.dataset.is_data_engineer(user)
+
+    # API permissions
+    @staticmethod
+    def has_read_permission(request):
+        return True
+
+    def has_object_read_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_metadata_permission(request):
+        return True
+
+    def has_object_metadata_permission(self, request):
+        return True
+
+    @staticmethod
+    def has_create_permission(request):
+        """
+        Data engineer and admin only
+        Check that the user is a data engineer of the dataset pk passed in the POST data.
+        :param request:
+        :return:
+        """
+        result = False
+        user = request.user
+        if is_admin(user):
+            result = True
+        elif 'dataset' in request.data:
+            dataset = Dataset.objects.filter(pk=request.data['dataset']).first()
+            result = dataset is not None and dataset.is_data_engineer(user)
+        return result
+
+    @staticmethod
+    def has_update_permission(request):
+        """
+        Update not allowed
+        :param request:
+        :return:
+        """
+        return False
+
+    @staticmethod
+    def has_destroy_permission(request):
+        return True
+
+    def has_object_destroy_permission(self, request):
+        return is_admin(request.user) or self.is_data_engineer(request.user)

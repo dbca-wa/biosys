@@ -252,14 +252,16 @@ class RecordCreator:
             counter += 1
             yield self._create_record(data, counter)
 
-    # TODO: Save the numeric fields (number and integer) as JSON number (not string). It will allow proper ordering.
     def _create_record(self, row, counter):
         """
-        :param row:
+        :param row: a {column(string): value(string)} dictionary
         :return: record, RecordValidatorResult
         """
         validator_result = self.validator.validate(row)
         record = None
+        # The row values comes as string but we want to save numeric field as json number not string to allow a
+        # correct ordering. The next call will cast the numeric field into python int or float.
+        row = self.schema.cast_numbers(row)
         try:
             if validator_result.is_valid:
                 site = self._get_or_create_site(row)
@@ -327,10 +329,20 @@ class RecordCreator:
 class DataPackageBuilder:
 
     @staticmethod
-    def infer_from_file(file_path, format_='xlsx', name=None):
+    def infer_from_file(file_path, format_='xlsx', name=None, infer_dataset_type=True):
+        """
+        This is the main entry point for inferring a data package from a file
+        :param file_path: the path
+        :param format_: the file format xlsx or csv
+        :param name: set the name property of your data package. If not provided the filename will be used.
+        :param infer_dataset_type: if this is set to True the inferrer will try to detect the dataset type and enforce
+        some rules, like required fields for location, date etc...
+        If False the dataset type will be generic and no dataset type specific changes are applied.
+        :return: a DataPackageBuilder
+        """
         dir_name = path.dirname(file_path)
         builder = DataPackageBuilder(base_path=dir_name, title=name)
-        builder._add_resource_from_file(file_path, format_=format_, name=name)
+        builder._add_resource_from_file(file_path, format_=format_, name=name, infer_dataset_type=infer_dataset_type)
         return builder
 
     @staticmethod
@@ -350,14 +362,30 @@ class DataPackageBuilder:
         field[BiosysSchema.BIOSYS_KEY_NAME] = biosys_tag
 
     def __init__(self, descriptor=None, title=None, **kwargs):
+        """
+        You should not use the constructor directly but use the infer_from_file static method.
+        :param descriptor: An initial json data package descriptor. If none it will generate a blank
+        :param title: if a title is given it will be set in the descriptor along with the required name.
+        :param kwargs: kwargs that can de passed to the underlying frictionless datapackage.Package
+        """
         descriptor = descriptor or {}
         if title:
             descriptor['title'] = title
             descriptor['name'] = slugify(title)
         self.package = datapackage.Package(descriptor, **kwargs)
         self.biosys_errors = []
+        # set the dataset type to be generic.
+        self.dataset_type = Dataset.TYPE_GENERIC
 
-    def _add_resource_from_file(self, file_path, format_='xlsx', name=None):
+    def _add_resource_from_file(self, file_path, format_='xlsx', name=None, infer_dataset_type=True):
+        """
+        See the static infer_from_file for usage.
+        :param file_path:
+        :param format_:
+        :param name:
+        :param infer_dataset_type:
+        :return:
+        """
         try:
             file_name = path.basename(file_path)
             name = slugify(name or path.splitext(file_name)[0])
@@ -366,8 +394,13 @@ class DataPackageBuilder:
                 'name': name,
                 'format': format_
             })
+            # This is the frictionless inferrer
             self.package.infer()
-            self._biosys_infer()
+            # apply some in-house rules.
+            self._apply_custom_rules()
+            if infer_dataset_type:
+                self._biosys_infer()
+            self.package.commit()
             # biosys support only one resources by package
             if len(self.resources) > 1:
                 self.biosys_errors.append(
@@ -377,23 +410,6 @@ class DataPackageBuilder:
         except Exception as e:
             self.biosys_errors.append(e)
             return None
-
-    def infer_biosys_type(self):
-        """
-        Use the schema models in utils to infer the type.
-        The constructor should throw an exception if something is not correct
-        :return:
-        """
-        # TODO: use a better control workflow than exception
-        try:
-            SpeciesObservationSchema(self.schema)
-            return Dataset.TYPE_SPECIES_OBSERVATION
-        except Exception:
-            try:
-                ObservationSchema(self.schema)
-                return Dataset.TYPE_OBSERVATION
-            except Exception:
-                return Dataset.TYPE_GENERIC
 
     @property
     def valid(self):
@@ -426,14 +442,13 @@ class DataPackageBuilder:
     def get_fields_by_name(self, name):
         return [f for f in self.fields if f.get('name') == name]
 
-    def _biosys_infer(self):
+    def _apply_custom_rules(self):
         """
         Rules:
         - Fields of type 'any' should be converted to type 'string'
         - Fields of type 'date' or 'datetime' should have format = 'any' instead of default
           (the 'any' makes the date parser more flexible)
-        - infer observation type
-        - infer species observation type.
+        :return: None
         """
         for field in self.fields:
             type_ = field.get('type')
@@ -445,10 +460,17 @@ class DataPackageBuilder:
             if type_ in ['date', 'datetime'] and format_ == 'default':
                 field['format'] = 'any'
 
+    def _biosys_infer(self):
+        """
+        Biosys dataset type specific. Will look into schema to detect date, location, species_name and tag these column
+        and enforce required.
+        """
         is_observation = self._infer_observation()
         if is_observation:
-            self._infer_species_observation()
-        self.package.commit()
+            self.dataset_type = Dataset.TYPE_OBSERVATION
+            is_species_observation = self._infer_species_observation()
+            if is_species_observation:
+                self.dataset_type = Dataset.TYPE_SPECIES_OBSERVATION
 
     def _infer_observation(self):
         """

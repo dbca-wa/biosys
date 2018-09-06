@@ -1,6 +1,7 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
 import datetime
+import logging
 from collections import OrderedDict
 from os import path
 
@@ -8,23 +9,29 @@ from django.contrib.auth import get_user_model, logout
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.conf import settings
 from dry_rest_permissions.generics import DRYPermissions
-from rest_framework import viewsets, filters, generics, status
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework import viewsets, generics, status
+from rest_framework.parsers import MultiPartParser, FormParser, FileUploadParser, JSONParser
 from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
 from rest_framework.views import APIView, Response
+from rest_framework.settings import import_from_string
 
 from main import models, constants
 from main.api import serializers
+from main.api import filters
 from main.api.helpers import to_bool
 from main.api.uploaders import SiteUploader, FileReader, RecordCreator, DataPackageBuilder
 from main.api.validators import get_record_validator_for_dataset
 from main.models import Project, Site, Dataset, Record
 from main.utils_auth import is_admin
-from main.utils_data_package import Exporter
-from main.utils_http import WorkbookResponse
-from main.utils_species import HerbieFacade
+from main.api.exporters import DefaultExporter
+from main.utils_http import WorkbookResponse, CSVFileResponse
+from main.utils_species import NoSpeciesFacade
 from main.utils_misc import search_json_fields, order_by_json_field
+
+
+logger = logging.getLogger(__name__)
 
 
 class UserPermission(BasePermission):
@@ -62,16 +69,21 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, UserPermission,)
     queryset = get_user_model().objects.all()
     serializer_class = serializers.UserSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
-    filter_fields = ('username', 'first_name', 'last_name', 'email')
+    filter_class = filters.UserFilterSet
+
+
+class ProgramViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
+    queryset = models.Program.objects.all()
+    serializer_class = serializers.ProgramSerializer
+    filter_class = filters.ProgramFilterSet
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Project.objects.all()
     serializer_class = serializers.ProjectSerializer
-    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
-    filter_fields = ('id', 'name', 'custodians', 'code')
+    filter_class = filters.ProjectFilterSet
 
 
 class ProjectPermission(BasePermission):
@@ -194,39 +206,8 @@ class SiteViewSet(viewsets.ModelViewSet):
 class DatasetViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     serializer_class = serializers.DatasetSerializer
-
-    def get_queryset(self):
-        queryset = models.Dataset.objects.all()
-
-        name = self.request.query_params.get('name', None)
-        if name is not None:
-            queryset = queryset.filter(name=name)
-
-        project = self.request.query_params.get('project', None)
-        if project is not None:
-            queryset = queryset.filter(project=project)
-
-        type_ = self.request.query_params.get('type', None)
-        if type_ is not None:
-            queryset = queryset.filter(type=type_)
-
-        datetime_start = self.request.query_params.get('record__datetime__start', None)
-        if datetime_start is not None:
-            queryset = queryset.filter(record__datetime__gte=datetime_start)
-
-        datetime_end = self.request.query_params.get('record__datetime__end', None)
-        if datetime_end is not None:
-            queryset = queryset.filter(record__datetime__lte=datetime_end)
-
-        species_name = self.request.query_params.get('record__species_name', None)
-        if species_name is not None:
-            queryset = queryset.filter(record__species_name=species_name)
-
-        name_id = self.request.query_params.get('record__name_id', None)
-        if name_id is not None:
-            queryset = queryset.filter(record__name_id=name_id)
-
-        return queryset.distinct()
+    filter_class = filters.DatasetFilterSet
+    queryset = models.Dataset.objects.all().distinct()
 
 
 class DatasetRecordsPermission(BasePermission):
@@ -235,15 +216,23 @@ class DatasetRecordsPermission(BasePermission):
         return \
             request.method in SAFE_METHODS \
             or is_admin(user) \
-            or (hasattr(view, 'dataset') and view.dataset and view.dataset.is_custodian(user))
+            or (hasattr(view, 'dataset') and view.dataset and (view.dataset.is_custodian(user) or view.dataset.is_data_engineer(user)))
 
 
 class SpeciesMixin(object):
-    species_facade_class = HerbieFacade
+    species_facade_class = NoSpeciesFacade
+    if settings.SPECIES_FACADE_CLASS:
+        try:
+            species_facade_class = import_from_string(settings.SPECIES_FACADE_CLASS, 'SPECIES_FACADE_CLASS')
+        except Exception as e:
+            msg = "Error while importing the species facade class {}".format(settings.SPECIES_FACADE_CLASS)
+            logger.exception(msg)
 
 
 class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesMixin):
     permission_classes = (IsAuthenticated, DatasetRecordsPermission)
+    # TODO: the filters don't appear in the swagger
+    filter_class = filters.RecordFilterSet
 
     def __init__(self, **kwargs):
         super(DatasetRecordsView, self).__init__(**kwargs)
@@ -329,9 +318,7 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
     permission_classes = (IsAuthenticated, DRYPermissions)
     queryset = models.Record.objects.all()
     serializer_class = serializers.RecordSerializer
-    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
-    filter_fields = ('id', 'site', 'dataset__id', 'dataset__name', 'dataset__project__id', 'dataset__project__name',
-                     'datetime', 'species_name', 'name_id')
+    filter_class = filters.RecordFilterSet
 
     def __init__(self, **kwargs):
         super(RecordViewSet, self).__init__(**kwargs)
@@ -386,35 +373,82 @@ class RecordViewSet(viewsets.ModelViewSet, SpeciesMixin):
 
     def list(self, request, *args, **kwargs):
         # don't use 'format' param as it's kind of reserved by DRF
-        if self.request.query_params.get('output') == 'xlsx':
+        output = self.request.query_params.get('output')
+        if output in ['xlsx', 'csv']:
             if not self.dataset:
                 return Response(status=status.HTTP_400_BAD_REQUEST, data="No dataset specified")
             qs = self.filter_queryset(self.get_queryset())
-            exporter = Exporter(self.dataset, qs)
-            wb = exporter.to_workbook()
+
+            # exporter class
+            exporter_class = DefaultExporter
+            if hasattr(settings, 'EXPORTER_CLASS') and settings.EXPORTER_CLASS:
+                try:
+                    exporter_class = import_from_string(settings.EXPORTER_CLASS, 'EXPORTER_CLASS')
+                except Exception:
+                    logger.exception("Error while importing exporter class: {}".format(settings.EXPORTER_CLASS))
+
+            exporter = exporter_class(self.dataset, qs)
             now = datetime.datetime.now()
-            file_name = self.dataset.name + '_' + now.strftime('%Y-%m-%d-%H%M%S') + '.xlsx'
-            response = WorkbookResponse(wb, file_name)
+            file_name = self.dataset.name + '_' + now.strftime('%Y-%m-%d-%H%M%S')
+            if output == 'xlsx':
+                file_name += '.xlsx'
+                wb = exporter.to_workbook()
+                response = WorkbookResponse(wb, file_name)
+            else:
+                # csv
+                file_name += '.csv'
+                response = CSVFileResponse(file_name=file_name)
+                exporter.to_csv(response)
             return response
         else:
             return super(RecordViewSet, self).list(request, *args, **kwargs)
-
-    def filter_queryset(self, queryset):
-        # apply the model filters: filter_fields
-        queryset = super(RecordViewSet, self).filter_queryset(queryset)
-        # other filters
-        datetime_start = self.request.query_params.get('datetime__start', None)
-        if datetime_start is not None:
-            queryset = queryset.filter(datetime__gte=datetime_start)
-        datetime_end = self.request.query_params.get('datetime__end', None)
-        if datetime_end is not None:
-            queryset = queryset.filter(datetime__lte=datetime_end)
-        return queryset
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         self.dataset = instance.dataset
         return super(RecordViewSet, self).update(request, *args, **kwargs)
+
+
+class MediaViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
+    queryset = models.Media.objects.all()
+    filter_class = filters.MediaFilterSet
+    parser_classes = (FormParser, MultiPartParser, JSONParser)
+
+    def get_serializer_class(self):
+        if self.request.content_type.startswith('application/json'):
+            return serializers.Base64MediaSerializer
+        else:
+            # multipart form serializer
+            return serializers.MediaSerializer
+
+
+class ProjectMediaViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
+    queryset = models.ProjectMedia.objects.all()
+    filter_class = filters.ProjectMediaFilterSet
+    parser_classes = (FormParser, MultiPartParser, JSONParser)
+
+    def get_serializer_class(self):
+        if self.request.content_type.startswith('application/json'):
+            return serializers.Base64ProjectMediaSerializer
+        else:
+            # multipart form serializer
+            return serializers.ProjectMediaSerializer
+
+
+class DatasetMediaViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
+    queryset = models.DatasetMedia.objects.all()
+    filter_class = filters.DatasetMediaFilterSet
+    parser_classes = (FormParser, MultiPartParser, JSONParser)
+
+    def get_serializer_class(self):
+        if self.request.content_type.startswith('application/json'):
+            return serializers.Base64DatasetMediaSerializer
+        else:
+            # multipart form serializer
+            return serializers.DatasetMediaSerializer
 
 
 class StatisticsView(APIView):
@@ -464,11 +498,11 @@ class StatisticsView(APIView):
 
 
 class WhoamiView(APIView):
-    serializers = serializers.SimpleUserSerializer
+    serializers = serializers.WhoAmISerializer
 
     def get(self, request, **kwargs):
         data = {}
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
             data = self.serializers(request.user).data
         return Response(data)
 
@@ -640,6 +674,7 @@ class InferDatasetView(APIView):
             # upload handlers of the request.
             request.upload_handlers = [TemporaryFileUploadHandler(request)]
             file_obj = request.data.get('file')
+            infer_dataset_type = to_bool(request.data.get('infer_dataset_type', True))
             if file_obj is None:
                 response_data = {
                     'errors': 'Missing file'
@@ -654,12 +689,13 @@ class InferDatasetView(APIView):
             builder = DataPackageBuilder.infer_from_file(
                 file_obj.temporary_file_path(),
                 name=dataset_name,
-                format_=file_format
+                format_=file_format,
+                infer_dataset_type=infer_dataset_type
             )
             if builder.valid:
                 response_data = {
                     'name': builder.title,  # use the data-package title instead of name (name is a slug)
-                    'type': builder.infer_biosys_type(),
+                    'type': builder.dataset_type,
                     'data_package': builder.descriptor
                 }
                 return Response(response_data, status=status.HTTP_200_OK)

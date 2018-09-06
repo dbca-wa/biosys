@@ -7,11 +7,28 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_gis import serializers as serializers_gis
+from drf_extra_fields.fields import Base64ImageField
 
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
-from main.models import Project, Site, Dataset, Record
+from main.models import Program, Project, Site, Dataset, Record, Media, DatasetMedia, ProjectMedia
+from main.utils_auth import is_admin
 from main.utils_species import get_key_for_value
+
+
+class WhoAmISerializer(serializers.ModelSerializer):
+    is_admin = serializers.SerializerMethodField()
+    is_data_engineer = serializers.SerializerMethodField()
+
+    def get_is_admin(self, user):
+        return is_admin(user)
+
+    def get_is_data_engineer(self, user):
+        return Program.objects.filter(data_engineers__in=[user.pk]).count() > 0
+
+    class Meta:
+        model = get_user_model()
+        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'is_admin', 'is_data_engineer')
 
 
 class SimpleUserSerializer(serializers.ModelSerializer):
@@ -26,9 +43,16 @@ class UserSerializer(serializers.ModelSerializer):
         exclude = ('password',)
 
 
+class ProgramSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Program
+        fields = '__all__'
+
+
 class ProjectSerializer(serializers.ModelSerializer):
     timezone = serializers.CharField(required=False)
     centroid = serializers_gis.GeometryField(required=False, read_only=True)
+    extent = serializers.ListField(required=False, read_only=True)
     dataset_count = serializers.IntegerField(required=False, read_only=True)
     site_count = serializers.IntegerField(required=False, read_only=True)
     record_count = serializers.IntegerField(required=False, read_only=True)
@@ -48,6 +72,7 @@ class SiteSerializer(serializers.ModelSerializer):
 
 class DatasetSerializer(serializers.ModelSerializer):
     record_count = serializers.IntegerField(required=False, read_only=True)
+    extent = serializers.ListField(required=False, read_only=True)
 
     class DataPackageValidator:
         def __init__(self):
@@ -75,6 +100,8 @@ class DatasetSerializer(serializers.ModelSerializer):
         if has_data:
             different_type = instance.type != validated_data.get('type')
             different_data_package = instance.data_package != validated_data.get('data_package')
+            #TODO: implement a smart risk-checking of changing dataset schema when there's data.
+            different_data_package = False
             if different_type or different_data_package:
                 message = "This dataset already contains records. " \
                           "You cannot change this field. " \
@@ -125,6 +152,9 @@ class SchemaValidator:
 
 
 class RecordSerializer(serializers.ModelSerializer):
+    parent = serializers.SerializerMethodField()
+    children = serializers.SerializerMethodField()
+
     # TODO: Split the serializer in 3 subclasses. One for every type of dataset.
     def __init__(self, instance=None, **kwargs):
         super(RecordSerializer, self).__init__(instance, **kwargs)
@@ -257,6 +287,22 @@ class RecordSerializer(serializers.ModelSerializer):
         except Exception as e:
             raise serializers.ValidationError(e)
 
+    def get_parent(self, record):
+        """
+        Return the FIRST parent record.id or None
+        """
+        parents = record.parents
+        # currently client support only one parent
+        return parents[0].id if parents else None
+
+    def get_children(self, record):
+        """
+        :param record:
+        :return: an array of children record ids, or None
+        """
+        children = record.children
+        return [rec.id for rec in children] if children is not None else None
+
     def validate_data(self, data):
         """
         Validate the Record.data JSONField.
@@ -282,10 +328,65 @@ class RecordSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         instance = super(RecordSerializer, self).update(instance, validated_data)
-        return self.set_fields_from_data(instance, validated_data)
+        # if data are sent we need to update the extracted fields
+        if validated_data.get('data') is not None:
+            instance = self.set_fields_from_data(instance, validated_data)
+        return instance
 
     class Meta:
         model = Record
+        fields = '__all__'
+
+
+class Base64ProjectMediaSerializer(serializers.ModelSerializer):
+    # Only image supported for base 64
+    # TODO: investigate extending drf_extra_fields.fields.Base64FileField for video support
+    file = Base64ImageField(required=True)
+
+    class Meta:
+        model = ProjectMedia
+        fields = ('id', 'file', 'project', 'created', 'filesize')
+
+
+class ProjectMediaSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ProjectMedia
+        fields = ('id', 'file', 'project', 'created', 'filesize')
+
+
+class Base64DatasetMediaSerializer(serializers.ModelSerializer):
+    # Only image supported for base 64
+    # TODO: investigate extending drf_extra_fields.fields.Base64FileField for video support
+    file = Base64ImageField(required=True)
+
+    class Meta:
+        model = DatasetMedia
+        fields = ('id', 'file', 'dataset', 'created', 'filesize')
+
+
+class DatasetMediaSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = DatasetMedia
+        fields = ('id', 'file', 'dataset', 'created', 'filesize')
+
+
+
+class Base64MediaSerializer(serializers.ModelSerializer):
+    # Only image supported for base 64
+    # TODO: investigate extending drf_extra_fields.fields.Base64FileField for video support
+    file = Base64ImageField(required=True)
+
+    class Meta:
+        model = Media
+        fields = '__all__'
+
+
+class MediaSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Media
         fields = '__all__'
 
 

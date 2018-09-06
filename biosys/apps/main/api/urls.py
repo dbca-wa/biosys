@@ -8,10 +8,15 @@ from main.api import views as api_views
 
 router = routers.DefaultRouter()
 router.register(r'users?', api_views.UserViewSet, 'user')
+router.register(r'programs?', api_views.ProgramViewSet, 'program')
 router.register(r'projects?', api_views.ProjectViewSet, 'project')
 router.register(r'sites?', api_views.SiteViewSet, 'site')
 router.register(r'datasets?', api_views.DatasetViewSet, 'dataset')
 router.register(r'records?', api_views.RecordViewSet, 'record')
+router.register(r'media', api_views.MediaViewSet, 'media')
+router.register(r'project-media', api_views.ProjectMediaViewSet, 'project-media')
+router.register(r'dataset-media', api_views.DatasetMediaViewSet, 'dataset-media')
+
 
 url_patterns = [
     url(r'auth-token/', obtain_auth_token, name="auth_token"),
@@ -38,4 +43,5 @@ url_patterns = [
     url(r'utils/infer-dataset/?', api_views.InferDatasetView.as_view(), name='infer-dataset')
 ]
 
+app_name = 'api'
 urls = router.urls + url_patterns

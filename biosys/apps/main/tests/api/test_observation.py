@@ -1,98 +1,55 @@
 import datetime
+import json
 import re
 from os import path
 
-from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
 from django.core.urlresolvers import reverse
-from django.test import TestCase, override_settings
 from django.utils import timezone, six
-from django_dynamic_fixture import G
 from openpyxl import load_workbook
 from rest_framework import status
-from rest_framework.test import APIClient
 
 from main import constants
-from main.models import Project, Site, Dataset, Record
+from main.models import Site, Dataset, Record
+from main.tests import factories
 from main.tests.api import helpers
 from main.tests.test_data_package import clone
-from main.utils_auth import is_admin
 
 
-class TestPermissions(TestCase):
+class TestPermissions(helpers.BaseUserTestCase):
     """
     Test Permissions
     Get: authenticated
-    Update: admin, custodians
-    Create: admin, custodians
-    Delete: admin, custodians
+    Update: admin, data_engineer, custodians
+    Create: admin, data_engineer, custodians
+    Delete: admin, data_engineer, custodians
     """
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-observations'
-    ]
-
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Site1").first()
-        self.ds_1 = Dataset.objects.filter(name="Observation1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = self.ds_1.record_model.objects.filter(dataset=self.ds_1).first()
+        super(TestPermissions, self).setUp()
+        rows = [
+            ['What', 'When', 'Latitude', 'Longitude', 'Comments'],
+            ['Chubby bat', '2018-06-01', -32, 115.75, 'It is huge!']
+        ]
+        self.ds_1 = self._create_dataset_and_records_from_rows(rows)
+        self.assertEqual(self.ds_1.type, Dataset.TYPE_OBSERVATION)
+        self.record_1 = self.ds_1.record_set.first()
         self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-
-        self.custodian_2_user = User.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.custodian_2_user.set_password(password)
-        self.custodian_2_user.save()
-        self.custodian_2_client = APIClient()
-        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
-        self.site_2 = Site.objects.filter(code="Site2").first()
-        self.ds_2 = Dataset.objects.filter(name="Observation2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
-
-        self.readonly_user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
-        self.readonly_user.set_password(password)
-        self.readonly_user.save()
-        self.readonly_client = APIClient()
-        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
-
-        self.anonymous_client = APIClient()
 
     def test_get(self):
         urls = [
             reverse('api:record-list'),
-            reverse('api:record-detail', kwargs={'pk': 1})
+            reverse('api:record-detail', kwargs={'pk': self.record_1.pk})
         ]
         access = {
             "forbidden": [self.anonymous_client],
-            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+            "allowed": [
+                self.readonly_client,
+                self.custodian_1_client,
+                self.custodian_2_client,
+                self.admin_client,
+                self.data_engineer_1_client,
+                self.data_engineer_2_client
+            ]
         }
         for client in access['forbidden']:
             for url in urls:
@@ -109,7 +66,7 @@ class TestPermissions(TestCase):
 
     def test_create(self):
         """
-        Admin and custodians
+        Admin, custodians and data engineers
         :return:
         """
         urls = [reverse('api:record-list')]
@@ -117,14 +74,21 @@ class TestPermissions(TestCase):
         rec = self.record_1
         data = {
             "dataset": rec.dataset.pk,
-            "site": rec.site.pk,
             "data": rec.data,
             "datetime": rec.datetime,
             "geometry": rec.geometry.geojson
         }
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
-            "allowed": [self.admin_client, self.custodian_1_client]
+            "forbidden": [
+                self.anonymous_client,
+                self.readonly_client,
+                self.custodian_2_client,
+                self.data_engineer_2_client
+            ],
+            "allowed": [
+                self.admin_client,
+                self.custodian_1_client
+            ]
         }
         for client in access['forbidden']:
             for url in urls:
@@ -153,18 +117,23 @@ class TestPermissions(TestCase):
         data = [
             {
                 "dataset": rec.dataset.pk,
-                "site": rec.site.pk,
                 "data": rec.data
             },
             {
                 "dataset": rec.dataset.pk,
-                "site": rec.site.pk,
                 "data": rec.data
             }
         ]
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client,
-                          self.admin_client, self.custodian_1_client],
+            "forbidden": [
+                self.anonymous_client,
+                self.readonly_client,
+                self.custodian_2_client,
+                self.admin_client,
+                self.custodian_1_client,
+                self.data_engineer_1_client,
+                self.data_engineer_2_client
+            ],
             "allowed": []
         }
         for client in access['forbidden']:
@@ -197,8 +166,13 @@ class TestPermissions(TestCase):
             "data": updated_data,
         }
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
-            "allowed": [self.admin_client, self.custodian_1_client]
+            "forbidden": [
+                self.anonymous_client,
+                self.readonly_client,
+                self.custodian_2_client,
+                self.data_engineer_2_client
+            ],
+            "allowed": [self.admin_client, self.custodian_1_client, self.data_engineer_1_client]
         }
 
         for client in access['forbidden']:
@@ -221,15 +195,24 @@ class TestPermissions(TestCase):
 
     def test_delete(self):
         """
-        Currently admin + custodian
+        Currently admin, custodians and data engineers
         :return:
         """
         rec = self.record_1
         urls = [reverse('api:record-detail', kwargs={'pk': rec.pk})]
         data = None
         access = {
-            "forbidden": [self.anonymous_client, self.readonly_client, self.custodian_2_client],
-            "allowed": [self.admin_client, self.custodian_1_client]
+            "forbidden": [
+                self.anonymous_client,
+                self.readonly_client,
+                self.custodian_2_client,
+                self.data_engineer_2_client
+            ],
+            "allowed": [
+                self.admin_client,
+                self.custodian_1_client,
+                self.data_engineer_1_client
+            ]
         }
 
         for client in access['forbidden']:
@@ -256,7 +239,14 @@ class TestPermissions(TestCase):
         ]
         access = {
             "forbidden": [self.anonymous_client],
-            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+            "allowed": [
+                self.readonly_client,
+                self.custodian_1_client,
+                self.custodian_2_client,
+                self.admin_client,
+                self.data_engineer_1_client,
+                self.data_engineer_2_client
+            ]
         }
         for client in access['forbidden']:
             for url in urls:
@@ -273,64 +263,28 @@ class TestPermissions(TestCase):
                 )
 
 
-class TestDataValidation(TestCase):
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-observations'
-    ]
+class TestDataValidation(helpers.BaseUserTestCase):
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Site1").first()
-        self.ds_1 = Dataset.objects.filter(name="Observation1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = self.ds_1.record_model.objects.filter(dataset=self.ds_1).first()
+        super(TestDataValidation, self).setUp()
+        self.ds_1 = self._create_dataset_with_schema(
+            self.project_1,
+            self.data_engineer_1_client,
+            self.observation_schema_with_with_all_possible_geometry_fields(),
+            dataset_type=Dataset.TYPE_OBSERVATION
+        )
+        # set the date
+        self.record_1 = self._create_record(
+            self.custodian_1_client,
+            self.ds_1,
+            {
+                'What': 'Chubby bat',
+                'When': '2018-06-30',
+                'Latitude': -32.0,
+                'Longitude': 115.75
+            }
+        )
         self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-
-        self.custodian_2_user = User.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.custodian_2_user.set_password(password)
-        self.custodian_2_user.save()
-        self.custodian_2_client = APIClient()
-        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
-        self.site_2 = Site.objects.filter(code="Site2").first()
-        self.ds_2 = Dataset.objects.filter(name="Observation2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
-
-        self.readonly_user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
-        self.readonly_user.set_password(password)
-        self.readonly_user.save()
-        self.readonly_client = APIClient()
-        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
-
-        self.anonymous_client = APIClient()
 
     def test_create_one_happy_path(self):
         """
@@ -351,7 +305,7 @@ class TestDataValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_201_CREATED
         )
-        self.assertEquals(ds.record_queryset.count(), count + 1)
+        self.assertEqual(ds.record_queryset.count(), count + 1)
 
     def test_empty_not_allowed(self):
         ds = self.ds_1
@@ -367,7 +321,7 @@ class TestDataValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(ds.record_queryset.count(), count)
+        self.assertEqual(ds.record_queryset.count(), count)
 
     def test_create_column_not_in_schema(self):
         """
@@ -391,7 +345,7 @@ class TestDataValidation(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(ds.record_queryset.count(), count)
+        self.assertEqual(ds.record_queryset.count(), count)
 
     def test_update_column_not_in_schema(self):
         """
@@ -415,21 +369,23 @@ class TestDataValidation(TestCase):
             client.put(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(ds.record_queryset.count(), count)
+        self.assertEqual(ds.record_queryset.count(), count)
         self.assertEqual(
             client.patch(url, data, format='json').status_code,
             status.HTTP_400_BAD_REQUEST
         )
-        self.assertEquals(ds.record_queryset.count(), count)
+        self.assertEqual(ds.record_queryset.count(), count)
 
     def test_date_error(self):
         """
-        An observation must have a date
+        Test date values
         :return:
         """
         ds = self.ds_1
         record = self.record_1
         date_column = ds.schema.observation_date_field.name
+        # ensure the date field is set as required
+        self.assertTrue(ds.schema.observation_date_field.required)
         new_data = clone(record.data)
         url_post = reverse('api:record-list')
         url_update = reverse('api:record-detail', kwargs={'pk': record.pk})
@@ -446,7 +402,7 @@ class TestDataValidation(TestCase):
                 client.post(url_post, data, format='json').status_code,
                 status.HTTP_201_CREATED
             )
-            self.assertEquals(ds.record_queryset.count(), count + 1)
+            self.assertEqual(ds.record_queryset.count(), count + 1)
 
         invalid_values = [None, '', 'abcd']
         for value in invalid_values:
@@ -470,7 +426,7 @@ class TestDataValidation(TestCase):
                 client.patch(url_update, data, format='json').status_code,
                 status.HTTP_400_BAD_REQUEST
             )
-            self.assertEquals(ds.record_queryset.count(), count)
+            self.assertEqual(ds.record_queryset.count(), count)
 
     def test_geometry_error(self):
         """
@@ -496,7 +452,7 @@ class TestDataValidation(TestCase):
                 client.post(url_post, data, format='json').status_code,
                 status.HTTP_201_CREATED
             )
-            self.assertEquals(ds.record_queryset.count(), count + 1)
+            self.assertEqual(ds.record_queryset.count(), count + 1)
 
         invalid_values = [None, '', 'abcd']
         for value in invalid_values:
@@ -520,68 +476,36 @@ class TestDataValidation(TestCase):
                 client.patch(url_update, data, format='json').status_code,
                 status.HTTP_400_BAD_REQUEST
             )
-            self.assertEquals(ds.record_queryset.count(), count)
+            self.assertEqual(ds.record_queryset.count(), count)
 
 
-class TestSiteExtraction(TestCase):
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-observations'
-    ]
-
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
+class TestSiteExtraction(helpers.BaseUserTestCase):
     def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
+        super(TestSiteExtraction, self).setUp()
+        self.site_1 = factories.SiteFactory.create(
+            project=self.project_1,
+            code='COTT',
+            geometry="SRID=4326;"
+                     "LINESTRING (124.18701171875 -17.6484375, 126.38427734375 -18.615234375, 123.35205078125 "
+                     "-20.65869140625, 124.1650390625 -17.71435546875)",)
 
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Adolphus").first()
-        self.ds_1 = Dataset.objects.filter(name="Observation1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = self.ds_1.record_model.objects.filter(dataset=self.ds_1).first()
+        self.ds_1 = self._create_dataset_with_schema(
+            self.project_1,
+            self.data_engineer_1_client,
+            self.observation_schema_with_with_all_possible_geometry_fields(),
+            dataset_type=Dataset.TYPE_OBSERVATION
+        )
+        # set the date
+        self.record_1 = self._create_record(
+            self.custodian_1_client,
+            self.ds_1,
+            {
+                'What': 'Chubby bat',
+                'When': '2018-06-30',
+                'Site Code': 'COTT',
+            }
+        )
         self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-        self.assertTrue(self.record_1.site, self.site_1)
-
-        self.custodian_2_user = User.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.custodian_2_user.set_password(password)
-        self.custodian_2_user.save()
-        self.custodian_2_client = APIClient()
-        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
-        self.site_2 = Site.objects.filter(code="Site2").first()
-        self.ds_2 = Dataset.objects.filter(name="Observation2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
-
-        self.readonly_user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
-        self.readonly_user.set_password(password)
-        self.readonly_user.save()
-        self.readonly_client = APIClient()
-        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
-
-        self.anonymous_client = APIClient()
 
     def test_create_with_site(self):
         """
@@ -592,7 +516,7 @@ class TestSiteExtraction(TestCase):
         # clear all records
         ds = self.ds_1
         ds.record_queryset.delete()
-        self.assertEquals(ds.record_queryset.count(), 0)
+        self.assertEqual(ds.record_queryset.count(), 0)
         record = self.record_1
         data = {
             "dataset": record.dataset.pk,
@@ -607,21 +531,21 @@ class TestSiteExtraction(TestCase):
             client.post(url, data, format='json').status_code,
             status.HTTP_201_CREATED
         )
-        self.assertEquals(ds.record_queryset.count(), 1)
-        self.assertEquals(ds.record_queryset.first().site, expected_site)
+        self.assertEqual(ds.record_queryset.count(), 1)
+        self.assertEqual(ds.record_queryset.first().site, expected_site)
 
     def test_update_site(self):
         ds = self.ds_1
-        record = ds.record_queryset.filter(site=self.site_1).first()
-        self.assertIsNotNone(record)
-        site = Site.objects.filter(name="Site1").first()
+        record = self.record_1
+        site = factories.SiteFactory.create(code='NEW-SITE', project=self.project_1, geometry=Point(117, 33))
         # need to test if the site belongs to the dataset project or the update won't happen
         self.assertIsNotNone(site)
-        self.assertEquals(site.project, record.dataset.project)
-        self.assertNotEquals(record.site, site)
+        self.assertEqual(site.project, record.dataset.project)
+        self.assertNotEqual(record.site, site)
         # update site value
         schema = record.dataset.schema
         site_column = schema.get_fk_for_model('Site').data_field
+        self.assertIsNotNone(site_column)
         r_data = record.data
         r_data[site_column] = site.code
         data = {
@@ -629,10 +553,8 @@ class TestSiteExtraction(TestCase):
         }
         url = reverse('api:record-detail', kwargs={"pk": record.pk})
         client = self.custodian_1_client
-        self.assertEqual(
-            client.patch(url, data, format='json').status_code,
-            status.HTTP_200_OK
-        )
+        resp = client.patch(url, data, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         record.refresh_from_db()
         self.assertEqual(record.site, site)
 
@@ -729,8 +651,10 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_lat_long_and_date()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
-        self.assertEquals(dataset.record_queryset.count(), 0)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema,
+            dataset_type=Dataset.TYPE_OBSERVATION)
+        self.assertEqual(dataset.record_queryset.count(), 0)
         record_data = {
             'What': 'A test',
             'When': '01/06/2017',
@@ -747,9 +671,9 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
             client.post(url, payload, format='json').status_code,
             status.HTTP_201_CREATED
         )
-        self.assertEquals(dataset.record_queryset.count(), 1)
+        self.assertEqual(dataset.record_queryset.count(), 1)
         record = dataset.record_queryset.first()
-        self.assertEquals(timezone.localtime(record.datetime).date(), expected_date)
+        self.assertEqual(timezone.localtime(record.datetime).date(), expected_date)
         geometry = record.geometry
         self.assertIsInstance(geometry, Point)
         self.assertEqual(geometry.x, 116.0)
@@ -764,8 +688,10 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_lat_long_and_date()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
-        self.assertEquals(dataset.record_queryset.count(), 0)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
+        self.assertEqual(dataset.record_queryset.count(), 0)
         record_data = {
             'What': 'A test',
             'When': '01/06/2017',
@@ -804,10 +730,10 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
             client.patch(url, data=payload, format='json').status_code,
             status.HTTP_200_OK
         )
-        self.assertEquals(dataset.record_queryset.count(), 1)
+        self.assertEqual(dataset.record_queryset.count(), 1)
         record.refresh_from_db()
         expected_date = datetime.date(2016, 4, 20)
-        self.assertEquals(timezone.localtime(record.datetime).date(), expected_date)
+        self.assertEqual(timezone.localtime(record.datetime).date(), expected_date)
         geometry = record.geometry
         self.assertIsInstance(geometry, Point)
         self.assertEqual(geometry.x, new_long)
@@ -820,8 +746,9 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_no_date()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
-        self.assertEquals(dataset.record_queryset.count(), 0)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        self.assertEqual(dataset.record_queryset.count(), 0)
         record_data = {
             'What': 'A test',
             'Latitude': -32.0,
@@ -836,7 +763,7 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
             client.post(url, payload, format='json').status_code,
             status.HTTP_201_CREATED
         )
-        self.assertEquals(dataset.record_queryset.count(), 1)
+        self.assertEqual(dataset.record_queryset.count(), 1)
         record = dataset.record_queryset.first()
         self.assertIsNone(record.datetime)
         geometry = record.geometry
@@ -851,8 +778,10 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_no_date()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
-        self.assertEquals(dataset.record_queryset.count(), 0)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
+        self.assertEqual(dataset.record_queryset.count(), 0)
         record_data = {
             'What': 'A test',
             'Latitude': -32.0,
@@ -884,7 +813,7 @@ class TestDateTimeAndGeometryExtraction(helpers.BaseUserTestCase):
             client.patch(url, data=payload, format='json').status_code,
             status.HTTP_200_OK
         )
-        self.assertEquals(dataset.record_queryset.count(), 1)
+        self.assertEqual(dataset.record_queryset.count(), 1)
         record.refresh_from_db()
         self.assertIsNone(record.datetime)
         geometry = record.geometry
@@ -948,7 +877,9 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_easting_northing()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
 
@@ -972,7 +903,7 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         resp = client.post(url, data=payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         qs = dataset.record_queryset
-        self.assertEquals(qs.count(), 1)
+        self.assertEqual(qs.count(), 1)
         record = qs.first()
         geom = record.geometry
         # should be in WGS84 -> srid = 4326
@@ -980,14 +911,16 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         # convert it back to GAD / zone 50 -> srid = 28350
         geom.transform(28350)
         # compare with 2 decimal place precision
-        self.assertAlmostEquals(geom.x, easting, places=2)
-        self.assertAlmostEquals(geom.y, northing, places=2)
+        self.assertAlmostEqual(geom.x, easting, places=2)
+        self.assertAlmostEqual(geom.y, northing, places=2)
 
     def test_update_happy_path(self):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_easting_northing()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
 
@@ -1012,7 +945,7 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         resp = client.post(url, data=payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         qs = dataset.record_queryset
-        self.assertEquals(qs.count(), 1)
+        self.assertEqual(qs.count(), 1)
         record = qs.first()
         geom = record.geometry
         # should be in WGS84 -> srid = 4326
@@ -1020,8 +953,8 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         # convert it back to GAD / zone 50 -> srid = 28350
         geom.transform(28350)
         # compare with 2 decimal place precision. Should be different that of expected
-        self.assertNotAlmostEquals(geom.x, easting, places=2)
-        self.assertNotAlmostEquals(geom.y, northing, places=2)
+        self.assertNotAlmostEqual(geom.x, easting, places=2)
+        self.assertNotAlmostEqual(geom.y, northing, places=2)
 
         # send path to update the zone
         record_data = {
@@ -1044,8 +977,8 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         self.assertEqual(geom.srid, 4326)
         # convert it back to GAD / zone 50 -> srid = 28350
         geom.transform(28350)
-        self.assertAlmostEquals(geom.x, easting, places=2)
-        self.assertAlmostEquals(geom.y, northing, places=2)
+        self.assertAlmostEqual(geom.x, easting, places=2)
+        self.assertAlmostEqual(geom.y, northing, places=2)
 
     def test_default_datum(self):
         """
@@ -1101,7 +1034,9 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
             }
         ]
         schema = helpers.create_schema_from_fields(schema_fields)
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
 
@@ -1121,7 +1056,7 @@ class TestEastingNorthing(helpers.BaseUserTestCase):
         resp = client.post(url, data=payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         qs = dataset.record_queryset
-        self.assertEquals(qs.count(), 1)
+        self.assertEqual(qs.count(), 1)
         record = qs.first()
         geom = record.geometry
         # should be in WGS84 -> srid = 4326
@@ -1167,7 +1102,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             },
         ]
         schema = helpers.create_schema_from_fields(schema_fields)
-        schema = helpers.add_foreign_key_to_schema(schema, {
+        schema = helpers.add_model_field_foreign_key_to_schema(schema, {
             'schema_field': 'Site Code',
             'model': 'Site',
             'model_field': 'code'
@@ -1214,7 +1149,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             },
         ]
         schema = helpers.create_schema_from_fields(schema_fields)
-        schema = helpers.add_foreign_key_to_schema(schema, {
+        schema = helpers.add_model_field_foreign_key_to_schema(schema, {
             'schema_field': 'Site Code',
             'model': 'Site',
             'model_field': 'code'
@@ -1246,7 +1181,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             },
         ]
         schema = helpers.create_schema_from_fields(schema_fields)
-        schema = helpers.add_foreign_key_to_schema(schema, {
+        schema = helpers.add_model_field_foreign_key_to_schema(schema, {
             'schema_field': 'Site Code',
             'model': 'Site',
             'model_field': 'code'
@@ -1255,7 +1190,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         # create data set
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         dataset_name = "Observation with site foreign key and no geometry"
         payload = {
             "name": dataset_name,
@@ -1294,7 +1229,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             },
         ]
         schema = helpers.create_schema_from_fields(schema_fields)
-        schema = helpers.add_foreign_key_to_schema(schema, {
+        schema = helpers.add_model_field_foreign_key_to_schema(schema, {
             'schema_field': 'Project',  # project not site
             'model': 'Project',
             'model_field': 'title'
@@ -1303,7 +1238,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         # create data set
         url = reverse('api:dataset-list')
         project = self.project_1
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         dataset_name = "Observation with project foreign key and no geometry"
         payload = {
             "name": dataset_name,
@@ -1322,11 +1257,13 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_site_code_fk()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
-        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+        site = factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
         record_data = {
             'What': 'Hello! This is a test.',
             'When': '12/12/2017',
@@ -1352,11 +1289,13 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_site_code_fk()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
-        G(Site, code=site_code, geometry=site_geometry, project=project)
+        factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
         record_data = {
             'What': 'Hello! This is a test.',
             'When': '12/12/2017',
@@ -1377,7 +1316,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         site_code = 'Somewhere'
         site_geometry = Point(116.0, -30.0)
         # create the site
-        G(Site, code=site_code, geometry=site_geometry, project=project)
+        factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
         record_data = {
             'What': 'Yellow!',
             'When': '01/01/2017',
@@ -1402,10 +1341,12 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_site_code_fk()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         site_code = 'Cottesloe'
         # create the site
-        site = G(Site, code=site_code, geometry=None, project=project)
+        site = factories.SiteFactory(code=site_code, geometry=None, project=project)
         self.assertIsNone(site.geometry)
         record_data = {
             'What': 'Hello! This is a test.',
@@ -1428,7 +1369,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         field_name, message = errors[0].split('::')
         self.assertEqual(field_name, 'Site Code')
         # message should be something like:
-        expected_message = 'The site Cottesloe does not exist or has no geometry'
+        expected_message = 'The site Cottesloe has no geometry'
         self.assertEqual(message, expected_message)
 
     def test_schema_with_lat_long_and_site_fk(self):
@@ -1442,13 +1383,15 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_latlong_and_site_code_fk()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.latitude_field)
         self.assertIsNotNone(dataset.schema.longitude_field)
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
-        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+        site = factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
         # the observation geometry different than the site geometry
         observation_geometry = Point(site_geometry.x + 2, site_geometry.y + 2)
         self.assertNotEqual(site.geometry, observation_geometry)
@@ -1471,7 +1414,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         record = Record.objects.filter(id=resp.json().get('id')).first()
         self.assertIsNotNone(record)
         self.assertEqual(record.site, site)
-        self.assertEqual(record.geometry, observation_geometry)
+        self.assertEqual(record.geometry.geojson, observation_geometry.geojson)
 
         # lat/long no site
         record_data = {
@@ -1491,7 +1434,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         record = Record.objects.filter(id=resp.json().get('id')).first()
         self.assertIsNotNone(record)
         self.assertIsNone(record.site)
-        self.assertEqual(record.geometry, observation_geometry)
+        self.assertEqual(record.geometry.geojson, observation_geometry.geojson)
 
         # site without lat/long
         record_data = {
@@ -1511,7 +1454,7 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         record = Record.objects.filter(id=resp.json().get('id')).first()
         self.assertIsNotNone(record)
         self.assertEqual(record.site, site)
-        self.assertEqual(record.geometry, site_geometry)
+        self.assertEqual(record.geometry.geojson, site_geometry.geojson)
 
         # no lat/long no site -> error
         record_data = {
@@ -1536,16 +1479,18 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_site_code_fk()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         # create two sites
         site_1_code = 'Cottesloe'
         site_1_geometry = Point(115.76, -32.0)
-        site_1 = G(Site, code=site_1_code, geometry=site_1_geometry, project=project)
+        site_1 = factories.SiteFactory(code=site_1_code, geometry=site_1_geometry, project=project)
 
         site_2_code = 'Somewhere'
         site_2_geometry = Point(116.0, -30.0)
         # create the site
-        site_2 = G(Site, code=site_2_code, geometry=site_2_geometry, project=project)
+        site_2 = factories.SiteFactory(code=site_2_code, geometry=site_2_geometry, project=project)
 
         # data
         csv_data = [
@@ -1554,16 +1499,16 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             ['what_2', '02/02/2017', site_2_code]
         ]
         file_ = helpers.rows_to_xlsx_file(csv_data)
-        self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
+        self.assertEqual(0, Record.objects.filter(dataset=dataset).count())
         url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
         with open(file_, 'rb') as fp:
             payload = {
                 'file': fp
             }
             resp = client.post(url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             records = Record.objects.filter(dataset=dataset)
-            self.assertEquals(records.count(), len(csv_data) - 1)
+            self.assertEqual(records.count(), len(csv_data) - 1)
             r = [r for r in records if r.data['What'] == 'what_1'][0]
             self.assertEqual(r.site, site_1)
             self.assertEqual(r.geometry, site_1_geometry)
@@ -1580,15 +1525,17 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_site_code_fk()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         # create two sites the number 2 without a geometry
         site_1_code = 'Cottesloe'
         site_1_geometry = Point(115.76, -32.0)
-        site_1 = G(Site, code=site_1_code, geometry=site_1_geometry, project=project)
+        site_1 = factories.SiteFactory(code=site_1_code, geometry=site_1_geometry, project=project)
 
         site_2_code = 'Somewhere'
         site_2_geometry = None
-        G(Site, code=site_2_code, geometry=site_2_geometry, project=project)
+        factories.SiteFactory(code=site_2_code, geometry=site_2_geometry, project=project)
 
         csv_data = [
             ['What', 'When', 'Site Code'],
@@ -1596,17 +1543,17 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             ['what_2', '02/02/2017', site_2_code]
         ]
         file_ = helpers.rows_to_xlsx_file(csv_data)
-        self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
+        self.assertEqual(0, Record.objects.filter(dataset=dataset).count())
         url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
         with open(file_, 'rb') as fp:
             payload = {
                 'file': fp
             }
             resp = client.post(url, data=payload, format='multipart')
-            self.assertEquals(resp.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
             # Check that the good record is there.
             records = Record.objects.filter(dataset=dataset)
-            self.assertEquals(records.count(), 1)
+            self.assertEqual(records.count(), 1)
             r = records.first()
             self.assertEqual(r.site, site_1)
             self.assertEqual(r.geometry, site_1_geometry)
@@ -1621,16 +1568,18 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
         project = self.project_1
         client = self.custodian_1_client
         schema = self.schema_with_site_code_fk()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         # create two sites
         site_1_code = 'Cottesloe'
         site_1_geometry = Point(115.76, -32.0)
-        site_1 = G(Site, code=site_1_code, geometry=site_1_geometry, project=project)
+        site_1 = factories.SiteFactory(code=site_1_code, geometry=site_1_geometry, project=project)
 
         site_2_code = 'Somewhere'
         site_2_geometry = Point(116.0, -30.0)
         # create the site
-        site_2 = G(Site, code=site_2_code, geometry=site_2_geometry, project=project)
+        site_2 = factories.SiteFactory(code=site_2_code, geometry=site_2_geometry, project=project)
 
         # data
         csv_data = [
@@ -1639,16 +1588,16 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             ['what_2', '02/02/2017', site_2_code]
         ]
         file_ = helpers.rows_to_xlsx_file(csv_data)
-        self.assertEquals(0, Record.objects.filter(dataset=dataset).count())
+        self.assertEqual(0, Record.objects.filter(dataset=dataset).count())
         url = reverse('api:dataset-upload', kwargs={'pk': dataset.pk})
         with open(file_, 'rb') as fp:
             payload = {
                 'file': fp
             }
             resp = client.post(url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             records = Record.objects.filter(dataset=dataset)
-            self.assertEquals(records.count(), len(csv_data) - 1)
+            self.assertEqual(records.count(), len(csv_data) - 1)
             record_1 = [r for r in records if r.data['What'] == 'what_1'][0]
             self.assertEqual(record_1.site, site_1)
             self.assertEqual(record_1.geometry, site_1_geometry)
@@ -1668,10 +1617,10 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             self.assertEqual(resp.status_code, 200)
             # check that the record has been updated
             record_1.refresh_from_db()
-            self.assertEqual(record_1.geometry, new_geometry)
+            self.assertEqual(record_1.geometry.geojson, new_geometry.geojson)
             # site_2 record should be untouched
             record_2.refresh_from_db()
-            self.assertEqual(record_2.geometry, site_2_geometry)
+            self.assertEqual(record_2.geometry.geojson, site_2_geometry.geojson)
 
             # Use case: the record geometry should be updated ONLY if it matches exactly the site geometry
             # new geometry for record_1
@@ -1681,93 +1630,17 @@ class TestGeometryFromSite(helpers.BaseUserTestCase):
             self.assertNotEqual(new_record_geometry, new_site_geometry)
             record_1.geometry = new_record_geometry
             record_1.save()
-            self.assertNotEqual(record_1.geometry, record_1.site.geometry)
+            self.assertNotEqual(record_1.geometry.geojson, record_1.site.geometry.geojson)
             site = record_1.site
             site.geometry = new_site_geometry
             site.save()
             # check record not changed
             record_1.refresh_from_db()
             self.assertEqual(record_1.geometry, new_record_geometry)
-            self.assertNotEqual(record_1.geometry, record_1.site.geometry)
+            self.assertNotEqual(record_1.geometry.geojson, record_1.site.geometry.geojson)
 
 
 class TestMultipleGeometrySource(helpers.BaseUserTestCase):
-    @staticmethod
-    def schema_with_with_all_possible_geometry_field():
-        schema_fields = [
-            {
-                "name": "What",
-                "type": "string",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS
-            },
-            {
-                "name": "When",
-                "type": "date",
-                "constraints": helpers.REQUIRED_CONSTRAINTS,
-                "format": "any",
-                "biosys": {
-                    'type': 'observationDate'
-                }
-            },
-            {
-                "name": "Latitude",
-                "type": "number",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": 'latitude'
-                }
-            },
-            {
-                "name": "Longitude",
-                "type": "number",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": 'longitude'
-                }
-            },
-            {
-                "name": "Site Code",
-                "type": "string",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": "siteCode"
-                }
-            },
-            {
-                "name": "Easting",
-                "type": "number",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": 'easting'
-                }
-            },
-            {
-                "name": "Northing",
-                "type": "number",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": 'northing'
-                }
-            },
-            {
-                "name": "Datum",
-                "type": "string",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": 'datum'
-                }
-            },
-            {
-                "name": "Zone",
-                "type": "integer",
-                "constraints": helpers.NOT_REQUIRED_CONSTRAINTS,
-                "biosys": {
-                    "type": 'zone'
-                }
-            },
-        ]
-        schema = helpers.create_schema_from_fields(schema_fields)
-        return schema
 
     def test_geometry_easting_northing_precedence(self):
         """
@@ -1775,8 +1648,10 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         """
         project = self.project_1
         client = self.custodian_1_client
-        schema = self.schema_with_with_all_possible_geometry_field()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        schema = self.observation_schema_with_with_all_possible_geometry_fields()
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
 
@@ -1784,7 +1659,7 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
-        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+        site = factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
 
         # easting/northing: nearly (116.0, -32.0)
         easting = 405542.537
@@ -1833,8 +1708,10 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         """
         project = self.project_1
         client = self.custodian_1_client
-        schema = self.schema_with_with_all_possible_geometry_field()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        schema = self.observation_schema_with_with_all_possible_geometry_fields()
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
 
@@ -1842,7 +1719,7 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
-        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+        site = factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
 
         # lat/long
         longitude = 117.0
@@ -1887,8 +1764,10 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         """
         project = self.project_1
         client = self.custodian_1_client
-        schema = self.schema_with_with_all_possible_geometry_field()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        schema = self.observation_schema_with_with_all_possible_geometry_fields()
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
 
@@ -1896,7 +1775,7 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
-        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+        site = factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
 
         # easting/northing: nearly (116.0, -32.0)
         easting = 405542.537
@@ -1936,8 +1815,10 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
     def test_site_only(self):
         project = self.project_1
         client = self.custodian_1_client
-        schema = self.schema_with_with_all_possible_geometry_field()
-        dataset = self._create_dataset_with_schema(project, client, schema, dataset_type=Dataset.TYPE_OBSERVATION)
+        schema = self.observation_schema_with_with_all_possible_geometry_fields()
+        dataset = self._create_dataset_with_schema(
+            project, self.data_engineer_1_client, schema, dataset_type=Dataset.TYPE_OBSERVATION
+        )
         self.assertIsNotNone(dataset.schema.datum_field)
         self.assertIsNotNone(dataset.schema.zone_field)
 
@@ -1945,7 +1826,7 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         site_code = 'Cottesloe'
         site_geometry = Point(115.76, -32.0)
         # create the site
-        site = G(Site, code=site_code, geometry=site_geometry, project=project)
+        site = factories.SiteFactory(code=site_code, geometry=site_geometry, project=project)
 
         record_data = {
             'What': 'A record with all geometry fields populated',
@@ -1975,65 +1856,75 @@ class TestMultipleGeometrySource(helpers.BaseUserTestCase):
         self.assertAlmostEqual(geometry.y, site_geometry.y, places=4)
 
 
-class TestSerialization(TestCase):
-    fixtures = [
-        'test-users',
-        'test-projects',
-        'test-sites',
-        'test-datasets',
-        'test-observations'
-    ]
+class TestGeometryConversion(helpers.BaseUserTestCase):
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
-    def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
+    def test_lat_long_with_projected_project_datum(self):
+        """
+        see: https://youtrack.gaiaresources.com.au/youtrack/issue/BIOSYS-152
+        Use case:
+         - Project datum set to be a projected one, e.g GDA/Zone 56.
+         - Schema has a latitude, longitude, datum, zone, easting and northing field (the whole shebang)
+         - Post a record with lat=-32.0 long=115.75 and Datum=WGS84
+        Success if record.geometry is Point(115.75, -32.0)
+        """
+        # Create project with projected datum
+        program = factories.ProgramFactory.create()
+        program.data_engineers.add(self.data_engineer_1_user)
+        datum_srid = constants.get_datum_srid('GDA94 / MGA zone 56')
+        project = factories.ProjectFactory.create(
+            program=program,
+            datum=datum_srid
+        )
+        self.assertTrue(constants.is_projected_srid(project.datum))
+        project.custodians.add(self.custodian_1_user)
+        self.assertTrue(project.is_custodian(self.custodian_1_user))
 
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.site_1 = Site.objects.filter(code="Adolphus").first()
-        self.ds_1 = Dataset.objects.filter(name="Observation1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = self.ds_1.record_model.objects.filter(dataset=self.ds_1).first()
-        self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-        self.assertTrue(self.record_1.site, self.site_1)
+        # Dataset and records in lat/long
+        schema = self.observation_schema_with_with_all_possible_geometry_fields()
+        client = self.custodian_1_client
+        dataset = self._create_dataset_with_schema(
+            project,
+            self.data_engineer_1_client,
+            schema,
+            dataset_type=Dataset.TYPE_OBSERVATION
+        )
+        # post record
+        record_data = {
+            'When': "2018-05-25",
+            'Datum': 'WGS84',
+            'Latitude': -32.0,
+            'Longitude': 115.75
+        }
+        record = self._create_record(
+            client,
+            dataset,
+            record_data
+        )
+        self.assertIsNotNone(record)
+        self.assertIsNotNone(record.geometry)
+        self.assertEqual(record.geometry.x, 115.75)
+        self.assertEqual(record.geometry.y, -32.0)
 
-        self.custodian_2_user = User.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.custodian_2_user.set_password(password)
-        self.custodian_2_user.save()
-        self.custodian_2_client = APIClient()
-        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
-        self.site_2 = Site.objects.filter(code="Site2").first()
-        self.ds_2 = Dataset.objects.filter(name="Observation2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
+        # try with the upload end-point
+        dataset.record_set.all().delete()
+        rows = [
+            ['When', 'Datum', 'Latitude', 'Longitude'],
+            ['2018-05-25', 'WGS84', -32.0, 115.75]
+        ]
+        response = self._upload_records_from_rows(
+            rows,
+            dataset.pk,
+            strict=True
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        record = dataset.record_set.last()
+        self.assertIsNotNone(record)
+        self.assertIsNotNone(record.geometry)
+        self.assertEqual(record.geometry.x, 115.75)
+        self.assertEqual(record.geometry.y, -32.0)
 
-        self.readonly_user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.site_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.site_1.is_custodian(self.readonly_user))
-        self.readonly_user.set_password(password)
-        self.readonly_user.save()
-        self.readonly_client = APIClient()
-        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
 
-        self.anonymous_client = APIClient()
+class TestSerialization(helpers.BaseUserTestCase):
 
     def test_date_serialization_uses_project_timezone(self):
         # TODO: implement this
@@ -2041,23 +1932,18 @@ class TestSerialization(TestCase):
 
 
 class TestExport(helpers.BaseUserTestCase):
-    fixtures = helpers.BaseUserTestCase.fixtures + [
-        'test-sites',
-        'test-datasets',
-        'test-observations'
-    ]
 
-    def _more_setup(self):
-        self.ds_1 = Dataset.objects.filter(name="Observation1", project=self.project_1).first()
-        self.assertIsNotNone(self.ds_1)
-        self.assertTrue(self.ds_1.is_custodian(self.custodian_1_user))
-        self.record_1 = Record.objects.filter(dataset=self.ds_1).first()
-        self.assertIsNotNone(self.record_1)
-        self.assertTrue(self.record_1.is_custodian(self.custodian_1_user))
-
-        self.ds_2 = Dataset.objects.filter(name="Bats2", project=self.project_2).first()
-        self.assertTrue(self.ds_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.ds_1.is_custodian(self.custodian_2_user))
+    def setUp(self):
+        super(TestExport, self).setUp()
+        rows = [
+            ['When', 'Species', 'How Many', 'Latitude', 'Longitude', 'Comments'],
+            ['2018-02-07', 'Canis lupus', 1, -32.0, 115.75, ''],
+            ['2018-01-12', 'Chubby bat', 10, -32.0, 115.75, 'Awesome'],
+            ['2018-02-02', 'Canis dingo', 2, -32.0, 115.75, 'Watch out kids'],
+            ['2018-02-10', 'Unknown', 3, -32.0, 115.75, 'Canis?'],
+        ]
+        self.ds_1 = self._create_dataset_and_records_from_rows(rows)
+        self.assertEqual(self.ds_1.type, Dataset.TYPE_OBSERVATION)
 
     def test_happy_path_no_filter(self):
         client = self.custodian_1_client
@@ -2073,7 +1959,7 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         # check headers
         self.assertEqual(resp.get('content-type'),
                          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -2083,25 +1969,27 @@ class TestExport(helpers.BaseUserTestCase):
         match = re.match('attachment; filename=(.+)', content_disposition)
         self.assertIsNotNone(match)
         filename, ext = path.splitext(match.group(1))
-        self.assertEquals(ext, '.xlsx')
+        self.assertEqual(ext, '.xlsx')
         filename.startswith(dataset.name)
         # read content
         wb = load_workbook(six.BytesIO(resp.content), read_only=True)
         # one datasheet named from dataset
-        sheet_names = wb.get_sheet_names()
-        self.assertEquals(1, len(sheet_names))
-        self.assertEquals(dataset.name, sheet_names[0])
-        ws = wb.get_sheet_by_name(dataset.name)
+        sheet_names = wb.sheetnames
+        self.assertEqual(1, len(sheet_names))
+        self.assertEqual(dataset.name, sheet_names[0])
+        ws = wb[dataset.name]
         rows = list(ws.rows)
         expected_records = Record.objects.filter(dataset=dataset)
-        self.assertEquals(len(rows), expected_records.count() + 1)
+        self.assertEqual(len(rows), expected_records.count() + 1)
         headers = [c.value for c in rows[0]]
         schema = dataset.schema
         # all the columns of the schema should be in the excel
-        self.assertEquals(schema.headers, headers)
+        self.assertEqual(schema.headers, headers)
 
     def test_permission_ok_for_not_custodian(self):
-        """Export is a read action. Should be authorised for every logged-in user."""
+        """
+        Export is a read action. Should be authorised for every logged-in user.
+        """
         client = self.custodian_2_client
         dataset = self.ds_1
         url = reverse('api:record-list')
@@ -2113,7 +2001,7 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
     def test_permission_denied_if_not_logged_in(self):
         """Must be logged-in."""
@@ -2128,7 +2016,7 @@ class TestExport(helpers.BaseUserTestCase):
             resp = client.get(url, query)
         except Exception as e:
             self.fail("Export should not raise an exception: {}".format(e))
-        self.assertEquals(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class TestDateNotMandatory(helpers.BaseUserTestCase):
@@ -2188,7 +2076,7 @@ class TestDateNotMandatory(helpers.BaseUserTestCase):
         client = self.custodian_1_client
         dataset = self._create_dataset_with_schema(
             project,
-            client,
+            self.data_engineer_1_client,
             self.date_easting_northing_site_nothing_required_schema,
             Dataset.TYPE_OBSERVATION
         )
@@ -2216,3 +2104,61 @@ class TestDateNotMandatory(helpers.BaseUserTestCase):
         self.assertAlmostEqual(geometry.x, easting, places=2)
         self.assertAlmostEqual(geometry.y, northing, places=2)
 
+
+class TestPatch(helpers.BaseUserTestCase):
+
+    def test_patch_validated(self):
+        """
+        Test that we can patch just the 'validated' flag
+        :return:
+        """
+        rows = [
+            ['What', 'When', 'Latitude', 'Longitude', 'Comments'],
+            ['Chubby bat', '2018-06-01', -32, 115.75, 'It is huge!']
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
+        self.assertEqual(dataset.type, Dataset.TYPE_OBSERVATION)
+        records = dataset.record_set.all()
+        record = records.last()
+        self.assertIsNotNone(record)
+        self.assertFalse(record.validated)
+        previous_data = json.dumps(record.data)
+        # patch
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
+        client = self.custodian_1_client
+        payload = {
+            'validated': True
+        }
+        resp = client.patch(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        record.refresh_from_db()
+        self.assertTrue(record.validated)
+        self.assertTrue(json.dumps(record.data), previous_data)
+
+    def test_patch_locked(self):
+        """
+        Test that we can patch just the 'locked' flag
+        :return:
+        """
+        rows = [
+            ['What', 'When', 'Latitude', 'Longitude', 'Comments'],
+            ['Chubby bat', '2018-06-01', -32, 115.75, 'It is huge!']
+        ]
+        dataset = self._create_dataset_and_records_from_rows(rows)
+        self.assertEqual(dataset.type, Dataset.TYPE_OBSERVATION)
+        records = dataset.record_set.all()
+        record = records.last()
+        self.assertIsNotNone(record)
+        self.assertFalse(record.locked)
+        previous_data = json.dumps(record.data)
+        # patch
+        url = reverse('api:record-detail', kwargs={"pk": record.pk})
+        client = self.custodian_1_client
+        payload = {
+            'locked': True
+        }
+        resp = client.patch(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        record.refresh_from_db()
+        self.assertTrue(record.locked)
+        self.assertTrue(json.dumps(record.data), previous_data)

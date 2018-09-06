@@ -53,7 +53,7 @@ class InferTestBase(helpers.BaseUserTestCase):
 
         # Verify that we can create a dataset from the inference result.
         url = reverse('api:dataset-list')
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         project = self.project_1
         payload = {
             'project': project.pk,
@@ -79,14 +79,14 @@ class TestGenericSchema(InferTestBase):
             ['Frederic', 56, 80.5, 'a comment'],
             ['Hilda', 24, 56, '']
         ]
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         file_ = helpers.rows_to_xlsx_file(rows)
         with open(file_, 'rb') as fp:
             payload = {
                 'file': fp,
             }
             resp = client.post(self.url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             # should be json
             self.assertEqual(resp.get('content-type'), 'application/json')
             received = resp.json()
@@ -94,10 +94,10 @@ class TestGenericSchema(InferTestBase):
             # name should be set with the file name
             self.assertIn('name', received)
             file_name = path.splitext(path.basename(fp.name))[0]
-            self.assertEquals(file_name, received.get('name'))
+            self.assertEqual(file_name, received.get('name'))
             # type should be 'generic'
             self.assertIn('type', received)
-            self.assertEquals('generic', received.get('type'))
+            self.assertEqual('generic', received.get('type'))
 
             # data_package verification
             self.assertIn('data_package', received)
@@ -106,28 +106,28 @@ class TestGenericSchema(InferTestBase):
             # verify schema
             schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
             schema = utils_data_package.GenericSchema(schema_descriptor)
-            self.assertEquals(len(schema.fields), len(columns))
-            self.assertEquals(schema.field_names, columns)
+            self.assertEqual(len(schema.fields), len(columns))
+            self.assertEqual(schema.field_names, columns)
 
             field = schema.get_field_by_name('Name')
-            self.assertEquals(field.type, 'string')
+            self.assertEqual(field.type, 'string')
             self.assertFalse(field.required)
-            self.assertEquals(field.format, 'default')
+            self.assertEqual(field.format, 'default')
 
             field = schema.get_field_by_name('Age')
-            self.assertEquals(field.type, 'integer')
+            self.assertEqual(field.type, 'integer')
             self.assertFalse(field.required)
-            self.assertEquals(field.format, 'default')
+            self.assertEqual(field.format, 'default')
 
             field = schema.get_field_by_name('Weight')
-            self.assertEquals(field.type, 'number')
+            self.assertEqual(field.type, 'number')
             self.assertFalse(field.required)
-            self.assertEquals(field.format, 'default')
+            self.assertEqual(field.format, 'default')
 
             field = schema.get_field_by_name('Comments')
-            self.assertEquals(field.type, 'string')
+            self.assertEqual(field.type, 'string')
             self.assertFalse(field.required)
-            self.assertEquals(field.format, 'default')
+            self.assertEqual(field.format, 'default')
 
     def test_generic_string_and_number_simple_csv(self):
         """
@@ -139,14 +139,14 @@ class TestGenericSchema(InferTestBase):
             ['Frederic', '56', '80.5', 'a comment'],
             ['Hilda', '24', '56', '']
         ]
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         file_ = helpers.rows_to_csv_file(rows)
         with open(file_, 'rb') as fp:
             payload = {
                 'file': fp,
             }
             resp = client.post(self.url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             # should be json
             self.assertEqual(resp.get('content-type'), 'application/json')
             received = resp.json()
@@ -154,10 +154,10 @@ class TestGenericSchema(InferTestBase):
             # name should be set with the file name
             self.assertIn('name', received)
             file_name = path.splitext(path.basename(fp.name))[0]
-            self.assertEquals(file_name, received.get('name'))
+            self.assertEqual(file_name, received.get('name'))
             # type should be 'generic'
             self.assertIn('type', received)
-            self.assertEquals('generic', received.get('type'))
+            self.assertEqual('generic', received.get('type'))
 
             # data_package verification
             self.assertIn('data_package', received)
@@ -166,28 +166,28 @@ class TestGenericSchema(InferTestBase):
             # verify schema
             schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
             schema = utils_data_package.GenericSchema(schema_descriptor)
-            self.assertEquals(len(schema.fields), len(columns))
-            self.assertEquals(schema.field_names, columns)
+            self.assertEqual(len(schema.fields), len(columns))
+            self.assertEqual(schema.field_names, columns)
 
             field = schema.get_field_by_name('Name')
-            self.assertEquals(field.type, 'string')
+            self.assertEqual(field.type, 'string')
             self.assertFalse(field.required)
-            self.assertEquals(field.format, 'default')
+            self.assertEqual(field.format, 'default')
 
             field = schema.get_field_by_name('Age')
-            self.assertEquals(field.type, 'integer')
+            self.assertEqual(field.type, 'integer')
             self.assertFalse(field.required)
-            self.assertEquals(field.format, 'default')
+            self.assertEqual(field.format, 'default')
 
             field = schema.get_field_by_name('Weight')
-            self.assertEquals(field.type, 'number')
+            self.assertEqual(field.type, 'number')
             self.assertFalse(field.required)
-            self.assertEquals(field.format, 'default')
+            self.assertEqual(field.format, 'default')
 
             field = schema.get_field_by_name('Comments')
-            self.assertEquals(field.type, 'string')
+            self.assertEqual(field.type, 'string')
             self.assertFalse(field.required)
-            self.assertEquals(field.format, 'default')
+            self.assertEqual(field.format, 'default')
 
     def test_generic_date_iso_xls(self):
         """
@@ -203,14 +203,14 @@ class TestGenericSchema(InferTestBase):
             ['Another thing', dt.date(2017, 12, 29).isoformat()],
             ['Another thing', '2017-08-01']
         ]
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         file_ = helpers.rows_to_xlsx_file(rows)
         with open(file_, 'rb') as fp:
             payload = {
                 'file': fp,
             }
             resp = client.post(self.url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             received = resp.json()
             # data_package verification
             self.assertIn('data_package', received)
@@ -220,14 +220,14 @@ class TestGenericSchema(InferTestBase):
             schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
             schema = utils_data_package.GenericSchema(schema_descriptor)
             field = schema.get_field_by_name('What')
-            self.assertEquals(field.type, 'string')
+            self.assertEqual(field.type, 'string')
             self.assertFalse(field.required)
-            self.assertEquals(field.format, 'default')
+            self.assertEqual(field.format, 'default')
 
             field = schema.get_field_by_name('When')
-            self.assertEquals(field.type, 'date')
+            self.assertEqual(field.type, 'date')
             self.assertFalse(field.required)
-            self.assertEquals(field.format, 'any')
+            self.assertEqual(field.format, 'any')
 
     def test_mix_types_infer_most_plausible(self):
         """
@@ -246,14 +246,14 @@ class TestGenericSchema(InferTestBase):
             [4],
             [5]
         ]
-        client = self.custodian_1_client
+        client = self.data_engineer_1_client
         file_ = helpers.rows_to_xlsx_file(rows)
         with open(file_, 'rb') as fp:
             payload = {
                 'file': fp,
             }
             resp = client.post(self.url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             received = resp.json()
             # data_package verification
             self.assertIn('data_package', received)
@@ -263,7 +263,7 @@ class TestGenericSchema(InferTestBase):
             schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
             schema = utils_data_package.GenericSchema(schema_descriptor)
             field = schema.get_field_by_name('How Many')
-            self.assertEquals(field.type, 'integer')
+            self.assertEqual(field.type, 'integer')
 
     def test_csv_with_excel_content_type(self):
         """
@@ -293,11 +293,11 @@ class TestGenericSchema(InferTestBase):
             if six.PY3:
                 data = data.encode('utf-8')
             request = factory.generic('POST', self.url, data, content_type=content_type)
-            user = self.custodian_1_user
+            user = self.data_engineer_1_user
             token, _ = Token.objects.get_or_create(user=user)
-            force_authenticate(request, user=self.custodian_1_user, token=token)
+            force_authenticate(request, user=self.data_engineer_1_user, token=token)
             resp = view(request).render()
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             # should be json
             self.assertEqual(resp.get('content-type'), 'application/json')
             if six.PY3:
@@ -309,10 +309,10 @@ class TestGenericSchema(InferTestBase):
             # name should be set with the file name
             self.assertIn('name', received)
             file_name = path.splitext(path.basename(fp.name))[0]
-            self.assertEquals(file_name, received.get('name'))
+            self.assertEqual(file_name, received.get('name'))
             # type should be 'generic'
             self.assertIn('type', received)
-            self.assertEquals('generic', received.get('type'))
+            self.assertEqual('generic', received.get('type'))
 
             # data_package verification
             self.assertIn('data_package', received)
@@ -321,28 +321,69 @@ class TestGenericSchema(InferTestBase):
             # verify schema
             schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
             schema = utils_data_package.GenericSchema(schema_descriptor)
-            self.assertEquals(len(schema.fields), len(columns))
-            self.assertEquals(schema.field_names, columns)
+            self.assertEqual(len(schema.fields), len(columns))
+            self.assertEqual(schema.field_names, columns)
 
             field = schema.get_field_by_name('Name')
-            self.assertEquals(field.type, 'string')
+            self.assertEqual(field.type, 'string')
             self.assertFalse(field.required)
-            self.assertEquals(field.format, 'default')
+            self.assertEqual(field.format, 'default')
 
             field = schema.get_field_by_name('Age')
-            self.assertEquals(field.type, 'integer')
+            self.assertEqual(field.type, 'integer')
             self.assertFalse(field.required)
-            self.assertEquals(field.format, 'default')
+            self.assertEqual(field.format, 'default')
 
             field = schema.get_field_by_name('Weight')
-            self.assertEquals(field.type, 'number')
+            self.assertEqual(field.type, 'number')
             self.assertFalse(field.required)
-            self.assertEquals(field.format, 'default')
+            self.assertEqual(field.format, 'default')
 
             field = schema.get_field_by_name('Comments')
-            self.assertEquals(field.type, 'string')
+            self.assertEqual(field.type, 'string')
             self.assertFalse(field.required)
-            self.assertEquals(field.format, 'default')
+            self.assertEqual(field.format, 'default')
+
+    def test_infer_dataset_param(self):
+        """
+        Test that when the param infer_dataset_type is set to False the type in generic even if we have a
+        valid observation type
+        """
+        columns = ['What', 'Latitude', 'Longitude']
+        rows = [
+            columns,
+            ['Observation1', -32.0, 117.75],
+            ['Observation with lat/long as string', '-32.0', '115.75']
+        ]
+        client = self.custodian_1_client
+        file_ = helpers.rows_to_xlsx_file(rows)
+        with open(file_, 'rb') as fp:
+            # no param: should infer the type
+            payload = {
+                'file': fp,
+            }
+            resp = client.post(self.url, data=payload, format='multipart')
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
+            received = resp.json()
+            self.assertEqual(Dataset.TYPE_OBSERVATION, received.get('type'))
+
+            # with param: return generic.
+            fp.seek(0)
+            payload = {
+                'file': fp,
+                'infer_dataset_type': False
+            }
+            resp = client.post(self.url, data=payload, format='multipart')
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
+            received = resp.json()
+            self.assertEqual(Dataset.TYPE_GENERIC, received.get('type'))
+            schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
+            schema = utils_data_package.GenericSchema(schema_descriptor)
+            lat_field = schema.get_field_by_name('Latitude')
+            lon_field = schema.get_field_by_name('Longitude')
+            # no required constraints
+            self.assertFalse(lat_field.required)
+            self.assertFalse(lon_field.required)
 
 
 class TestObservationSchema(InferTestBase):
@@ -372,7 +413,7 @@ class TestObservationSchema(InferTestBase):
                 'file': fp,
             }
             resp = client.post(self.url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             received = resp.json()
             # data_package verification
             self.assertIn('data_package', received)
@@ -382,15 +423,15 @@ class TestObservationSchema(InferTestBase):
             schema = utils_data_package.GenericSchema(schema_descriptor)
             lat_field = schema.get_field_by_name('Latitude')
             lon_field = schema.get_field_by_name('Longitude')
-            self.assertEquals(lat_field.type, 'number')
-            self.assertEquals(lon_field.type, 'number')
+            self.assertEqual(lat_field.type, 'number')
+            self.assertEqual(lon_field.type, 'number')
             self.assertTrue(lat_field.required)
             self.assertTrue(lon_field.required)
             # biosys types
             self.assertTrue(BiosysSchema(lat_field.get(BiosysSchema.BIOSYS_KEY_NAME)).is_latitude())
             self.assertTrue(BiosysSchema(lon_field.get(BiosysSchema.BIOSYS_KEY_NAME)).is_longitude())
 
-            self.assertEquals(Dataset.TYPE_OBSERVATION, received.get('type'))
+            self.assertEqual(Dataset.TYPE_OBSERVATION, received.get('type'))
             # test biosys validity
             self.verify_inferred_data(received)
 
@@ -416,35 +457,35 @@ class TestObservationSchema(InferTestBase):
                 'file': fp,
             }
             resp = client.post(self.url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             received = resp.json()
             # type observation
-            self.assertEquals(Dataset.TYPE_OBSERVATION, received.get('type'))
+            self.assertEqual(Dataset.TYPE_OBSERVATION, received.get('type'))
 
             # verify fields attributes
             schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
             schema = utils_data_package.GenericSchema(schema_descriptor)
             lat_field = schema.get_field_by_name('Latitude')
-            self.assertEquals(lat_field.type, 'number')
+            self.assertEqual(lat_field.type, 'number')
             self.assertTrue(lat_field.required)
             biosys = lat_field.get('biosys')
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.LATITUDE_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.LATITUDE_TYPE_NAME)
 
             lon_field = schema.get_field_by_name('Longitude')
-            self.assertEquals(lon_field.type, 'number')
+            self.assertEqual(lon_field.type, 'number')
             self.assertTrue(lon_field.required)
             biosys = lon_field.get('biosys')
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.LONGITUDE_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.LONGITUDE_TYPE_NAME)
 
             # datum
             datum_field = schema.get_field_by_name('Datum')
-            self.assertEquals(datum_field.type, 'string')
+            self.assertEqual(datum_field.type, 'string')
             self.assertFalse(datum_field.required)
             biosys = datum_field.get('biosys')
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.DATUM_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.DATUM_TYPE_NAME)
 
             # test that we can save the dataset back.
             self.verify_inferred_data(received)
@@ -472,10 +513,10 @@ class TestObservationSchema(InferTestBase):
                 'file': fp,
             }
             resp = client.post(self.url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             received = resp.json()
             # should be an observation
-            self.assertEquals(Dataset.TYPE_OBSERVATION, received.get('type'))
+            self.assertEqual(Dataset.TYPE_OBSERVATION, received.get('type'))
             # data_package verification
             self.assertIn('data_package', received)
 
@@ -484,30 +525,30 @@ class TestObservationSchema(InferTestBase):
             schema = utils_data_package.GenericSchema(schema_descriptor)
             east_field = schema.get_field_by_name('Easting')
             self.assertIsNotNone(east_field)
-            self.assertEquals(east_field.type, 'number')
+            self.assertEqual(east_field.type, 'number')
             self.assertTrue(east_field.required)
             biosys = east_field.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.EASTING_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.EASTING_TYPE_NAME)
 
             north_field = schema.get_field_by_name('Northing')
             self.assertIsNotNone(north_field)
-            self.assertEquals(north_field.type, 'number')
+            self.assertEqual(north_field.type, 'number')
             self.assertTrue(north_field.required)
             biosys = north_field.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.NORTHING_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.NORTHING_TYPE_NAME)
 
             datum_field = schema.get_field_by_name('Datum')
             self.assertIsNotNone(datum_field)
-            self.assertEquals(datum_field.type, 'string')
+            self.assertEqual(datum_field.type, 'string')
             self.assertTrue(datum_field.required)
             biosys = datum_field.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.DATUM_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.DATUM_TYPE_NAME)
 
             # test that we can save the dataset as returned
             self.verify_inferred_data(received)
@@ -535,10 +576,10 @@ class TestObservationSchema(InferTestBase):
                 'file': fp,
             }
             resp = client.post(self.url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             received = resp.json()
             # should be an observation
-            self.assertEquals(Dataset.TYPE_OBSERVATION, received.get('type'))
+            self.assertEqual(Dataset.TYPE_OBSERVATION, received.get('type'))
             # data_package verification
             self.assertIn('data_package', received)
 
@@ -547,30 +588,30 @@ class TestObservationSchema(InferTestBase):
             schema = utils_data_package.GenericSchema(schema_descriptor)
             east_field = schema.get_field_by_name('Easting')
             self.assertIsNotNone(east_field)
-            self.assertEquals(east_field.type, 'number')
+            self.assertEqual(east_field.type, 'number')
             self.assertTrue(east_field.required)
             biosys = east_field.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.EASTING_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.EASTING_TYPE_NAME)
 
             north_field = schema.get_field_by_name('Northing')
             self.assertIsNotNone(north_field)
-            self.assertEquals(north_field.type, 'number')
+            self.assertEqual(north_field.type, 'number')
             self.assertTrue(north_field.required)
             biosys = north_field.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.NORTHING_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.NORTHING_TYPE_NAME)
 
             zone_field = schema.get_field_by_name('Zone')
             self.assertIsNotNone(zone_field)
-            self.assertEquals(zone_field.type, 'integer')
+            self.assertEqual(zone_field.type, 'integer')
             self.assertTrue(zone_field.required)
             biosys = zone_field.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.ZONE_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.ZONE_TYPE_NAME)
 
             # test that we can save the dataset as returned
             self.verify_inferred_data(received)
@@ -604,23 +645,23 @@ class TestSpeciesObservation(InferTestBase):
                 'file': fp,
             }
             resp = client.post(self.url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             received = resp.json()
             # should be a species observation
-            self.assertEquals(Dataset.TYPE_SPECIES_OBSERVATION, received.get('type'))
+            self.assertEqual(Dataset.TYPE_SPECIES_OBSERVATION, received.get('type'))
             self.assertIn('data_package', received)
             schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
             schema = utils_data_package.GenericSchema(schema_descriptor)
             species_name_field = schema.get_field_by_name('Species Name')
             # field attributes
             self.assertIsNotNone(species_name_field)
-            self.assertEquals(species_name_field.type, 'string')
+            self.assertEqual(species_name_field.type, 'string')
             self.assertTrue(species_name_field.required)
             # biosys type
             biosys = species_name_field.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.SPECIES_NAME_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.SPECIES_NAME_TYPE_NAME)
 
             # test that we can create a dataset with the returned data
             self.verify_inferred_data(received)
@@ -647,10 +688,10 @@ class TestSpeciesObservation(InferTestBase):
                 'file': fp,
             }
             resp = client.post(self.url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             received = resp.json()
             # should be a species observation
-            self.assertEquals(Dataset.TYPE_SPECIES_OBSERVATION, received.get('type'))
+            self.assertEqual(Dataset.TYPE_SPECIES_OBSERVATION, received.get('type'))
             self.assertIn('data_package', received)
             schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
             schema = utils_data_package.GenericSchema(schema_descriptor)
@@ -658,21 +699,21 @@ class TestSpeciesObservation(InferTestBase):
             # genus
             genus = schema.get_field_by_name('Genus')
             self.assertIsNotNone(genus)
-            self.assertEquals(genus.type, 'string')
+            self.assertEqual(genus.type, 'string')
             self.assertTrue(genus.required)
             biosys = genus.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.GENUS_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.GENUS_TYPE_NAME)
 
             species = schema.get_field_by_name('Species')
             self.assertIsNotNone(species)
-            self.assertEquals(species.type, 'string')
+            self.assertEqual(species.type, 'string')
             self.assertTrue(species.required)
             biosys = species.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.SPECIES_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.SPECIES_TYPE_NAME)
 
             # test that we can create a dataset with the returned data
             self.verify_inferred_data(received)
@@ -703,10 +744,10 @@ class TestSpeciesObservation(InferTestBase):
                 'file': fp,
             }
             resp = client.post(self.url, data=payload, format='multipart')
-            self.assertEquals(status.HTTP_200_OK, resp.status_code)
+            self.assertEqual(status.HTTP_200_OK, resp.status_code)
             received = resp.json()
             # should be a species observation
-            self.assertEquals(Dataset.TYPE_SPECIES_OBSERVATION, received.get('type'))
+            self.assertEqual(Dataset.TYPE_SPECIES_OBSERVATION, received.get('type'))
             self.assertIn('data_package', received)
             schema_descriptor = Package(received.get('data_package')).resources[0].descriptor['schema']
             schema = utils_data_package.GenericSchema(schema_descriptor)
@@ -714,39 +755,39 @@ class TestSpeciesObservation(InferTestBase):
             # genus
             genus = schema.get_field_by_name('Genus')
             self.assertIsNotNone(genus)
-            self.assertEquals(genus.type, 'string')
+            self.assertEqual(genus.type, 'string')
             self.assertTrue(genus.required)
             biosys = genus.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.GENUS_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.GENUS_TYPE_NAME)
             # species
             species = schema.get_field_by_name('Species')
             self.assertIsNotNone(species)
-            self.assertEquals(species.type, 'string')
+            self.assertEqual(species.type, 'string')
             self.assertTrue(species.required)
             biosys = species.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.SPECIES_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.SPECIES_TYPE_NAME)
             # infra rank
             infra_rank = schema.get_field_by_name('Infraspecific Rank')
             self.assertIsNotNone(infra_rank)
-            self.assertEquals(infra_rank.type, 'string')
+            self.assertEqual(infra_rank.type, 'string')
             self.assertFalse(infra_rank.required)
             biosys = infra_rank.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.INFRA_SPECIFIC_RANK_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.INFRA_SPECIFIC_RANK_TYPE_NAME)
             # infra name
             infra_name = schema.get_field_by_name('Infraspecific Name')
             self.assertIsNotNone(infra_name)
-            self.assertEquals(infra_name.type, 'string')
+            self.assertEqual(infra_name.type, 'string')
             self.assertFalse(infra_name.required)
             biosys = infra_name.get('biosys')
             self.assertIsNotNone(biosys)
             biosys_type = biosys.get('type')
-            self.assertEquals(biosys_type, BiosysSchema.INFRA_SPECIFIC_NAME_TYPE_NAME)
+            self.assertEqual(biosys_type, BiosysSchema.INFRA_SPECIFIC_NAME_TYPE_NAME)
 
             # test that we can create a dataset with the returned data
             self.verify_inferred_data(received)

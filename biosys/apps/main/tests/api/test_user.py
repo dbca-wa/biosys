@@ -1,15 +1,11 @@
-from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
-from django.test import TestCase, override_settings
 from rest_framework import status
-from rest_framework.test import APIClient
 
-from main.models import Project
+from main.tests import factories
 from main.tests.api import helpers
-from main.utils_auth import is_admin
 
 
-class TestPermissions(TestCase):
+class TestPermissions(helpers.BaseUserTestCase):
     """
     Test Permissions
     Get: authenticated
@@ -17,61 +13,22 @@ class TestPermissions(TestCase):
     Create: admin
     Delete: forbidden through API
     """
-    fixtures = [
-        'test-users',
-        'test-projects'
-    ]
-
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=helpers.REST_FRAMEWORK_TEST_SETTINGS)
-    def setUp(self):
-        password = 'password'
-        self.admin_user = User.objects.filter(username="admin").first()
-        self.assertIsNotNone(self.admin_user)
-        self.assertTrue(is_admin(self.admin_user))
-        self.admin_user.set_password(password)
-        self.admin_user.save()
-        self.admin_client = APIClient()
-        self.assertTrue(self.admin_client.login(username=self.admin_user.username, password=password))
-
-        self.custodian_1_user = User.objects.filter(username="custodian1").first()
-        self.assertIsNotNone(self.custodian_1_user)
-        self.custodian_1_user.set_password(password)
-        self.custodian_1_user.save()
-        self.custodian_1_client = APIClient()
-        self.assertTrue(self.custodian_1_client.login(username=self.custodian_1_user.username, password=password))
-        self.project_1 = Project.objects.filter(name="Project1").first()
-        self.assertTrue(self.project_1.is_custodian(self.custodian_1_user))
-
-        self.custodian_2_user = User.objects.filter(username="custodian2").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.custodian_2_user.set_password(password)
-        self.custodian_2_user.save()
-        self.custodian_2_client = APIClient()
-        self.assertTrue(self.custodian_2_client.login(username=self.custodian_2_user.username, password=password))
-        self.project_2 = Project.objects.filter(name="Project2").first()
-        self.assertTrue(self.project_2.is_custodian(self.custodian_2_user))
-        self.assertFalse(self.project_1.is_custodian(self.custodian_2_user))
-
-        self.readonly_user = User.objects.filter(username="readonly").first()
-        self.assertIsNotNone(self.custodian_2_user)
-        self.assertFalse(self.project_2.is_custodian(self.readonly_user))
-        self.assertFalse(self.project_1.is_custodian(self.readonly_user))
-        self.readonly_user.set_password(password)
-        self.readonly_user.save()
-        self.readonly_client = APIClient()
-        self.assertTrue(self.readonly_client.login(username=self.readonly_user.username, password=password))
-
-        self.anonymous_client = APIClient()
 
     def test_get(self):
         urls = [
             reverse('api:user-list'),
-            reverse('api:user-detail', kwargs={'pk': 1})
+            reverse('api:user-detail', kwargs={'pk': self.readonly_user.pk})
         ]
         access = {
             "forbidden": [self.anonymous_client],
-            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+            "allowed": [
+                self.readonly_client,
+                self.custodian_1_client,
+                self.custodian_2_client,
+                self.admin_client,
+                self.data_engineer_1_client,
+                self.data_engineer_2_client
+            ]
         }
         for client in access['forbidden']:
             for url in urls:
@@ -237,3 +194,54 @@ class TestPermissions(TestCase):
                     client.options(url).status_code,
                     status.HTTP_200_OK
                 )
+
+
+class TestFiltering(helpers.BaseUserTestCase):
+
+    def test_project_custodians(self):
+        """
+        Test that we can filter users to obtain only the custodians of a project.
+        """
+        user_1, user_2 = factories.UserFactory.create_batch(2)
+        project = self.project_1
+        project.custodians.add(user_1)
+        expected_users = [self.custodian_1_user, user_1]
+        for user in expected_users:
+            self.assertTrue(project.is_custodian(user))
+        self.assertFalse(project.is_custodian(user_2))
+
+        # test by project id
+        url = reverse('api:user-list')
+        client = self.custodian_1_client
+        filters = {
+            'project__id': project.id
+        }
+        resp = client.get(url, filters)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        users = resp.json()
+        self.assertEqual(len(users), len(expected_users))
+        self.assertEqual(sorted([u['id'] for u in users]), sorted([u.id for u in expected_users]))
+
+        # test by project name
+        url = reverse('api:user-list')
+        client = self.custodian_1_client
+        filters = {
+            'project__name': project.name
+        }
+        resp = client.get(url, filters)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        users = resp.json()
+        self.assertEqual(len(users), len(expected_users))
+        self.assertEqual(sorted([u['id'] for u in users]), sorted([u.id for u in expected_users]))
+
+        # test by project code
+        url = reverse('api:user-list')
+        client = self.custodian_1_client
+        filters = {
+            'project__code': project.code
+        }
+        resp = client.get(url, filters)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        users = resp.json()
+        self.assertEqual(len(users), len(expected_users))
+        self.assertEqual(sorted([u['id'] for u in users]), sorted([u.id for u in expected_users]))
