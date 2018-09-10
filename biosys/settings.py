@@ -22,14 +22,10 @@ DEBUG = env('DEBUG', False)
 SECRET_KEY = env('SECRET_KEY', 'wjdh^hIO)jj5')
 CSRF_COOKIE_SECURE = env('CSRF_COOKIE_SECURE', False)
 SESSION_COOKIE_SECURE = env('SESSION_COOKIE_SECURE', False)
-ALLOWED_HOSTS = env('ALLOWED_HOSTS', [
-    'localhost',
-    '127.0.0.1',
-    'biosys.dbca.wa.gov.au',
-    'biosys.dbca.wa.gov.au.',
-    'biosys-uat.dbca.wa.gov.au',
-    'biosys-uat.dbca.wa.gov.au.',
-])
+if not DEBUG:
+    ALLOWED_HOSTS = env('ALLOWED_DOMAINS', 'localhost').split(',')
+else:
+    ALLOWED_HOSTS = ['*']
 
 # Application definition
 # The variables below are added to all responses in biosys/context_processors.py
