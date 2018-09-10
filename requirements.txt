@@ -34,8 +34,8 @@ Pillow==5.1.0
 django-storages==1.6.6
 boto3==1.7.50
 
-# dbca for SSO login
-git+https://github.com/dbca-wa/dpaw-utils.git@0.4.1
+# dbca-utils for SSO login
+https://static.dbca.wa.gov.au/static/py/dpaw-utils/dist/dpaw-utils-0.3a15.tar.gz
 
 # TODO: to get rid of
 django-grappelli==2.8.2
