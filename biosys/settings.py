@@ -56,6 +56,7 @@ INSTALLED_APPS = (
     'drf_yasg',
     'reversion',
     'storages',
+    'djoser',
 
     'django_extensions',
     'bootstrap3',
@@ -144,6 +145,10 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'DEFAULT_METADATA_CLASS': 'rest_framework.metadata.SimpleMetadata',
+}
+
+DJOSER = {
+    'PASSWORD_RESET_CONFIRM_URL': env('PASSWORD_RESET_CONFIRM_URL', '#/password/reset/confirm/{uid}/{token}'),
 }
 
 SWAGGER_SETTINGS = {
@@ -314,8 +319,15 @@ LOGGING = {
 GRAPPELLI_ADMIN_TITLE = SITE_TITLE + ' administration'
 
 # Email settings
-EMAIL_HOST = env('EMAIL_HOST', 'email.host')
+EMAIL_HOST = env('EMAIL_HOST', 'localhost')
 EMAIL_PORT = env('EMAIL_PORT', 25)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = env('EMAIL_USE_TLS', False)
+EMAIL_USE_SSL = env('EMAIL_USE_SSL', False)
+EMAIL_SUBJECT_PREFIX = env('EMAIL_SUBJECT_PREFIX', '[BioSys] ')
+EMAIL_USE_LOCALTIME = env('EMAIL_USE_LOCALTIME', False)
+
 
 ###################################################################################
 #  Static and media files settings

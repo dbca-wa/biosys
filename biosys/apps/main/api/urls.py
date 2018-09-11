@@ -3,6 +3,7 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 from django.conf.urls import url
 from rest_framework import routers
 from rest_framework.authtoken.views import obtain_auth_token
+from djoser import views as djoser_views
 
 from main.api import views as api_views
 
@@ -40,7 +41,18 @@ url_patterns = [
         api_views.GeoConvertView.as_view(output='geometry'),
         name="data-to-geometry"
         ),
-    url(r'utils/infer-dataset/?', api_views.InferDatasetView.as_view(), name='infer-dataset')
+    url(r'utils/infer-dataset/?', api_views.InferDatasetView.as_view(), name='infer-dataset'),
+    url(r'^password/?$', djoser_views.SetPasswordView.as_view(), name='set_password'),
+    url(
+        r'^password/reset/?$',
+        djoser_views.PasswordResetView.as_view(),
+        name='password_reset'
+    ),
+    url(
+        r'^password/reset/confirm/?$',
+        djoser_views.PasswordResetConfirmView.as_view(),
+        name='password_reset_confirm'
+    ),
 ]
 
 app_name = 'api'
