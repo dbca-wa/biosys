@@ -15,6 +15,7 @@ from main.models import Program, Project, Site, Dataset, Record, Media, DatasetM
 from main.utils_auth import is_admin
 from main.utils_species import get_key_for_value
 
+User = get_user_model()
 
 class WhoAmISerializer(serializers.ModelSerializer):
     is_admin = serializers.SerializerMethodField()

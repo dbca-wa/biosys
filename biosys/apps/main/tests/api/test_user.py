@@ -245,3 +245,32 @@ class TestFiltering(helpers.BaseUserTestCase):
         users = resp.json()
         self.assertEqual(len(users), len(expected_users))
         self.assertEqual(sorted([u['id'] for u in users]), sorted([u.id for u in expected_users]))
+
+
+class TestCreation(helpers.BaseUserTestCase):
+
+    def test_create_with_password(self):
+        """
+        User can be created with password.
+        Test that the password is set
+        """
+        client = self.admin_client
+        url = reverse('api:user-list')
+        user_payload = {
+            "username": "newuser",
+            "email": "newuser@example.com",
+            'first_name': 'New',
+            'last_name': 'User',
+            "password": "abcdefghi"
+        }
+        resp = client.post(url, user_payload)
+        self.assertEqual(status.HTTP_201_CREATED, resp.status_code)
+
+        # test that the user can retrieve it's token
+        url = reverse('api:auth-token')
+        token_payload = {
+            'username': user_payload['username'],
+            'password': user_payload['password']
+        }
+        resp = client.post(url, token_payload)
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
