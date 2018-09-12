@@ -328,7 +328,7 @@ EMAIL_USE_LOCALTIME = env('EMAIL_USE_LOCALTIME', False)
 # djoser is used to manage user password reset workflow.
 # see https://djoser.readthedocs.io
 DJOSER = {
-    'PASSWORD_RESET_CONFIRM_URL': env('PASSWORD_RESET_CONFIRM_URL', '#/password/reset/confirm/{uid}/{token}'),
+    'PASSWORD_RESET_CONFIRM_URL': env('PASSWORD_RESET_CONFIRM_URL', '#/reset-password/{uid}/{token}'),
     'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': env('PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND', True)
 }
 # This is use in the email template sent to the user after a reset password request.
