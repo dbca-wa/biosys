@@ -42,16 +42,16 @@ url_patterns = [
         name="data-to-geometry"
         ),
     url(r'utils/infer-dataset/?', api_views.InferDatasetView.as_view(), name='infer-dataset'),
-    url(r'^password/?$', djoser_views.SetPasswordView.as_view(), name='set_password'),
+    url(r'^password/?$', djoser_views.SetPasswordView.as_view(), name='set-password'),
     url(
         r'^password/reset/?$',
         djoser_views.PasswordResetView.as_view(),
-        name='password_reset'
+        name='password-reset'
     ),
     url(
         r'^password/reset/confirm/?$',
         djoser_views.PasswordResetConfirmView.as_view(),
-        name='password_reset_confirm'
+        name='password-reset-confirm'
     ),
 ]
 

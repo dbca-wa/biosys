@@ -3,6 +3,7 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 import datetime
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
@@ -17,6 +18,7 @@ from main.utils_species import get_key_for_value
 
 User = get_user_model()
 
+
 class WhoAmISerializer(serializers.ModelSerializer):
     is_admin = serializers.SerializerMethodField()
     is_data_engineer = serializers.SerializerMethodField()
@@ -28,20 +30,46 @@ class WhoAmISerializer(serializers.ModelSerializer):
         return Program.objects.filter(data_engineers__in=[user.pk]).count() > 0
 
     class Meta:
-        model = get_user_model()
+        model = User
         fields = ('id', 'username', 'first_name', 'last_name', 'email', 'is_admin', 'is_data_engineer')
 
 
-class SimpleUserSerializer(serializers.ModelSerializer):
+class CreateUserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(
+        style={'input_type': 'password'},
+        write_only=True
+    )
+
+    def validate(self, attrs):
+        user = User(**attrs)
+        password = attrs.get('password')
+
+        try:
+            validate_password(password, user)
+        except ValidationError as e:
+            raise serializers.ValidationError({'password': list(e.messages)})
+
+        return attrs
+
+    def create(self, validated_data):
+        try:
+            return User.objects.create_user(**validated_data)
+        except Exception as e:
+            self.fail('cannot create user: {}'.format(e))
+
     class Meta:
-        model = get_user_model()
-        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'is_superuser', 'is_staff')
+        model = User
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'password')
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = get_user_model()
-        exclude = ('password',)
+        model = User
+        fields = (
+            'id', 'username', 'email', 'first_name', 'last_name', 'email',
+            'date_joined', 'last_login', 'is_active'
+        )
+        read_only_fields = ('id', 'date_joined', 'last_login', 'is_active')
 
 
 class ProgramSerializer(serializers.ModelSerializer):
@@ -101,7 +129,7 @@ class DatasetSerializer(serializers.ModelSerializer):
         if has_data:
             different_type = instance.type != validated_data.get('type')
             different_data_package = instance.data_package != validated_data.get('data_package')
-            #TODO: implement a smart risk-checking of changing dataset schema when there's data.
+            # TODO: implement a smart risk-checking of changing dataset schema when there's data.
             different_data_package = False
             if different_type or different_data_package:
                 message = "This dataset already contains records. " \
@@ -350,7 +378,6 @@ class Base64ProjectMediaSerializer(serializers.ModelSerializer):
 
 
 class ProjectMediaSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = ProjectMedia
         fields = ('id', 'file', 'project', 'created', 'filesize')
@@ -367,11 +394,9 @@ class Base64DatasetMediaSerializer(serializers.ModelSerializer):
 
 
 class DatasetMediaSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = DatasetMedia
         fields = ('id', 'file', 'dataset', 'created', 'filesize')
-
 
 
 class Base64MediaSerializer(serializers.ModelSerializer):
@@ -385,7 +410,6 @@ class Base64MediaSerializer(serializers.ModelSerializer):
 
 
 class MediaSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Media
         fields = '__all__'
