@@ -30,16 +30,6 @@ class UsernameValidator(RegexValidator):
     message = 'Enter a valid username. This value may contain only letters, numbers, and @/./+/-/_/\ characters.'
 
 
-class UsernameField(fields.CharField):
-    """
-    A username field that allows `\` (backslash). This is a requirement imposed by NSW OEH.
-    """
-
-    def __init__(self):
-        super(UsernameField, self).__init__(max_length=150)
-        pass
-
-
 class WhoAmISerializer(serializers.ModelSerializer):
     is_admin = serializers.SerializerMethodField()
     is_data_engineer = serializers.SerializerMethodField()
