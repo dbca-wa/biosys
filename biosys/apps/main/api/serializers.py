@@ -52,6 +52,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
     )
     username = fields.CharField(
         max_length=150,
+        required=True,
         validators=[
             validators.UniqueValidator(queryset=User.objects.all()),
             UsernameValidator()
@@ -83,6 +84,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     username = fields.CharField(
         max_length=150,
+        required=True,
         validators=[
             validators.UniqueValidator(queryset=User.objects.all()),
             UsernameValidator()
