@@ -497,3 +497,78 @@ class TestPasswordResetWorkflow(helpers.BaseUserTestCase):
         # check that the user has a new password
         user.refresh_from_db()
         self.assertTrue(user.check_password(new_password))
+
+
+class TestUsername(helpers.BaseUserTestCase):
+
+    def test_username_backslash(self):
+        """
+        Required by OEH NSW to accommodate their Windows domain name
+        The username can include a '\`, e.g 'DEC\serge`
+        """
+        # test create
+        url = reverse('api:user-list')
+        client = self.admin_client
+        payload = {
+            'username': 'domain\\user',
+            'password': '123456'
+        }
+        resp = client.post(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        # ORM query
+        user = User.objects.filter(username='domain\\user').first()
+        self.assertIsNotNone(user)
+        # try API to get the auth token
+        # test that the user can retrieve it's token
+        url = reverse('api:auth-token')
+        client = APIClient()
+        token_payload = {
+            'username': payload['username'],
+            'password': payload['password']
+        }
+        resp = client.post(url, token_payload)
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
+
+        # should also work with put/patch
+        url = reverse('api:user-detail', kwargs={'pk': user.pk})
+        payload = {
+            'username': 'dec\\a\\lot'
+        }
+        client = self.admin_client
+        resp = client.patch(url, payload)
+        self.assertEqual(status.HTTP_200_OK, resp.status_code)
+        user.refresh_from_db()
+        self.assertEqual(user.username, 'dec\\a\\lot')
+
+    def test_username_unique(self):
+        """
+        Test that the API detect username duplicate
+        """
+        # create user
+        url = reverse('api:user-list')
+        client = self.admin_client
+        payload = {
+            'username': 'domain\\user',
+            'first_name': 'F1',
+            'lats_name': 'L1',
+            'password': '123456'
+        }
+        resp = client.post(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+        # try to create a user with same username
+        url = reverse('api:user-list')
+        client = self.admin_client
+        payload = {
+            'username': 'domain\\user',
+            'first_name': 'F2',
+            'lats_name': 'L2',
+            'password': 'abcdefghij'
+        }
+        resp = client.post(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        data = resp.json()
+        self.assertIn('username', data)
+        # the error message should contains the word unique
+        message = data.get('username')[0]
+        self.assertIn('unique', message.lower())

@@ -5,8 +5,10 @@ import datetime
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.utils import timezone
-from rest_framework import serializers
+
+from rest_framework import serializers, fields, validators
 from rest_framework_gis import serializers as serializers_gis
 from drf_extra_fields.fields import Base64ImageField
 
@@ -17,6 +19,15 @@ from main.utils_auth import is_admin
 from main.utils_species import get_key_for_value
 
 User = get_user_model()
+
+
+class UsernameValidator(RegexValidator):
+    """
+    A username validator that allows `\` (backslash). This is a requirement imposed by NSW OEH.
+    By default Django and DRF doesn't allow it.
+    """
+    regex = r'^[\w.@+-\\]+$'
+    message = 'Enter a valid username. This value may contain only letters, numbers, and @/./+/-/_/\ characters.'
 
 
 class WhoAmISerializer(serializers.ModelSerializer):
@@ -38,6 +49,13 @@ class CreateUserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         style={'input_type': 'password'},
         write_only=True
+    )
+    username = fields.CharField(
+        max_length=150,
+        validators=[
+            validators.UniqueValidator(queryset=User.objects.all()),
+            UsernameValidator()
+        ]
     )
 
     def validate(self, attrs):
@@ -63,6 +81,14 @@ class CreateUserSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    username = fields.CharField(
+        max_length=150,
+        validators=[
+            validators.UniqueValidator(queryset=User.objects.all()),
+            UsernameValidator()
+        ]
+    )
+
     class Meta:
         model = User
         fields = (
