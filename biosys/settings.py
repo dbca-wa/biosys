@@ -56,6 +56,7 @@ INSTALLED_APPS = (
     'drf_yasg',
     'reversion',
     'storages',
+    'djoser',
 
     'django_extensions',
     'bootstrap3',
@@ -314,8 +315,27 @@ LOGGING = {
 GRAPPELLI_ADMIN_TITLE = SITE_TITLE + ' administration'
 
 # Email settings
-EMAIL_HOST = env('EMAIL_HOST', 'email.host')
+EMAIL_HOST = env('EMAIL_HOST', 'localhost')
 EMAIL_PORT = env('EMAIL_PORT', 25)
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = env('EMAIL_USE_TLS', False)
+EMAIL_USE_SSL = env('EMAIL_USE_SSL', False)
+EMAIL_SUBJECT_PREFIX = env('EMAIL_SUBJECT_PREFIX', '[BioSys] ')
+EMAIL_USE_LOCALTIME = env('EMAIL_USE_LOCALTIME', False)
+
+# djoser is used to manage user password reset workflow.
+# see https://djoser.readthedocs.io
+DJOSER = {
+    'PASSWORD_RESET_CONFIRM_URL': env('PASSWORD_RESET_CONFIRM_URL', '#/reset-password/{uid}/{token}'),
+    'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': env('PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND', True)
+}
+# This is use in the email template sent to the user after a reset password request.
+# see https://django-templated-mail.readthedocs.io/en/latest/settings.html#site-name
+# if not specified SITE_NAME and DOMAIN are set from the django.contrib.sites.shortcuts.get_current_site(request)
+SITE_NAME = env('SITE_NAME', 'BioSys')
+DOMAIN = env('DOMAIN')
 
 ###################################################################################
 #  Static and media files settings
