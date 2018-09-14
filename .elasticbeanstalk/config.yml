@@ -1,12 +1,15 @@
 branch-defaults:
-  aws_ebeanstalk:
-    environment: eb-biosys-uat
-    group_suffix: null
   master:
+    environment: eb-biosys-uat
+  prod:
+    environment: eb-biosys-prod
+  staging:
+    environment: eb-biosys-staging
+  uat:
     environment: eb-biosys-uat
 global:
   application_name: eb-biosys
-  branch: uat
+  branch: master
   default_ec2_keyname: aws-eb
   default_platform: Python 3.6
   default_region: ap-southeast-2
