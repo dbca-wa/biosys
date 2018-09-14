@@ -1,4 +1,6 @@
 branch-defaults:
+  eb-serbot:
+    environment: eb-biosys-uat
   master:
     environment: eb-biosys-uat
   prod:
