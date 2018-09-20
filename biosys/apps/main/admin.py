@@ -1,6 +1,8 @@
 from __future__ import absolute_import, unicode_literals, print_function, division
 
 from django.contrib import admin
+from django.contrib.auth import get_user_model
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.gis.admin import OSMGeoAdmin, GeoModelAdmin
 
 from main import forms
@@ -8,10 +10,21 @@ from main.models import *
 
 logger = logging.getLogger(__name__)
 
+User = get_user_model()
+
 
 class MainAppAdmin(admin.ModelAdmin):
     change_form_template = 'main/main_change_form.html'
     change_list_template = 'main/main_change_list.html'
+
+
+class UserAdmin(BaseUserAdmin):
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'auth_token')
+
+
+if admin.site.is_registered(User):
+    admin.site.unregister(User)
+admin.site.register(User, UserAdmin)
 
 
 @admin.register(Program)
