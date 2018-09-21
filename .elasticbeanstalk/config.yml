@@ -1,6 +1,7 @@
 branch-defaults:
   ebs:
     environment: biosys-uat
+    group_suffix: null
   master:
     environment: biosys-uat
   prod:
