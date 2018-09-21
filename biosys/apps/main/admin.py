@@ -53,9 +53,6 @@ class CustomUserCreationForm(UserCreationForm):
     The sole purpose of this class is to override the django model username validation to allow backslash.
     """
 
-    def __init__(self, *args, **kwargs):
-        super(CustomUserCreationForm, self).__init__(*args, **kwargs)
-
     def _post_clean(self):
         """
         This is where the UnicodeUsernameValidator validator defined in the model is applied.
