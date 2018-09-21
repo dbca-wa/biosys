@@ -1,16 +1,16 @@
 branch-defaults:
-  eb-serbot:
-    environment: eb-biosys-uat
+  eb:
+    environment: biosys-uat
   master:
-    environment: eb-biosys-uat
+    environment: biosys-uat
   prod:
-    environment: eb-biosys-prod
+    environment: biosys-prod
   staging:
-    environment: eb-biosys-staging
+    environment: biosys-staging
   uat:
-    environment: eb-biosys-uat
+    environment: biosys-uat
 global:
-  application_name: eb-biosys
+  application_name: biosys
   branch: master
   default_ec2_keyname: aws-eb
   default_platform: Python 3.6
