@@ -1,5 +1,5 @@
 branch-defaults:
-  eb:
+  ebs:
     environment: biosys-uat
   master:
     environment: biosys-uat
