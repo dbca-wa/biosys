@@ -37,7 +37,7 @@ class CustomUserChangeForm(UserChangeForm):
             if field.name == self.instance.USERNAME_FIELD:
                 username_field = field
                 break
-        if username_field:
+        if username_field is not None:
             # our username validator
             validators = [UsernameValidator()]
             # we still want other validators if any (there's at least the max length validator)
@@ -64,7 +64,7 @@ class CustomUserCreationForm(UserCreationForm):
             if field.name == self.instance.USERNAME_FIELD:
                 username_field = field
                 break
-        if username_field:
+        if username_field is not None:
             # our username validator
             validators = [UsernameValidator()]
             # we still want other validators if any (there's at least the max length validator)
