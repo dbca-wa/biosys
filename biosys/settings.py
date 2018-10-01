@@ -334,8 +334,8 @@ DJOSER = {
 # This is use in the email template sent to the user after a reset password request.
 # see https://django-templated-mail.readthedocs.io/en/latest/settings.html#site-name
 # if not specified SITE_NAME and DOMAIN are set from the django.contrib.sites.shortcuts.get_current_site(request)
-SITE_NAME = env('SITE_NAME', 'BioSys')
-DOMAIN = env('DOMAIN')
+SITE_NAME = env('PASSWORD_RESET_SITE_NAME', 'BioSys')
+DOMAIN = env('PASSWORD_RESET_DOMAIN')
 
 ###################################################################################
 #  Static and media files settings
