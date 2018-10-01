@@ -366,4 +366,6 @@ S3_USE_SIGV4 = True
 # By default it is s3.<region>.amazonaws.com/<bucket>/...
 AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN', None)
 
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# For when the app is behind a proxy or a load balancer in charge of the https/ssl
+# https://docs.djangoproject.com/en/2.1/ref/settings/#secure-proxy-ssl-header
+SECURE_PROXY_SSL_HEADER = env('SECURE_PROXY_SSL_HEADER')
