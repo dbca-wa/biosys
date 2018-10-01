@@ -365,3 +365,5 @@ S3_USE_SIGV4 = True
 # If using a CDN or a S3 static website tell django-storages the domain to use to refer to static files.
 # By default it is s3.<region>.amazonaws.com/<bucket>/...
 AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN', None)
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
