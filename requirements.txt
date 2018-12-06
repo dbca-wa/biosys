@@ -35,7 +35,7 @@ django-storages==1.6.6
 boto3==1.7.50
 
 # dbca for SSO login
-git+https://github.com/dbca-wa/dpaw-utils.git@0.4.1
+git+https://github.com/dbca-wa/dpaw-utils.git@0.3a16
 
 # TODO: to get rid of
 django-grappelli==2.8.2
