@@ -6,7 +6,7 @@ openpyxl==2.4.2
 django-reversion==1.10
 pytz>=2016.6.1
 django-timezone-field==2.0
-requests==2.11
+requests==2.20.0
 Unipath==1.1
 six==1.10
 python-dateutil==2.6.0
