@@ -78,16 +78,18 @@ class CreateUserSerializer(serializers.ModelSerializer):
             # look for a 'projects' string or list in the post data
             # TODO: Should not create the user but return a 400 error if a requested project is not allowed
             # TODO: use a proper validator
-            requested_project_names = self.context['request'].data['projects']
-            # compare with the server settings allowed public projects
-            allowed_project_names = settings.ALLOWED_PUBLIC_REGISTRATION_PROJECTS
-            if allowed_project_names and requested_project_names:
-                if not isinstance(requested_project_names, list):
-                    requested_project_names = [requested_project_names]
-                for project_name in [p for p in requested_project_names if p in allowed_project_names]:
-                    project = Project.objects.filter(name=project_name).first()
-                    if project is not None:
-                        project.custodians.add(user)
+            request_data = self.context['request'].data
+            if 'projects' in request_data:
+                requested_project_names = request_data['projects']
+                # compare with the server settings allowed public projects
+                allowed_project_names = settings.ALLOWED_PUBLIC_REGISTRATION_PROJECTS
+                if allowed_project_names and requested_project_names:
+                    if not isinstance(requested_project_names, list):
+                        requested_project_names = [requested_project_names]
+                    for project_name in [p for p in requested_project_names if p in allowed_project_names]:
+                        project = Project.objects.filter(name=project_name).first()
+                        if project is not None:
+                            project.custodians.add(user)
             return user
         except Exception as e:
             self.fail('cannot create user: {}'.format(e))
