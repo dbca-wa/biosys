@@ -370,3 +370,6 @@ AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN', None)
 # https://docs.djangoproject.com/en/2.1/ref/settings/#secure-proxy-ssl-header
 SECURE_PROXY_SSL_HEADER = env('SECURE_PROXY_SSL_HEADER')
 USE_X_FORWARDED_HOST = env('USE_X_FORWARDED_HOST', False)
+
+# Do we allow public registration?
+ALLOW_PUBLIC_REGISTRATION = env('ALLOW_PUBLIC_REGISTRATION', False)

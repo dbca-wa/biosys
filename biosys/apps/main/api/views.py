@@ -24,7 +24,7 @@ from main.api.helpers import to_bool
 from main.api.uploaders import SiteUploader, FileReader, RecordCreator, DataPackageBuilder
 from main.api.validators import get_record_validator_for_dataset
 from main.models import Project, Site, Dataset, Record
-from main.utils_auth import is_admin
+from main.utils_auth import is_admin, can_create_user
 from main.api.exporters import DefaultExporter
 from main.utils_http import WorkbookResponse, CSVFileResponse
 from main.utils_species import NoSpeciesFacade
@@ -50,11 +50,13 @@ class UserPermission(BasePermission):
         The rest will be checked at object level (below)
         """
         method = request.method
+        user = request.user
         if method == 'DELETE':
             return False
-        if method == 'POST':
-            return is_admin(request.user)
-        return True
+        elif method == 'POST':
+            return can_create_user(user)
+        else:
+            return user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
         """
@@ -66,7 +68,7 @@ class UserPermission(BasePermission):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    permission_classes = (IsAuthenticated, UserPermission,)
+    permission_classes = (UserPermission,)
     queryset = get_user_model().objects.all()
     serializer_class = serializers.UserSerializer
     filter_class = filters.UserFilterSet

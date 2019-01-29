@@ -55,7 +55,8 @@ class TestPermissions(helpers.BaseUserTestCase):
 
     def test_create(self):
         """
-        Only admin can create
+        By default only admin can create.
+        But if the site settings is set to allow public registration (see test_create_public)
         :return:
         """
         urls = [reverse('api:user-list')]
@@ -77,6 +78,40 @@ class TestPermissions(helpers.BaseUserTestCase):
 
         for client in access['allowed']:
             for url in urls:
+                self.assertEqual(
+                    client.post(url, data, format='json').status_code,
+                    status.HTTP_201_CREATED
+                )
+
+    @override_settings(ALLOW_PUBLIC_REGISTRATION=True)
+    def test_create_public(self):
+        """
+        Test that if the site is set to allow public registration an anonymous user can register
+        :return:
+        """
+        urls = [reverse('api:user-list')]
+        data = {
+            "username": "public",
+            "email": "newuser@example.com",
+            "password": "password",
+            "first_name": "John",
+            "last_name": "Doe"
+        }
+        access = {
+            "forbidden": [self.readonly_client, self.custodian_1_client],
+            "allowed": [self.admin_client, self.anonymous_client]
+        }
+        for client in access['forbidden']:
+            for url in urls:
+                self.assertIn(
+                    client.post(url, data, format='json').status_code,
+                    [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+                )
+
+        for client in access['allowed']:
+            for url in urls:
+                # we need to provide a unique username by adding an 'x' every time
+                data['username'] += 'x'
                 self.assertEqual(
                     client.post(url, data, format='json').status_code,
                     status.HTTP_201_CREATED
