@@ -607,3 +607,126 @@ class TestUsername(helpers.BaseUserTestCase):
         # the error message should contains the word unique
         message = data.get('username')[0]
         self.assertIn('unique', message.lower())
+
+
+class TestUserCreateDefaultProject(helpers.BaseUserTestCase):
+    """
+    Use case:
+    When a user signup he can request to be the custodian od a projects through POST params.
+    This will only be allowed if the requested project name is in a ALLOWED_PUBLIC_REGISTRATION_PROJECTS setting list.
+    Note: at this stage if the user request a not allowed project we don't return any error. The user is created but not
+    assigned to the requested project.
+    """
+
+    @override_settings(ALLOW_PUBLIC_REGISTRATION=True)
+    def test_default_none(self):
+        """
+        By default the user is not assigned to any project even if user request it
+        """
+        url = reverse('api:user-list')
+        payload = {
+            "username": "public",
+            "email": "newuser@example.com",
+            "password": "password",
+            "first_name": "John",
+            "last_name": "Doe",
+            "projects": self.project_1.name
+        }
+        client = self.anonymous_client
+        resp = client.post(url, payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        user = User.objects.filter(username=payload['username']).first()
+        self.assertIsNotNone(user)
+        self.assertFalse(self.project_1.is_custodian(user))
+
+    @override_settings(ALLOW_PUBLIC_REGISTRATION=True)
+    @override_settings(ALLOWED_PUBLIC_REGISTRATION_PROJECTS=['Project_1'])
+    def test_one_project_allowed(self):
+        """
+        User request to be assigned to an allowed project
+        """
+        url = reverse('api:user-list')
+        payload = {
+            "username": "public",
+            "email": "newuser@example.com",
+            "password": "password",
+            "first_name": "John",
+            "last_name": "Doe",
+            "projects": 'Project_1'
+        }
+        client = self.anonymous_client
+        resp = client.post(url, payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        user = User.objects.filter(username=payload['username']).first()
+        self.assertIsNotNone(user)
+        self.assertTrue(self.project_1.is_custodian(user))
+
+    @override_settings(ALLOW_PUBLIC_REGISTRATION=True)
+    @override_settings(ALLOWED_PUBLIC_REGISTRATION_PROJECTS=['Project_2'])
+    def test_one_project_not_allowed(self):
+        """
+        User request to be assigned to not allowed project
+        """
+        url = reverse('api:user-list')
+        payload = {
+            "username": "public",
+            "email": "newuser@example.com",
+            "password": "password",
+            "first_name": "John",
+            "last_name": "Doe",
+            "projects": ['Project_1']
+        }
+        client = self.anonymous_client
+        resp = client.post(url, payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        user = User.objects.filter(username=payload['username']).first()
+        self.assertIsNotNone(user)
+        self.assertFalse(self.project_1.is_custodian(user))
+
+    @override_settings(ALLOW_PUBLIC_REGISTRATION=True)
+    @override_settings(ALLOWED_PUBLIC_REGISTRATION_PROJECTS=['Project_1'])
+    def test_request_two_projects_only_one_allowed(self):
+        """
+        User request to be assigned to two projects but only one is allowed.
+        No error is sent back but the user is custodian of only one
+        """
+        url = reverse('api:user-list')
+        payload = {
+            "username": "public",
+            "email": "newuser@example.com",
+            "password": "password",
+            "first_name": "John",
+            "last_name": "Doe",
+            "projects": ['Project_1', 'Project_2']
+        }
+        client = self.anonymous_client
+        resp = client.post(url, payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        user = User.objects.filter(username=payload['username']).first()
+        self.assertIsNotNone(user)
+        self.assertTrue(self.project_1.is_custodian(user))
+        self.assertFalse(self.project_2.is_custodian(user))
+
+    @override_settings(ALLOW_PUBLIC_REGISTRATION=True)
+    @override_settings(ALLOWED_PUBLIC_REGISTRATION_PROJECTS=['Project_1', 'Project_2'])
+    def test_request_two_projects_allowed(self):
+        """
+        User request to be assigned to two projects but only one is allowed.
+        No error is sent back but the user is custodian of only one
+        """
+        url = reverse('api:user-list')
+        payload = {
+            "username": "public",
+            "email": "newuser@example.com",
+            "password": "password",
+            "first_name": "John",
+            "last_name": "Doe",
+            "projects": ['Project_1', 'Project_2']
+        }
+        client = self.anonymous_client
+        resp = client.post(url, payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        user = User.objects.filter(username=payload['username']).first()
+        self.assertIsNotNone(user)
+        self.assertTrue(self.project_1.is_custodian(user))
+        self.assertTrue(self.project_2.is_custodian(user))
