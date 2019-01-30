@@ -7,6 +7,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils import timezone
+from django.conf import settings
 
 from rest_framework import serializers, fields, validators
 from rest_framework_gis import serializers as serializers_gis
@@ -72,7 +73,24 @@ class CreateUserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         try:
-            return User.objects.create_user(**validated_data)
+            user = User.objects.create_user(**validated_data)
+            # assign new user as custodians of some projects if requested.
+            # look for a 'projects' string or list in the post data
+            # TODO: Should not create the user but return a 400 error if a requested project is not allowed
+            # TODO: use a proper validator
+            request_data = self.context['request'].data
+            if 'projects' in request_data:
+                requested_project_names = request_data['projects']
+                # compare with the server settings allowed public projects
+                allowed_project_names = settings.ALLOWED_PUBLIC_REGISTRATION_PROJECTS
+                if allowed_project_names and requested_project_names:
+                    if not isinstance(requested_project_names, list):
+                        requested_project_names = [requested_project_names]
+                    for project_name in [p for p in requested_project_names if p in allowed_project_names]:
+                        project = Project.objects.filter(name=project_name).first()
+                        if project is not None:
+                            project.custodians.add(user)
+            return user
         except Exception as e:
             self.fail('cannot create user: {}'.format(e))
 
