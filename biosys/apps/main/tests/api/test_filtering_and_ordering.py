@@ -3,6 +3,7 @@ import json
 from django.urls import reverse
 from django.contrib.gis.geos import Polygon, Point, MultiPolygon
 from rest_framework import status
+from unittest import skip
 
 from main.models import Record, Dataset
 from main.tests.api import helpers
@@ -274,6 +275,7 @@ class TestJsonSearchAndOrdering(helpers.BaseUserTestCase):
         expected = expected[::-1]
         self.assertEqual([(r['data']['What'], r['data']['Weight']) for r in records], expected)
 
+    @skip
     def test_filter_id__in(self):
         """
         Test the id__in filter.
