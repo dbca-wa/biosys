@@ -4,7 +4,7 @@ import json
 
 from datapackage import Package
 from django.core.exceptions import ValidationError
-from django.shortcuts import reverse
+from django.urls import reverse
 from django.utils import six
 from rest_framework import status
 from rest_framework.authtoken.models import Token

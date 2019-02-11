@@ -3,7 +3,7 @@ import csv
 import tempfile
 
 from django.conf import settings
-from django.shortcuts import reverse
+from django.urls import reverse
 from django.test import TestCase, override_settings
 from openpyxl import Workbook
 from rest_framework import status
@@ -71,6 +71,8 @@ class LightSpeciesFacade(SpeciesFacade):
         return []
 
 
+@override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
+                   REST_FRAMEWORK_TEST_SETTINGS=REST_FRAMEWORK_TEST_SETTINGS)
 class BaseUserTestCase(TestCase):
     """
     A test case that provides some users and authenticated clients.
@@ -162,8 +164,6 @@ class BaseUserTestCase(TestCase):
         })
         return schema
 
-    @override_settings(PASSWORD_HASHERS=('django.contrib.auth.hashers.MD5PasswordHasher',),
-                       REST_FRAMEWORK_TEST_SETTINGS=REST_FRAMEWORK_TEST_SETTINGS)
     def setUp(self):
         from main.api.views import SpeciesMixin
         SpeciesMixin.species_facade_class = self.species_facade_class

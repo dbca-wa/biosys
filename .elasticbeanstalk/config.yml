@@ -1,0 +1,26 @@
+branch-defaults:
+  ebs:
+    environment: biosys-uat
+    group_suffix: null
+  master:
+    environment: biosys-uat
+  prod:
+    environment: biosys-prod
+  staging:
+    environment: biosys-staging
+  uat:
+    environment: biosys-uat
+global:
+  application_name: biosys
+  branch: master
+  default_ec2_keyname: aws-eb
+  default_platform: Python 3.6
+  default_region: ap-southeast-2
+  include_git_submodules: true
+  instance_profile: null
+  platform_name: null
+  platform_version: null
+  profile: null
+  repository: null
+  sc: git
+  workspace_type: Application

@@ -1,4 +1,4 @@
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -17,7 +17,7 @@ class TestAuth(helpers.BaseUserTestCase):
         """
         client = APIClient()
         # request token
-        url = reverse('api:auth_token')
+        url = reverse('api:auth-token')
         user = self.readonly_user
         self.assertTrue(user.check_password('password'))
         data = {
@@ -41,7 +41,7 @@ class TestAuth(helpers.BaseUserTestCase):
         client = APIClient()
         user = self.readonly_user
         self.assertTrue(user.check_password('password'))
-        url = reverse('api:auth_token')
+        url = reverse('api:auth-token')
         data = {
             'username': user.username,
             "password": "password"

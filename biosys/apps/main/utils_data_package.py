@@ -185,6 +185,12 @@ class BiosysSchema:
     def is_species_name_id(self):
         return self.type == self.SPECIES_NAME_ID_TYPE_NAME
 
+    def is_genus(self):
+        return self.type == self.GENUS_TYPE_NAME
+
+    def is_species(self):
+        return self.type == self.SPECIES_TYPE_NAME
+
 
 @python_2_unicode_compatible
 class SchemaField:
@@ -1209,7 +1215,19 @@ class SpeciesNameParser(object):
     def cast_species_name(self, record):
         composite = self._compose_species_name(record) if self.has_genus_and_species else None
         species_name = self._cast_field(self.species_name_field, record) if self.species_name_field else None
-        return composite or species_name
+        if composite and species_name:
+            # if both are present use precedence rules:
+            # look for biosys tags if only one have it use it
+            # else use the composite
+            # see https://youtrack.gaiaresources.com.au/youtrack/issue/BIOSYS-305
+            is_species_name_tagged = self.species_name_field.biosys.is_species_name()
+            is_genus_and_species_tagged = self.genus_field.biosys.is_genus() and self.species_field.biosys.is_species()
+            if is_species_name_tagged and not is_genus_and_species_tagged:
+                return species_name
+            else:
+                return composite
+        else:
+            return composite or species_name
 
     def _compose_species_name(self, record):
         """

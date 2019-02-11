@@ -1,7 +1,7 @@
 import json
 
 from django.contrib.gis.geos import GEOSGeometry
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from rest_framework import status
 
 from main.models import Site

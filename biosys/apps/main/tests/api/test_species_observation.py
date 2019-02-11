@@ -4,7 +4,7 @@ from os import path
 import json
 
 from django.contrib.gis.geos import Point
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.utils import timezone, six
 from openpyxl import load_workbook
 from rest_framework import status
@@ -1659,7 +1659,6 @@ class TestCompositeSpeciesName(helpers.BaseUserTestCase):
                     "type": "speciesName"
                 }
             },
-
             {
                 "name": "Genus",
                 "type": "string",
@@ -1855,6 +1854,36 @@ class TestCompositeSpeciesName(helpers.BaseUserTestCase):
         """
         schema = self.schema_with_genus_and_species_name_no_required()
         self.assert_create_dataset(schema)
+
+    def test_species_name_tag_precedence(self):
+        """
+        if the schema has Species Name and genus/species and the the Species Name column is biosys tagged as type
+        speciesName it then has precedence over genus/species.
+        @see https://youtrack.gaiaresources.com.au/youtrack/issue/BIOSYS-305
+        Given I have a species observation dataset with fields |Genus|Species|Species Name|
+        And the Species Name field is tagged with the Biosys type 'SpeciesName'
+        And Genus and Species fields have no Biosys type
+        When I enter |Pteropyus|vampyrus|Canis lupus|
+        Then the species extracted should be Canis lupus and not Pteropyus vampyrus
+        """
+        schema = self.schema_with_genus_and_species_name_no_required()
+        # remove biosys tag for Genus and Species
+        for field in schema['fields']:
+            if field['name'] in ['Genus', 'Species']:
+                del field['biosys']
+        dataset = self.assert_create_dataset(schema)
+        records = [
+            ['Genus', 'Species', 'SpeciesName', 'When', 'Latitude', 'Longitude'],
+            ['Pteropyus', 'vampyrus', 'Canis lupus', '2018-01-25', -32.0, 115.75],
+        ]
+        expected_species_name = 'Canis lupus'
+
+        resp = self._upload_records_from_rows(records, dataset_pk=dataset.pk, strict=False)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        received = resp.json()
+        rec_id = received[0]['recordId']
+        record = Record.objects.filter(pk=rec_id).first()
+        self.assertEqual(record.species_name, expected_species_name)
 
 
 class TestPatch(helpers.BaseUserTestCase):

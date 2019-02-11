@@ -71,9 +71,9 @@ class GeometryFilter(filters.CharFilter):
 
 
 class UserFilterSet(filters.FilterSet):
-    project__id = filters.CharFilter(name='project', method='filter_project_id_custodians')
-    project__name = filters.CharFilter(name='project', method='filter_project_name_custodians')
-    project__code = filters.CharFilter(name='project', method='filter_project_code_custodians')
+    project__id = filters.CharFilter(field_name='project', method='filter_project_id_custodians')
+    project__name = filters.CharFilter(field_name='project', method='filter_project_name_custodians')
+    project__code = filters.CharFilter(field_name='project', method='filter_project_code_custodians')
 
     @staticmethod
     def filter_project_id_custodians(queryset, name, project_ids):
