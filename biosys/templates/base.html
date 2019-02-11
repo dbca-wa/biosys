@@ -10,7 +10,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         {% block base_style %}
             <link rel="stylesheet"
-                  href="//static.dbca.wa.gov.au/static/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css">
+                  href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css">
         {% endblock %}
         {% block extra_style %}
             <link rel="stylesheet" href="{% static 'css/dpaw-custom.css' %}">
@@ -21,7 +21,7 @@
         {% endblock %}
 
         <script type="text/javascript"
-                src="//static.dbca.wa.gov.au/static/libs/require.js/2.2.0/require.min.js"></script>
+                src="//cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js"></script>
         <script type="text/javascript">
             require(["{% static 'js/config.js' %}"], function (conf) {
                 require(['bootstrap']);
