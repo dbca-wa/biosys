@@ -2,7 +2,7 @@ import datetime
 from os import path
 
 from django.contrib.gis.geos import Point
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 

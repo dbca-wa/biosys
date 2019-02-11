@@ -5,7 +5,7 @@ from openpyxl import load_workbook
 
 from django.test import TestCase
 from django.test.client import Client
-from django.shortcuts import reverse
+from django.urls import reverse
 from django.utils import six
 from rest_framework import status
 

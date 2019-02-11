@@ -3,7 +3,7 @@ import csv
 import tempfile
 
 from django.conf import settings
-from django.shortcuts import reverse
+from django.urls import reverse
 from django.test import TestCase, override_settings
 from openpyxl import Workbook
 from rest_framework import status

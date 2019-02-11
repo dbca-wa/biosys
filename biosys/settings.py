@@ -71,7 +71,6 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -80,7 +79,7 @@ MIDDLEWARE = [
 ]
 
 EXTRA_MIDDLEWARE = env('EXTRA_MIDDLEWARE', [
-    'dpaw_utils.middleware.SSOLoginMiddleware'
+    'dbca_utils.middleware.SSOLoginMiddleware'
 ])
 
 MIDDLEWARE += EXTRA_MIDDLEWARE

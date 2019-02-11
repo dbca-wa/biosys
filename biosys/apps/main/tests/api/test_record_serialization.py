@@ -4,7 +4,7 @@ from os import path
 from django.test import override_settings
 from openpyxl import load_workbook
 
-from django.shortcuts import reverse
+from django.urls import reverse
 from django.utils import six
 from rest_framework import status
 

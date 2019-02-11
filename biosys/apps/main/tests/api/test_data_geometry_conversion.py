@@ -1,4 +1,4 @@
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from rest_framework import status
 
 from main.models import Dataset, Record
@@ -348,8 +348,8 @@ class EastingNorthingSchema(helpers.BaseUserTestCase):
         expected_data = {
             'What': sent_data['What'],
             'When': sent_data['When'],
-            'Northing': 6237393.340227433,
-            'Easting': 592349.6033431825,
+            'Northing': 6237393.340227537,
+            'Easting': 592349.6033431701,
             'Datum': sent_data['Datum'],
             'Zone': sent_data['Zone']
         }
