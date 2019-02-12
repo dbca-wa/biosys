@@ -2,7 +2,7 @@
 FROM python:3.6.8-slim-stretch as builder_base_biosys
 MAINTAINER asi@dbca.wa.gov.au
 RUN apt-get update -y \
-  && apt-get install --no-install-recommends -y wget git libmagic-dev gcc binutils libproj-dev gdal-bin python3-dev  gcc g++ libsasl2-dev libldap2-dev \
+  && apt-get install --no-install-recommends -y wget git libmagic-dev gcc binutils libproj-dev gdal-bin python3-dev gcc g++ libsasl2-dev \
   && rm -rf /var/lib/apt/lists/* \
   && pip install --upgrade pip
 
