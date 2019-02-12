@@ -5,6 +5,7 @@ RUN apt-get update && \
     apt-get install --assume-yes \
       libsasl2-dev \
       libldap2-dev \
+      git \
       gdal-bin \
       python3 \
       python3-pip \
