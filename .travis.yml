@@ -2,7 +2,6 @@ sudo: false
 language: python
 python:
     - "3.6"
-    - "2.7"
 addons:
     postgresql: "9.6"
 services:
@@ -10,6 +9,7 @@ services:
 branches:
     only:
         - master
+        - docker
         - uat
         - staging
         - production
