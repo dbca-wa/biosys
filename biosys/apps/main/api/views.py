@@ -510,6 +510,10 @@ class WhoamiView(APIView):
 
     def get(self, request, **kwargs):
         data = {}
+        print('whoami call')
+        print(request)
+        print(request.user)
+        print(request.user.is_authenticated)
         if request.user.is_authenticated:
             data = self.serializers(request.user).data
         return Response(data)

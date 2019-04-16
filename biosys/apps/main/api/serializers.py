@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
+from django.core.mail import send_mail
 from django.utils import timezone
 from django.conf import settings
 
@@ -90,6 +91,24 @@ class CreateUserSerializer(serializers.ModelSerializer):
                         project = Project.objects.filter(name=project_name).first()
                         if project is not None:
                             project.custodians.add(user)
+
+            # FIXME: A more elegant solution to this would be to extend the use of djoser user registration so that
+            # emails could be handled through the plugin. However at present user creation is handled through a vanilla
+            # DRF endpoint and client applications in production utilise this for user registration, re: discussion on
+            # public user registration for BioSys, so this is used to fulfill requirements for now
+            if settings.SEND_REGISTRATION_CONF:
+                try:
+                    send_mail(
+                        subject=settings.REGISTRATION_EMAIL_SUBJECT,
+                        message=settings.REGISTRATION_EMAIL_BODY,
+                        html_message=settings.REGISTRATION_EMAIL_BODY,
+                        from_email=(settings.REGISTRATION_EMAIL_FROM + '@' + settings.EMAIL_HOST),
+                        recipient_list=[user.email],
+                        fail_silently=False,
+                    )
+                except Exception as mail_exception:
+                    print(mail_exception)
+
             return user
         except Exception as e:
             self.fail('cannot create user: {}'.format(e))
