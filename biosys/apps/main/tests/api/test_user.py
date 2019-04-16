@@ -117,6 +117,31 @@ class TestPermissions(helpers.BaseUserTestCase):
                     status.HTTP_201_CREATED
                 )
 
+    @override_settings(ALLOW_PUBLIC_REGISTRATION=True, SEND_REGISTRATION_CONF=True,
+                       REGISTRATION_EMAIL_SUBJECT='registration', REGISTRATION_EMAIL_FROM='hello',
+                       REGISTRATION_EMAIL_BODY='body')
+    def test_create_public_with_email_conf(self):
+        """
+        Test that if the site is set to allow public registration and email confirmation
+        a confirmation is sent
+        :return:
+        """
+        url = reverse('api:user-list')
+        client = APIClient()
+
+        payload = {
+            "username": "public",
+            "email": "newuser@example.com",
+            "password": "password",
+            "first_name": "John",
+            "last_name": "Doe"
+        }
+        resp = client.post(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertTrue('registration' in mail.outbox[0].subject)
+        self.assertTrue('body' in mail.outbox[0].body)
+
     def test_bulk_create(self):
         """
         Bulk create is not possible

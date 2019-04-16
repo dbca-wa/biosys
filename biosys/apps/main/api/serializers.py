@@ -20,6 +20,10 @@ from main.models import Program, Project, Site, Dataset, Record, Media, DatasetM
 from main.utils_auth import is_admin
 from main.utils_species import get_key_for_value
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 User = get_user_model()
 
 
@@ -107,7 +111,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
                         fail_silently=False,
                     )
                 except Exception as mail_exception:
-                    print(mail_exception)
+                    logger.warning('Error sending registration confirmation: ' + mail_exception)
 
             return user
         except Exception as e:
