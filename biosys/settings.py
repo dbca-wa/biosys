@@ -325,11 +325,16 @@ EMAIL_USE_SSL = env('EMAIL_USE_SSL', False)
 EMAIL_SUBJECT_PREFIX = env('EMAIL_SUBJECT_PREFIX', '[BioSys] ')
 EMAIL_USE_LOCALTIME = env('EMAIL_USE_LOCALTIME', False)
 
+SEND_REGISTRATION_CONF = env('SEND_REGISTRATION_CONF', False)
+REGISTRATION_EMAIL_SUBJECT = env('REGISTRATION_EMAIL_SUBJECT', '')
+REGISTRATION_EMAIL_BODY = env('REGISTRATION_EMAIL_BODY', '')
+REGISTRATION_EMAIL_FROM = env('REGISTRATION_EMAIL_FROM', 'hello')
+
 # djoser is used to manage user password reset workflow.
 # see https://djoser.readthedocs.io
 DJOSER = {
     'PASSWORD_RESET_CONFIRM_URL': env('PASSWORD_RESET_CONFIRM_URL', '#/reset-password/{uid}/{token}'),
-    'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': env('PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND', True)
+    'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': env('PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND', True),
 }
 # This is use in the email template sent to the user after a reset password request.
 # see https://django-templated-mail.readthedocs.io/en/latest/settings.html#site-name

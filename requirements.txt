@@ -29,7 +29,7 @@ djangorestframework-gis==0.13
 drf-yasg==1.7.4
 django-extra-fields==1.0.0
 Pillow==5.1.0
-djoser==1.2.1
+djoser==1.2.2
 
 # for S3 static/media storage
 django-storages==1.6.6
