@@ -106,12 +106,12 @@ class CreateUserSerializer(serializers.ModelSerializer):
                         subject=settings.REGISTRATION_EMAIL_SUBJECT,
                         message=settings.REGISTRATION_EMAIL_BODY,
                         html_message=settings.REGISTRATION_EMAIL_BODY,
-                        from_email=(settings.REGISTRATION_EMAIL_FROM + '@' + settings.EMAIL_HOST),
+                        from_email=(settings.DEFAULT_FROM_EMAIL),
                         recipient_list=[user.email],
                         fail_silently=False,
                     )
                 except Exception as mail_exception:
-                    logger.warning('Error sending registration confirmation: ' + mail_exception)
+                    logger.warning('Error sending registration confirmation: ' + str(mail_exception))
 
             return user
         except Exception as e:
