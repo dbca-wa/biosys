@@ -211,6 +211,12 @@ class SiteViewSet(viewsets.ModelViewSet):
             records.update(geometry=instance.geometry)
 
 
+class FormViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
+    serializer_class = serializers.FormSerializer
+    queryset = models.Form.objects.all().distinct()
+
+
 class DatasetViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
     serializer_class = serializers.DatasetSerializer
