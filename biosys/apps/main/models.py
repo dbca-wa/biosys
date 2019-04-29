@@ -306,6 +306,10 @@ class Site(models.Model):
 
 
 @python_2_unicode_compatible
+class Form(models.Model):
+    layout = JSONField()
+
+@python_2_unicode_compatible
 class Dataset(models.Model):
     TYPE_GENERIC = 'generic'
     TYPE_OBSERVATION = 'observation'

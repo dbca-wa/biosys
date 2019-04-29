@@ -16,7 +16,7 @@ from drf_extra_fields.fields import Base64ImageField
 
 from main.api.validators import get_record_validator_for_dataset
 from main.constants import MODEL_SRID
-from main.models import Program, Project, Site, Dataset, Record, Media, DatasetMedia, ProjectMedia
+from main.models import Program, Project, Site, Dataset, Record, Media, DatasetMedia, ProjectMedia, Form
 from main.utils_auth import is_admin
 from main.utils_species import get_key_for_value
 
@@ -165,6 +165,12 @@ class SiteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Site
+        fields = '__all__'
+
+
+class FormSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Form
         fields = '__all__'
 
 
