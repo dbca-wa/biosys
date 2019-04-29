@@ -309,6 +309,7 @@ class Site(models.Model):
 class Form(models.Model):
     name = models.CharField(max_length=200, null=False, blank=False)
     layout = JSONField()
+    dataset = models.ForeignKey('Dataset', null=False, blank=False)
 
     def __str__(self):
         return '{}'.format(self.name)
