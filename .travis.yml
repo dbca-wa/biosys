@@ -13,6 +13,8 @@ branches:
         - uat
         - staging
         - production
+        - oeh_uat
+        - oeh_production
 env:
     global:
         - SECRET_KEY=SecretKeyForTravis
