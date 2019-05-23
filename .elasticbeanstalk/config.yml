@@ -1,15 +1,16 @@
 branch-defaults:
-  ebs:
-    environment: biosys-uat
-    group_suffix: null
   master:
-    environment: biosys-uat
-  prod:
-    environment: biosys-prod
+    environment: biosys-staging
   staging:
     environment: biosys-staging
   uat:
     environment: biosys-uat
+  oeh_uat:
+    environment: biosys-uat
+  production:
+    environment: biosys-prod
+  oeh_production:
+    environment: biosys-prod
 global:
   application_name: biosys
   branch: master
