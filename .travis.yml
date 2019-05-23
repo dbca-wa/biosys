@@ -31,12 +31,12 @@ script:
 
 deploy:
   provider: elasticbeanstalk
-  access_key_id: $AWS_ACCESS_KEY
+  access_key_id: $AWS_OEH_ACCESS_KEY
   secret_access_key:
-    secure: "$AWS_SECRET_KEY"
+    secure: $AWS_OEH_SECRET_KEY
   region: "ap-southeast-2"
-  app: "eb-biosys"
-  env: "eb-biosys-uat"
-  bucket_name: $AWS_BUCKET_NAME
+  app: "biosys"
+  env: "biosys-uat"
+  bucket_name: elasticbeanstalk-ap-southeast-2-119102954308
   on:
-    branch: uat
+    branch: oeh_uat
