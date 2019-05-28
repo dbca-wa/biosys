@@ -559,6 +559,7 @@ class TestPasswordResetWorkflow(helpers.BaseUserTestCase):
         self.assertTrue(user.check_password(new_password))
 
 
+@override_settings(AUTH_PASSWORD_VALIDATORS=[])
 class TestUsername(helpers.BaseUserTestCase):
 
     def test_username_backslash(self):

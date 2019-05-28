@@ -8,6 +8,8 @@ from django.contrib import admin
 from django.shortcuts import redirect
 from django.views.generic import TemplateView
 from django.contrib.auth import views as auth_views
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication, TokenAuthentication
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
@@ -70,7 +72,9 @@ schema_view = get_schema_view(
         description="Biosys API Documentation",
     ),
     public=True,
-    patterns=api_urls
+    patterns=api_urls,
+    authentication_classes=(SessionAuthentication, BasicAuthentication, TokenAuthentication),
+    permission_classes=(IsAuthenticated,)
 )
 
 api_doc_urls = [
