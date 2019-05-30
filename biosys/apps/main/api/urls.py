@@ -21,7 +21,7 @@ router.register(r'dataset-media', api_views.DatasetMediaViewSet, 'dataset-media'
 
 
 url_patterns = [
-    url(r'auth-token/', obtain_auth_token, name="auth-token"),
+    url(r'auth-token/', api_views.ObtainAuthToken.as_view(), name="auth-token"),
     url(r'projects?/(?P<pk>\d+)/sites/?', api_views.ProjectSitesView.as_view(), name='project-sites'),  # bulk sites
     url(r'projects?/(?P<pk>\d+)/upload-sites/?', api_views.ProjectSitesUploadView.as_view(),
         name='upload-sites'),  # file upload for sites

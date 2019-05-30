@@ -46,7 +46,6 @@ django-grappelli==2.8.2
 dj-static==0.0.6
 
 # test, deploy and dev
-Fabric>=1.10.1,<2.0
 coverage>=4.2,<5.0
 flake8>=2.4.0,<3.0
 mixer>=5.4.1,<6.0
@@ -54,3 +53,4 @@ django-extensions>=1.7.2,<1.8
 ipython>=5.1.0,<6.0
 Werkzeug>=0.10.4,<1.0
 factory-boy==2.11.1
+freezegun==0.3.11
