@@ -53,6 +53,7 @@ class TestPermissions(helpers.BaseUserTestCase):
                     status.HTTP_200_OK
                 )
 
+    @override_settings(ALLOW_PUBLIC_REGISTRATION=False)
     def test_create(self):
         """
         By default only admin can create.
