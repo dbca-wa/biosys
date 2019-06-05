@@ -96,6 +96,8 @@ Example of how to create an environment:
     eb create --scale 2 -db -db.engine postgres -db.i db.t2.micro
     # same as above with no load balancer (single instance)
     eb create --single -db -db.engine postgres -db.i db.t2.micro
+    # example of uat for slug (mksas). One instance but with load balancer
+    eb create --scale 1 -db -db.engine postgres -db.i db.t2.micro --profile mksas
     
 Check environment
     

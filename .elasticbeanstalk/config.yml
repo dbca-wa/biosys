@@ -8,9 +8,13 @@ branch-defaults:
   oeh_uat:
     environment: biosys-uat
   production:
-    environment: biosys-prod
+    environment: biosys-production
   oeh_production:
-    environment: biosys-prod
+    environment: biosys-production
+  slug_uat:
+    environment: biosys-uat
+  slug_prod:
+    environment: biosys-production
 global:
   application_name: biosys
   branch: master
