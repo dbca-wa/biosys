@@ -15,6 +15,8 @@ branches:
         - production
         - oeh_uat
         - oeh_production
+        - slug_uat
+        - slug_production
 env:
     global:
         - SECRET_KEY=SecretKeyForTravis
