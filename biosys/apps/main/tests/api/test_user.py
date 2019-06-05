@@ -53,6 +53,7 @@ class TestPermissions(helpers.BaseUserTestCase):
                     status.HTTP_200_OK
                 )
 
+    @override_settings(ALLOW_PUBLIC_REGISTRATION=False)
     def test_create(self):
         """
         By default only admin can create.
@@ -559,6 +560,7 @@ class TestPasswordResetWorkflow(helpers.BaseUserTestCase):
         self.assertTrue(user.check_password(new_password))
 
 
+@override_settings(AUTH_PASSWORD_VALIDATORS=[])
 class TestUsername(helpers.BaseUserTestCase):
 
     def test_username_backslash(self):

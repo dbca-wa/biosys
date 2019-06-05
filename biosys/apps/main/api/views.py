@@ -16,6 +16,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, FileUploadParser
 from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
 from rest_framework.views import APIView, Response
 from rest_framework.settings import import_from_string
+import rest_framework.authtoken.views as auth_views
 
 from main import models, constants
 from main.api import serializers
@@ -29,7 +30,7 @@ from main.api.exporters import DefaultExporter
 from main.utils_http import WorkbookResponse, CSVFileResponse
 from main.utils_species import NoSpeciesFacade
 from main.utils_misc import search_json_fields, order_by_json_field
-
+from main.api.throttling import UserLoginRateThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,10 @@ class UserPermission(BasePermission):
         """
         is_owner = (request.user == obj)
         return request.method in SAFE_METHODS or is_admin(request.user) or is_owner
+
+
+class ObtainAuthToken(auth_views.ObtainAuthToken):
+    throttle_classes = (UserLoginRateThrottle,)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -209,6 +214,12 @@ class SiteViewSet(viewsets.ModelViewSet):
         instance.refresh_from_db()
         if instance.geometry is not None:
             records.update(geometry=instance.geometry)
+
+
+class FormViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = (IsAuthenticated, DRYPermissions)
+    serializer_class = serializers.FormSerializer
+    queryset = models.Form.objects.all().distinct()
 
 
 class DatasetViewSet(viewsets.ModelViewSet):

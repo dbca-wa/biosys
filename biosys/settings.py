@@ -34,7 +34,7 @@ ALLOWED_HOSTS = env('ALLOWED_HOSTS', [
 # Application definition
 # The variables below are added to all responses in biosys/context_processors.py
 SITE_TITLE = 'BioSys - WA Biological Survey Database'
-APPLICATION_VERSION_NO = '5.0.0'
+APPLICATION_VERSION_NO = '5.1.0'
 
 INSTALLED_APPS = (
     'grappelli',  # Must be before django.contrib.admin
@@ -122,6 +122,18 @@ LOGIN_REDIRECT_URL = '/'
 AUTHENTICATION_BACKENDS = env('AUTHENTICATION_BACKENDS', [
     'django.contrib.auth.backends.ModelBackend',
 ])
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': env('PASSWORD_MIN_LENGTH', 8),
+        }
+    },
+]
+EXTRA_PASSWORD_VALIDATORS = env('EXTRA_PASSWORD_VALIDATORS', [])
+AUTH_PASSWORD_VALIDATORS += EXTRA_PASSWORD_VALIDATORS
+
 EXPORTER_CLASS = env('EXPORTER_CLASS', 'main.api.exporters.DefaultExporter')
 
 REST_FRAMEWORK = {
@@ -137,7 +149,6 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
-        # 'rest_framework.renderers.BrowsableAPIRenderer', # commented because we use the swagger explorer
     ),
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
@@ -145,6 +156,9 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'DEFAULT_METADATA_CLASS': 'rest_framework.metadata.SimpleMetadata',
+    'DEFAULT_THROTTLE_RATES': {
+        'auth': env('REST_FRAMEWORK_AUTH_THROTTLE', '20/hour'),
+    }
 }
 
 SWAGGER_SETTINGS = {
