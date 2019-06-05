@@ -321,10 +321,11 @@ class RecordSerializer(serializers.ModelSerializer):
         observation_date = RecordSerializer.get_datetime(dataset, validated_data['data'])
         if observation_date:
             # convert to datetime with timezone awareness
-            if isinstance(observation_date, datetime.date):
+            if isinstance(observation_date, datetime.date) and not isinstance(observation_date, datetime.datetime):
                 observation_date = datetime.datetime.combine(observation_date, datetime.time.min)
-            tz = dataset.project.timezone or timezone.get_current_timezone()
-            observation_date = timezone.make_aware(observation_date, tz)
+            if timezone.is_naive(observation_date):
+                tz = dataset.project.timezone or timezone.get_current_timezone()
+                observation_date = timezone.make_aware(observation_date, tz)
             instance.datetime = observation_date
             if commit:
                 instance.save()
