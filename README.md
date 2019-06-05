@@ -106,7 +106,5 @@ Check environment
 Deploy :
     
         example: deploy on OEH uat. This assume you have an oeh AWS credential profile. 
-        eb deploy biosys-uat --profile oeh 
-    
-     
-     
+        eb deploy biosys-uat --profile oeh
+ 
