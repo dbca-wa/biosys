@@ -70,7 +70,7 @@ class UserPermission(BasePermission):
         elif method == 'GET':
             return is_admin(user) or is_data_engineer(user)
         else:
-            # UPDATE and PATCH permission will be sorted in has_object_permission
+            # UPDATE and PATCH permission are sorted in has_object_permission() below.
             return user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
