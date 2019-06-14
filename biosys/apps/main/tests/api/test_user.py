@@ -17,7 +17,7 @@ User = get_user_model()
 class TestPermissions(helpers.BaseUserTestCase):
     """
     Test Permissions
-    Get: authenticated
+    Get: admin or data_engineer
     Update: admin or user itself
     Create: admin
     Delete: forbidden through API
@@ -29,11 +29,13 @@ class TestPermissions(helpers.BaseUserTestCase):
             reverse('api:user-detail', kwargs={'pk': self.readonly_user.pk})
         ]
         access = {
-            "forbidden": [self.anonymous_client],
-            "allowed": [
+            "forbidden": [
+                self.anonymous_client,
                 self.readonly_client,
                 self.custodian_1_client,
                 self.custodian_2_client,
+            ],
+            "allowed": [
                 self.admin_client,
                 self.data_engineer_1_client,
                 self.data_engineer_2_client
@@ -248,8 +250,17 @@ class TestPermissions(helpers.BaseUserTestCase):
             reverse('api:user-detail', kwargs={'pk': 1})
         ]
         access = {
-            "forbidden": [self.anonymous_client],
-            "allowed": [self.readonly_client, self.custodian_1_client, self.custodian_2_client, self.admin_client]
+            "forbidden": [
+                self.anonymous_client,
+            ],
+            "allowed": [
+                self.readonly_client,
+                self.custodian_1_client,
+                self.custodian_2_client,
+                self.data_engineer_1_client,
+                self.data_engineer_2_client,
+                self.admin_client
+            ]
         }
         for client in access['forbidden']:
             for url in urls:
@@ -282,7 +293,8 @@ class TestFiltering(helpers.BaseUserTestCase):
 
         # test by project id
         url = reverse('api:user-list')
-        client = self.custodian_1_client
+        # since june 2019. Only admin or data_engineer can GET users.
+        client = self.data_engineer_1_client
         filters = {
             'project__id': project.id
         }
@@ -294,7 +306,8 @@ class TestFiltering(helpers.BaseUserTestCase):
 
         # test by project name
         url = reverse('api:user-list')
-        client = self.custodian_1_client
+        # since june 2019. Only admin or data_engineer can GET users.
+        client = self.data_engineer_1_client
         filters = {
             'project__name': project.name
         }
@@ -306,7 +319,8 @@ class TestFiltering(helpers.BaseUserTestCase):
 
         # test by project code
         url = reverse('api:user-list')
-        client = self.custodian_1_client
+        # since june 2019. Only admin or data_engineer can GET users.
+        client = self.data_engineer_1_client
         filters = {
             'project__code': project.code
         }
