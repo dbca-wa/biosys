@@ -79,5 +79,5 @@ deploy:
     env: "biosys-production"
     bucket_name: elasticbeanstalk-ap-southeast-2-496139929044
     on:
-      branch: slug_prod
+      branch: slug_production
       python: "3.6"
