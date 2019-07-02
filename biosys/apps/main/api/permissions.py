@@ -7,7 +7,7 @@ from main.utils_auth import is_admin
 
 class CanViewSwagger(BasePermission):
     """
-    Since OEH Koala pen testing, Swagger should not be visible by user that has register freely on Biosys.
+    Since OEH Koala pen testing, Swagger should not be visible by user that has registered freely on Biosys.
     Until we add a proper permission model for 'public' user we just restrict it to admin and data engineer if the
     server is set to allow public registration
     """
