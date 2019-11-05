@@ -13,7 +13,7 @@ branch-defaults:
     environment: biosys-production
   slug_uat:
     environment: biosys-uat
-  slug_produstion:
+  slug_production:
     environment: biosys-production
 global:
   application_name: biosys
