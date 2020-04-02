@@ -1,0 +1,3 @@
+-r requirements.txt
+# dbca for SSO login
+git+https://github.com/dbca-wa/dpaw-utils.git@0.4.1

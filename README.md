@@ -43,6 +43,7 @@ docker-compose rm -f
 
 ### Supporting Applications / Packages:
 
+- Python 2.7 or 3.6 (Some dependencies fail on 3.7)
 - PostgreSQL (>=9.3)
 - PostGIS extension (>=2.1)
 - GDAL (>=1.10)

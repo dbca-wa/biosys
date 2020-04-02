@@ -84,7 +84,7 @@ MIDDLEWARE = [
 ]
 
 EXTRA_MIDDLEWARE = env('EXTRA_MIDDLEWARE', [
-    'dpaw_utils.middleware.SSOLoginMiddleware'
+    # 'dpaw_utils.middleware.SSOLoginMiddleware'
 ])
 
 MIDDLEWARE += EXTRA_MIDDLEWARE
