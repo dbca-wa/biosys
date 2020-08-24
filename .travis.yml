@@ -36,8 +36,7 @@ script:
 deploy:
   - provider: elasticbeanstalk
     access_key_id: $AWS_OEH_ACCESS_KEY
-    secret_access_key:
-      secure: $AWS_OEH_SECRET_KEY
+    secret_access_key: $AWS_OEH_SECRET_KEY
     region: "ap-southeast-2"
     app: "biosys"
     env: "biosys-uat"
@@ -48,8 +47,7 @@ deploy:
 
   - provider: elasticbeanstalk
     access_key_id: $AWS_OEH_ACCESS_KEY
-    secret_access_key:
-      secure: $AWS_OEH_SECRET_KEY
+    secret_access_key: $AWS_OEH_SECRET_KEY
     region: "ap-southeast-2"
     app: "biosys"
     env: "biosys-production"
@@ -60,8 +58,7 @@ deploy:
 
   - provider: elasticbeanstalk
     access_key_id: $AWS_SLUG_ACCESS_KEY
-    secret_access_key:
-      secure: $AWS_SLUG_SECRET_KEY
+    secret_access_key: $AWS_SLUG_SECRET_KEY
     region: "ap-southeast-2"
     app: "biosys"
     env: "biosys-uat"
@@ -72,8 +69,7 @@ deploy:
 
   - provider: elasticbeanstalk
     access_key_id: $AWS_SLUG_ACCESS_KEY
-    secret_access_key:
-      secure: $AWS_SLUG_SECRET_KEY
+    secret_access_key: $AWS_SLUG_SECRET_KEY
     region: "ap-southeast-2"
     app: "biosys"
     env: "biosys-production"
