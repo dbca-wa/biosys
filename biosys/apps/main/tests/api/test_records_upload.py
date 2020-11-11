@@ -210,8 +210,8 @@ class TestGenericRecord(helpers.BaseUserTestCase):
         Test that unicode characters works
         """
         csv_data = [
-            [u'Column A', u'Column B'],
-            [u'Some char: \u1234', u'The euro char: \u20ac']
+            ['Column A', 'Column B'],
+            ['Some char: \u1234', 'The euro char: \u20ac']
         ]
         file_ = helpers.rows_to_xlsx_file(csv_data)
         client = self.custodian_1_client
@@ -230,8 +230,8 @@ class TestGenericRecord(helpers.BaseUserTestCase):
             index = 0
             record = qs[index]
             expected_data = {
-                'Column A': u'Some char: \u1234',
-                'Column B': u'The euro char: \u20ac',
+                'Column A': 'Some char: \u1234',
+                'Column B': 'The euro char: \u20ac',
             }
             self.assertEqual(expected_data, record.data)
 
