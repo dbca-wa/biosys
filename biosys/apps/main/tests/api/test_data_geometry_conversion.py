@@ -1,4 +1,4 @@
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from rest_framework import status
 
 from main.models import Dataset, Record
@@ -345,14 +345,19 @@ class EastingNorthingSchema(helpers.BaseUserTestCase):
         data = resp.json()
         self.assertTrue('geometry' in data)
         self.assertTrue('data' in data)
+
+        # extract Northing / Easting so they can be compared with almostEqual
+        northing = data['data'].pop('Northing')
+        easting = data['data'].pop('Easting')
+
         expected_data = {
             'What': sent_data['What'],
             'When': sent_data['When'],
-            'Northing': 6237393.340227433,
-            'Easting': 592349.6033431825,
             'Datum': sent_data['Datum'],
             'Zone': sent_data['Zone']
         }
         self.assertEqual(data['data'], expected_data)
+        self.assertAlmostEqual(northing, 6237393.340227, 5)
+        self.assertAlmostEqual(easting, 592349.603343, 5)
         expected_geometry = geometry
         self.assertEqual(data['geometry'], expected_geometry)

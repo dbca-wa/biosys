@@ -2,7 +2,7 @@ import re
 
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient

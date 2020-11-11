@@ -333,10 +333,13 @@ class TestJsonSearchAndOrdering(helpers.BaseUserTestCase):
             'id__in': json.dumps(expected_ids)  # '[1,4]'
         }
         resp = client.get(url, params)
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        records = resp.json()
-        self.assertEqual(0, len(records))
-        self.assertNotEqual(sorted([r['id'] for r in records]), sorted(expected_ids))
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        error = resp.json()
+        # this should be a typical django exception with the message inside the 'id__in' field
+        self.assertIsInstance(error, dict)
+        self.assertIn('id__in', error)
+        # test that the error message contains 'Enter a number.'
+        self.assertIn('Enter a number.', error['id__in'])
 
         # Test that repeated key doesn't work. It will return the last one
         expected_ids = [record_ids[0], record_ids[-1]]

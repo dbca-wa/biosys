@@ -1,11 +1,11 @@
+import io
 import json
 import re
 from os import path
 
-from django.core.urlresolvers import reverse
-from django.utils import six
+from django.urls import reverse
 from openpyxl import load_workbook
-from openpyxl.cell import Cell
+from openpyxl.cell import cell
 from rest_framework import status
 
 from main.models import Dataset, Record
@@ -482,7 +482,7 @@ class TestExport(helpers.BaseUserTestCase):
         self.assertEqual(ext, '.xlsx')
         filename.startswith(dataset.name)
         # read content
-        wb = load_workbook(six.BytesIO(resp.content), read_only=True)
+        wb = load_workbook(io.BytesIO(resp.content), read_only=True)
         # one datasheet named from dataset
         sheet_names = wb.sheetnames
         self.assertEqual(1, len(sheet_names))
@@ -593,19 +593,19 @@ class TestExport(helpers.BaseUserTestCase):
             self.fail("Export should not raise an exception: {}".format(e))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         # load workbook
-        wb = load_workbook(six.BytesIO(resp.content))
+        wb = load_workbook(io.BytesIO(resp.content))
         ws = wb[dataset.name]
         rows = list(ws.rows)
         self.assertEqual(len(rows), 2)
         cells = rows[1]
         string, number, integer, date, datetime, boolean = cells
-        # excel type are string, number or boolean
-        self.assertEqual(string.data_type, Cell.TYPE_STRING)
-        self.assertEqual(number.data_type, Cell.TYPE_NUMERIC)
-        self.assertEqual(integer.data_type, Cell.TYPE_NUMERIC)
-        self.assertEqual(date.data_type, Cell.TYPE_NUMERIC)
-        self.assertEqual(datetime.data_type, Cell.TYPE_NUMERIC)
-        self.assertEqual(boolean.data_type, Cell.TYPE_BOOL)
+        # excel type are string, number, boolean, date or datetime, although there's not TYPE for date or datetimes
+        self.assertEqual(string.data_type, cell.TYPE_STRING)
+        self.assertEqual(number.data_type, cell.TYPE_NUMERIC)
+        self.assertEqual(integer.data_type, cell.TYPE_NUMERIC)
+        self.assertEqual(boolean.data_type, cell.TYPE_BOOL)
+        self.assertTrue(date.is_date)
+        self.assertTrue(datetime.is_date)
 
 
 class TestSchemaValidation(helpers.BaseUserTestCase):

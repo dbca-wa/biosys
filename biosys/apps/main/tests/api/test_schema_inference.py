@@ -5,7 +5,6 @@ import json
 from datapackage import Package
 from django.core.exceptions import ValidationError
 from django.shortcuts import reverse
-from django.utils import six
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIRequestFactory, force_authenticate
@@ -232,7 +231,7 @@ class TestGenericSchema(InferTestBase):
     def test_mix_types_infer_most_plausible(self):
         """
         Scenario: column with more integers than string should be infer a type='integer'
-        Given than a column contains 2 strings then 5 integers
+        Given than a column contains 2 strings then 6 integers
         Then the column type should be 'integer'
         """
         columns = ['How Many']
@@ -244,7 +243,8 @@ class TestGenericSchema(InferTestBase):
             [2],
             [3],
             [4],
-            [5]
+            [5],
+            [6]
         ]
         client = self.data_engineer_1_client
         file_ = helpers.rows_to_xlsx_file(rows)
@@ -287,11 +287,9 @@ class TestGenericSchema(InferTestBase):
             # with the view directly. Can't use the classic API client.
             # hack the content-type of the request.
             data, content_type = factory._encode_data(payload, format='multipart')
-            if six.PY3:
-                data = data.decode('utf-8')
+            data = data.decode('utf-8')
             data = data.replace('Content-Type: text/csv', 'Content-Type: application/vnd.ms-excel')
-            if six.PY3:
-                data = data.encode('utf-8')
+            data = data.encode('utf-8')
             request = factory.generic('POST', self.url, data, content_type=content_type)
             user = self.data_engineer_1_user
             token, _ = Token.objects.get_or_create(user=user)
@@ -300,10 +298,7 @@ class TestGenericSchema(InferTestBase):
             self.assertEqual(status.HTTP_200_OK, resp.status_code)
             # should be json
             self.assertEqual(resp.get('content-type'), 'application/json')
-            if six.PY3:
-                content = resp.content.decode('utf-8')
-            else:
-                content = resp.content
+            content = resp.content.decode('utf-8')
             received = json.loads(content)
 
             # name should be set with the file name

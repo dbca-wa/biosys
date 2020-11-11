@@ -398,7 +398,7 @@ class TestSchemaFieldCast(TestCase):
 
         # test non unicode (python 2)
         value = 'not unicode'
-        self.assertIsInstance(f.cast(value), six.text_type)  # will fail on python 3 (type = str)
+        self.assertIsInstance(f.cast(value), str)
         self.assertEqual(f.cast(value), value)
 
 

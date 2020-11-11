@@ -50,8 +50,6 @@ import logging
 import requests
 from confy import env
 
-from django.utils import six
-
 logger = logging.getLogger(__name__)
 
 
@@ -64,7 +62,7 @@ def get_key_for_value(dict_, value, default=None):
     :param default:
     :return: the key for the given value of default
     """
-    for k, v in six.iteritems(dict_):
+    for k, v in dict_.items():
         if v == value:
             return k
     return default

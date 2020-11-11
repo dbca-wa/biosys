@@ -1,3 +1,4 @@
+import io
 import re
 from os import path
 
@@ -6,7 +7,6 @@ from openpyxl import load_workbook
 from django.test import TestCase
 from django.test.client import Client
 from django.shortcuts import reverse
-from django.utils import six
 from rest_framework import status
 
 
@@ -32,7 +32,7 @@ class TestDownloadSiteTemplates(TestCase):
         self.assertEqual(ext, '.xlsx')
         self.assertEqual(filename, 'Sites_template_lat_long')
         # read content
-        wb = load_workbook(six.BytesIO(resp.content), read_only=True)
+        wb = load_workbook(io.BytesIO(resp.content), read_only=True)
         # one datasheet named 'Sites'
         expected_sheet_name = 'Sites'
         sheet_names = wb.sheetnames
@@ -66,7 +66,7 @@ class TestDownloadSiteTemplates(TestCase):
         self.assertEqual(ext, '.xlsx')
         self.assertEqual(filename, 'Sites_template_easting_northing')
         # read content
-        wb = load_workbook(six.BytesIO(resp.content), read_only=True)
+        wb = load_workbook(io.BytesIO(resp.content), read_only=True)
         # one datasheet named 'Sites'
         expected_sheet_name = 'Sites'
         sheet_names = wb.sheetnames

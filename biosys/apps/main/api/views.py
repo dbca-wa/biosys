@@ -321,7 +321,7 @@ class DatasetRecordsView(generics.ListAPIView, generics.DestroyAPIView, SpeciesM
 
             return queryset
         else:
-            return Dataset.objects.none()
+            return Record.objects.none()
 
     def get(self, request, *args, **kwargs):
         """
@@ -631,7 +631,7 @@ class LogoutView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class GeoConvertView(generics.GenericAPIView):
+class GeoConvertView(APIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = serializers.GeoConvertSerializer
     OUTPUT_GEOMETRY = "geometry"

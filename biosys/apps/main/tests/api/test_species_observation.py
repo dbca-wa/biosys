@@ -1,11 +1,12 @@
 import datetime
+import io
 import re
 from os import path
 import json
 
 from django.contrib.gis.geos import Point
-from django.core.urlresolvers import reverse
-from django.utils import timezone, six
+from django.urls import reverse
+from django.utils import timezone
 from openpyxl import load_workbook
 from rest_framework import status
 
@@ -1094,7 +1095,7 @@ class TestExport(helpers.BaseUserTestCase):
         self.assertEqual(ext, '.xlsx')
         filename.startswith(dataset.name)
         # read content
-        wb = load_workbook(six.BytesIO(resp.content), read_only=True)
+        wb = load_workbook(io.BytesIO(resp.content), read_only=True)
         # one datasheet named from dataset
         sheet_names = wb.sheetnames
         self.assertEqual(1, len(sheet_names))

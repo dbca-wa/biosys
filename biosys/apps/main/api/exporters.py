@@ -1,7 +1,8 @@
-from django.utils import six
+import io
+
 from openpyxl import Workbook
 from openpyxl.styles import Font
-from openpyxl.writer.write_only import WriteOnlyCell
+from openpyxl.cell import WriteOnlyCell
 
 from main.utils_data_package import GenericSchema
 
@@ -28,9 +29,7 @@ class DefaultExporter:
                         value = field.cast(value)
                     except Exception:
                         pass
-                # TODO: remove that when running in Python3
-                if isinstance(value, six.string_types) and not isinstance(value, six.text_type):
-                    value = six.u(value)
+
                 row.append(value)
             yield row
 
@@ -59,13 +58,9 @@ class DefaultExporter:
         return wb
 
     def to_csv(self, output):
-        # TODO: remove when python3
-        if six.PY2:
-            import unicodecsv as csv
-        else:
-            import csv
+        import csv
 
-        output = output or six.StringIO()
+        output = output or io.StringIO()
         writer = csv.writer(output, dialect='excel')
         for row in self.csv_it():
             writer.writerow(row)
@@ -76,13 +71,9 @@ class BionetExporter(DefaultExporter):
     Same as default but spit two blank lines at the top when using csv
     """
     def to_csv(self, output):
-        # TODO: remove when python3
-        if six.PY2:
-            import unicodecsv as csv
-        else:
-            import csv
+        import csv
 
-        output = output or six.StringIO()
+        output = output or io.StringIO()
         writer = csv.writer(output, dialect='excel')
         writer.writerow(['Bionet Ignored Line'])
         writer.writerow(['Bionet Ignored Line'])

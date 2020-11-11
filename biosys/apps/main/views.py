@@ -2,7 +2,7 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 
 from openpyxl import Workbook
 from openpyxl.styles import Font
-from openpyxl.writer.write_only import WriteOnlyCell
+from openpyxl.cell import WriteOnlyCell
 from django.http import HttpResponseBadRequest
 
 from django.contrib.auth.mixins import LoginRequiredMixin

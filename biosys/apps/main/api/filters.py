@@ -3,7 +3,6 @@ import json
 
 from django.contrib.auth import get_user_model
 from django_filters import rest_framework as filters, constants
-from django.utils import six
 from rest_framework.exceptions import APIException
 
 from main import models
@@ -32,7 +31,7 @@ class JSONFilter(filters.CharFilter):
             return qs
         # value should be a valid json string
         try:
-            if isinstance(value, six.string_types):
+            if isinstance(value, str):
                 # replace single quote by double quote
                 value = value.replace('\'', '\"')
                 value = json.loads(value)
@@ -71,9 +70,9 @@ class GeometryFilter(filters.CharFilter):
 
 
 class UserFilterSet(filters.FilterSet):
-    project__id = filters.CharFilter(name='project', method='filter_project_id_custodians')
-    project__name = filters.CharFilter(name='project', method='filter_project_name_custodians')
-    project__code = filters.CharFilter(name='project', method='filter_project_code_custodians')
+    project__id = filters.CharFilter(field_name='project', method='filter_project_id_custodians')
+    project__name = filters.CharFilter(field_name='project', method='filter_project_name_custodians')
+    project__code = filters.CharFilter(field_name='project', method='filter_project_code_custodians')
 
     @staticmethod
     def filter_project_id_custodians(queryset, name, project_ids):

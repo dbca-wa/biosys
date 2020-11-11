@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from django.contrib.auth.decorators import login_required
 from django.conf.urls import include, url
 from django.contrib import admin
+from django.contrib.auth.views import LogoutView
 from django.shortcuts import redirect
 from django.views.generic import TemplateView
 from django.contrib.auth import views as auth_views
@@ -37,12 +38,12 @@ def admin_view_selection_view(request):
 
 web_urls = [
     # Authentication URLs
-    url(r'^logout/$', auth_views.logout, {'next_page': '/login/'}, name='logout'),
+    url(r'^logout/$', LogoutView.as_view(), {'next_page': '/login/'}, name='logout'),
     # url(r'^login/$', auth_views.login),
     url('^', include('django.contrib.auth.urls')),
     # Application URLs
     url(r'^download/', include(download_urlpatterns, namespace='download')),
-    url(r'^admin/logout/$', auth_views.logout, {'next_page': '/'}),
+    url(r'^admin/logout/$', LogoutView.as_view(), {'next_page': '/'}),
     # use a function to determine where admin/ will resolve to, based on the user
     url(r'^admin/$', admin_view_selection_view),
     url(r'^admin/', admin.site.urls),
@@ -56,11 +57,11 @@ web_urls = [
 ]
 
 api_urls = [
-    url(r'^api/', include(api_endpoints, namespace='api')),
+    url(r'^api/', include((api_endpoints, 'api'))),
 ]
 
 sso_api_urls = [
-    url(r'^sso-api/', include(api_endpoints, namespace='sso-api')),
+    url(r'^sso-api/', include((api_endpoints, 'sso-api'))),
 ]
 
 media_urls = static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
