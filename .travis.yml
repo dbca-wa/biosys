@@ -22,7 +22,7 @@ env:
         - SECRET_KEY=SecretKeyForTravis
         - DATABASE_URL="postgis://postgres@localhost:5432/travis_ci_test"
 install:
-    - sudo apt-get install -y postgresql-12-postgis-3 postgresql-12-postgis-scripts
+    - sudo apt-get install -y postgis postgresql-12-postgis-3
     - psql -U postgres -c "create extension if not exists postgis"
     - pip install pip --upgrade
     - pip --version
