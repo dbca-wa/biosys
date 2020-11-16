@@ -46,7 +46,6 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.gis',
     'django.contrib.postgres',
-
     'rest_framework',
     'rest_framework.authtoken',
     'dry_rest_permissions',
@@ -57,7 +56,6 @@ INSTALLED_APPS = (
     'reversion',
     'storages',
     'djoser',
-
     'django_extensions',
     'bootstrap3',
     'timezone_field'
@@ -75,7 +73,6 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',

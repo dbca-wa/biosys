@@ -1,8 +1,8 @@
+dist: bionic
 sudo: false
 language: python
 python:
-    - "3.6"
-    - "2.7"
+    - "3.8"
 addons:
     postgresql: "9.6"
 services:

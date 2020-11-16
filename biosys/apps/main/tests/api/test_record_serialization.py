@@ -1,3 +1,4 @@
+import io
 import re
 from os import path
 
@@ -5,15 +6,11 @@ from django.test import override_settings
 from openpyxl import load_workbook
 
 from django.shortcuts import reverse
-from django.utils import six
 from rest_framework import status
 
 from main.tests.api import helpers
-# TODO: remove when python3
-if six.PY2:
-    import unicodecsv as csv
-else:
-    import csv
+
+import csv
 
 
 class TestFieldSelection(helpers.BaseUserTestCase):
@@ -182,7 +179,7 @@ class TestExcelFormat(helpers.BaseUserTestCase):
         filename, ext = path.splitext(match.group(1))
         self.assertEqual(ext, '.xlsx')
         # read content
-        wb = load_workbook(six.BytesIO(resp.content), read_only=True)
+        wb = load_workbook(io.BytesIO(resp.content), read_only=True)
         # one datasheet named after the dataset
         expected_sheet_name = dataset.name
         sheet_names = wb.sheetnames
@@ -230,7 +227,7 @@ class TestCSVFormat(helpers.BaseUserTestCase):
         filename, ext = path.splitext(match.group(1))
         self.assertEqual(ext, '.csv')
         # read content
-        reader = csv.reader(six.StringIO(resp.content.decode('utf-8')), dialect='excel')
+        reader = csv.reader(io.StringIO(resp.content.decode('utf-8')), dialect='excel')
         for expected_row, actual_row in zip(expected_rows, reader):
             expected_row_string = [str(v) for v in expected_row]
             self.assertEqual(actual_row, expected_row_string)

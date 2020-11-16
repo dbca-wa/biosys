@@ -7,7 +7,6 @@ import pytz
 from django import forms
 from django.contrib.postgres.forms import JSONField
 from django.core.exceptions import ValidationError
-from django.utils import six
 
 from .models import Project, Site, Dataset
 
@@ -32,7 +31,7 @@ class BetterJSONField(JSONField):
     def prepare_value(self, value):
         if value is None:
             return ""
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             # already a string
             return value
         else:

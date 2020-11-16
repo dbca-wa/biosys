@@ -8,8 +8,6 @@ import re
 
 from dateutil.parser import parse as date_parse
 from django.contrib.gis.geos import Point
-from django.utils import six
-from django.utils.encoding import python_2_unicode_compatible
 from future.utils import raise_with_traceback
 from tableschema import Field as TableField
 from tableschema import Schema as TableSchema
@@ -27,7 +25,7 @@ def is_blank_value(value):
 
 
 def is_empty_string(value):
-    return isinstance(value, six.string_types) and len(value.strip()) == 0
+    return isinstance(value, str) and len(value.strip()) == 0
 
 
 class InvalidDateType(Exception):
@@ -112,7 +110,6 @@ def find_unique_field(schema, biosys_type, column_name):
     return None, None
 
 
-@python_2_unicode_compatible
 class BiosysSchema:
     """
     The utility class for the biosys data within a schema field
@@ -192,7 +189,6 @@ class BiosysSchema:
         return self.type == self.SPECIES_TYPE_NAME
 
 
-@python_2_unicode_compatible
 class SchemaField:
     """
     Utility class for a field in a schema.
@@ -286,12 +282,9 @@ class SchemaField:
         :return:
         """
         # we want to strip strings
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             value = value.strip()
-            # TODO: remove that when running in Python3
-            if not isinstance(value, six.text_type):
-                # the ensure only unicode
-                value = six.u(value).strip()
+
         # date or datetime with format='any
         if self.is_datetime_types and self.format == 'any' and value:
             return cast_date_any_format(value) if self.is_date_type else cast_datetime_any_format(value)
@@ -374,7 +367,6 @@ class SchemaConstraints:
         return self.get('enum')
 
 
-@python_2_unicode_compatible
 class SchemaForeignKey:
     """
     A utility class for foreign key in schema
@@ -397,7 +389,7 @@ class SchemaForeignKey:
     def _as_list(value):
         if isinstance(value, list):
             return value
-        elif isinstance(value, six.string_types):
+        elif isinstance(value, str):
             return [value]
         else:
             return list(value)
@@ -436,7 +428,6 @@ class SchemaForeignKey:
         return self.reference_fields[0] if self.reference_fields else None
 
 
-@python_2_unicode_compatible
 class GenericSchema(object):
     """
     A utility class for schema.

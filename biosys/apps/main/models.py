@@ -10,9 +10,8 @@ from tableschema import exceptions as tableschema_exceptions
 from django.conf import settings
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models import Extent
-from django.contrib.postgres.fields import JSONField
+from django.db.models import JSONField
 from django.core.exceptions import ValidationError
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.text import Truncator
 from django.db.models.query_utils import Q
 from timezone_field import TimeZoneField
@@ -24,7 +23,6 @@ from main.utils_data_package import GenericSchema, ObservationSchema, SpeciesObs
 logger = logging.getLogger(__name__)
 
 
-@python_2_unicode_compatible
 class Program(models.Model):
     name = models.CharField(max_length=300, null=False, blank=False, unique=True,
                             verbose_name="Name", help_text="Enter a name for the program (required).")
@@ -83,7 +81,6 @@ class Program(models.Model):
         return self.name
 
 
-@python_2_unicode_compatible
 class Project(models.Model):
     DEFAULT_TIMEZONE = settings.TIME_ZONE
 
@@ -217,7 +214,6 @@ class Project(models.Model):
         return self.name
 
 
-@python_2_unicode_compatible
 class Site(models.Model):
     project = models.ForeignKey('Project', null=False, blank=False,
                                 verbose_name="Project", help_text="Select the project this site is part of (required)",
@@ -305,16 +301,15 @@ class Site(models.Model):
         return self.code
 
 
-@python_2_unicode_compatible
 class Form(models.Model):
     name = models.CharField(max_length=200, null=False, blank=False)
     layout = JSONField()
-    dataset = models.ForeignKey('Dataset', null=False, blank=False)
+    dataset = models.ForeignKey('Dataset', null=False, blank=False, on_delete=models.CASCADE)
 
     def __str__(self):
         return '{}'.format(self.name)
 
-@python_2_unicode_compatible
+
 class Dataset(models.Model):
     TYPE_GENERIC = 'generic'
     TYPE_OBSERVATION = 'observation'
@@ -598,7 +593,6 @@ class Dataset(models.Model):
         ordering = ['name']
 
 
-@python_2_unicode_compatible
 class Record(models.Model):
     dataset = models.ForeignKey(Dataset, null=False, blank=False, on_delete=models.CASCADE)
     data = JSONField()
@@ -758,7 +752,6 @@ def get_media_path(instance, filename):
         return 'unknown/{}'.format(filename)
 
 
-@python_2_unicode_compatible
 class Media(models.Model):
     file = models.FileField(upload_to=get_media_path)
     record = models.ForeignKey(Record, blank=False, null=False, on_delete=models.CASCADE)
@@ -861,7 +854,6 @@ def get_project_media_path(instance, filename):
         return 'unknown/{}'.format(filename)
 
 
-@python_2_unicode_compatible
 class ProjectMedia(models.Model):
     file = models.FileField(upload_to=get_project_media_path)
     project = models.ForeignKey(Project, blank=False, null=False, on_delete=models.CASCADE)
@@ -957,7 +949,7 @@ def get_dataset_media_path(instance, filename):
         return 'unknown/{}'.format(filename)
 
 
-@python_2_unicode_compatible
+
 class DatasetMedia(models.Model):
     file = models.FileField(upload_to=get_dataset_media_path)
     dataset = models.ForeignKey(Dataset, blank=False, null=False, on_delete=models.CASCADE)

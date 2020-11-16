@@ -1,10 +1,11 @@
 import codecs
 import datetime
+import io
 from os import path
 
 import datapackage
 from django.conf import settings
-from django.utils import six, timezone
+from django.utils import timezone
 from django.utils.text import slugify
 from openpyxl import load_workbook
 
@@ -16,11 +17,7 @@ from main.utils_data_package import GeometryParser, ObservationSchema, SpeciesOb
 from main.utils_misc import get_value
 from main.utils_species import HerbieFacade, get_key_for_value
 
-# TODO: remove when python3
-if six.PY2:
-    import unicodecsv as csv
-else:
-    import csv
+import csv
 
 
 def xlsx_to_csv(file_):
@@ -31,7 +28,7 @@ def xlsx_to_csv(file_):
             result = result.strftime(settings.DATE_FORMAT)
         return result
 
-    output = six.StringIO()
+    output = io.StringIO()
     writer = csv.writer(output)
     wb = load_workbook(filename=file_, read_only=True)
     # use the first sheet
@@ -101,15 +98,10 @@ class FileReader(object):
             self.file = xlsx_to_csv(file_)
             self.reader = csv.DictReader(self.file)
         else:
-            if six.PY3:
-                self.reader = csv.DictReader(codecs.iterdecode(self.file, 'utf-8'))
-            else:
-                self.reader = csv.DictReader(self.file)
+            self.reader = csv.DictReader(codecs.iterdecode(self.file, 'utf-8'))
+
         # because users are stupid we want to trim/strip the headers (fieldnames).
         self.reader.fieldnames = [f.strip() for f in self.reader.fieldnames]
-        if six.PY2 and hasattr(self.reader, 'unicode_fieldnames'):
-            # we're using the unicode csv reader.
-            self.reader.unicode_fieldnames = [f.strip() for f in self.reader.unicode_fieldnames]
 
     def __iter__(self):
         for row in self.reader:
