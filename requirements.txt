@@ -28,7 +28,7 @@ dry-rest-permissions==0.1.8
 djangorestframework-gis==0.13
 drf-yasg==1.7.4
 django-extra-fields==1.0.0
-Pillow==5.1.0
+Pillow==8.1.1
 djoser==1.2.1
 
 # for S3 static/media storage
