@@ -5,6 +5,7 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 
 import os
 import sys
+from platform import system
 
 from confy import env, database
 from unipath import Path
@@ -30,6 +31,10 @@ ALLOWED_HOSTS = env('ALLOWED_HOSTS', [
     'biosys-uat.dbca.wa.gov.au',
     'biosys-uat.dbca.wa.gov.au.',
 ])
+
+if system() == 'Windows':
+    GDAL_LIBRARY_PATH = env('GDAL_LIBRARY_PATH')
+    GEOS_LIBRARY_PATH = env('GEOS_LIBRARY_PATH')
 
 # Application definition
 # The variables below are added to all responses in biosys/context_processors.py
