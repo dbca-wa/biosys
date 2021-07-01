@@ -53,6 +53,13 @@ GDAL_LIBRARY_PATH='C:\Program Files\OSGeo4W64\bin\gdal301'
 GEOS_LIBRARY_PATH='C:\Program Files\OSGeo4W64\bin\geos_c'
 ```
 
+#### Conda
+`conda create --name biosys python=3.8.8`
+`conda activate biosys`
+`conda install gdal=2.3.3`
+`conda install pathlib=1.0.1`
+`conda install pyqt=5.9.2`
+
 ### Python Libraries
 
 Python library requirements should be installed using `pip`:
