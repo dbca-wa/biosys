@@ -1,4 +1,4 @@
-Django>=1.11,<2.0
+Django>=2.2.27,<2.0
 psycopg2-binary==2.7.4
 django-confy==1.0.4
 django-bootstrap3==10.0.1
@@ -18,21 +18,21 @@ datapackage==1.2.6
 tableschema==1.0.13
 
 # rest API
-djangorestframework==3.8.2
+djangorestframework==3.11.2
 coreapi==2.3.3
 # next line is to fix a strange dep error from (the openapi-codec==1.3.1 create issues)
-django-filter==1.1.0
+django-filter==2.4.0
 django-crispy-forms==1.6.1
-django-cors-headers==1.3.1
+django-cors-headers==3.0.0
 dry-rest-permissions==0.1.8
 djangorestframework-gis==0.13
 drf-yasg==1.7.4
 django-extra-fields==1.0.0
-Pillow==5.1.0
+Pillow==9.0.0
 djoser==1.2.1
 
 # for S3 static/media storage
-django-storages==1.6.6
+django-storages==1.7
 boto3==1.7.50
 
 # dbca for SSO login
@@ -54,3 +54,5 @@ django-extensions>=1.7.2,<1.8
 ipython>=5.1.0,<6.0
 Werkzeug>=0.10.4,<1.0
 factory-boy==2.11.1
+pygments>=2.7.4 # not directly required, pinned by Snyk to avoid a vulnerability
+urllib3>=1.26.5 # not directly required, pinned by Snyk to avoid a vulnerability
