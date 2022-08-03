@@ -6,7 +6,7 @@ openpyxl==2.4.2
 django-reversion==1.10
 pytz>=2016.6.1
 django-timezone-field==2.0
-requests==2.11
+requests==2.20.0
 Unipath==1.1
 six==1.10
 python-dateutil==2.6.0
@@ -29,13 +29,14 @@ djangorestframework-gis==0.13
 drf-yasg==1.7.4
 django-extra-fields==1.0.0
 Pillow==5.1.0
+djoser==1.2.1
 
 # for S3 static/media storage
 django-storages==1.6.6
 boto3==1.7.50
 
-# dbca-utils for SSO login
-https://static.dbca.wa.gov.au/static/py/dpaw-utils/dist/dpaw-utils-0.3a15.tar.gz
+# dbca for SSO login
+git+https://github.com/dbca-wa/dpaw-utils.git@0.3a16
 
 # TODO: to get rid of
 django-grappelli==2.8.2
@@ -53,7 +54,3 @@ django-extensions>=1.7.2,<1.8
 ipython>=5.1.0,<6.0
 Werkzeug>=0.10.4,<1.0
 factory-boy==2.11.1
-
-
-
-

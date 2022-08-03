@@ -52,6 +52,7 @@ INSTALLED_APPS = (
     'drf_yasg',
     'reversion',
     'storages',
+    'djoser',
 
     'django_extensions',
     'bootstrap3',
@@ -310,8 +311,27 @@ LOGGING = {
 GRAPPELLI_ADMIN_TITLE = SITE_TITLE + ' administration'
 
 # Email settings
-EMAIL_HOST = env('EMAIL_HOST', 'email.host')
+EMAIL_HOST = env('EMAIL_HOST', 'localhost')
 EMAIL_PORT = env('EMAIL_PORT', 25)
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = env('EMAIL_USE_TLS', False)
+EMAIL_USE_SSL = env('EMAIL_USE_SSL', False)
+EMAIL_SUBJECT_PREFIX = env('EMAIL_SUBJECT_PREFIX', '[BioSys] ')
+EMAIL_USE_LOCALTIME = env('EMAIL_USE_LOCALTIME', False)
+
+# djoser is used to manage user password reset workflow.
+# see https://djoser.readthedocs.io
+DJOSER = {
+    'PASSWORD_RESET_CONFIRM_URL': env('PASSWORD_RESET_CONFIRM_URL', '#/reset-password/{uid}/{token}'),
+    'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': env('PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND', True)
+}
+# This is use in the email template sent to the user after a reset password request.
+# see https://django-templated-mail.readthedocs.io/en/latest/settings.html#site-name
+# if not specified SITE_NAME and DOMAIN are set from the django.contrib.sites.shortcuts.get_current_site(request)
+SITE_NAME = env('PASSWORD_RESET_SITE_NAME', 'BioSys')
+DOMAIN = env('PASSWORD_RESET_DOMAIN')
 
 ###################################################################################
 #  Static and media files settings
@@ -341,3 +361,8 @@ S3_USE_SIGV4 = True
 # If using a CDN or a S3 static website tell django-storages the domain to use to refer to static files.
 # By default it is s3.<region>.amazonaws.com/<bucket>/...
 AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN', None)
+
+# For when the app is behind a proxy or a load balancer in charge of the https/ssl
+# https://docs.djangoproject.com/en/2.1/ref/settings/#secure-proxy-ssl-header
+SECURE_PROXY_SSL_HEADER = env('SECURE_PROXY_SSL_HEADER')
+USE_X_FORWARDED_HOST = env('USE_X_FORWARDED_HOST', False)

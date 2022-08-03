@@ -71,6 +71,12 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.UserSerializer
     filter_class = filters.UserFilterSet
 
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return serializers.CreateUserSerializer
+        else:
+            return self.serializer_class
+
 
 class ProgramViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, DRYPermissions)
