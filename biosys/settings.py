@@ -17,20 +17,22 @@ sys.path.insert(0, PROJECT_DIR)
 # Add PROJECT_DIR/apps to the system path.
 sys.path.insert(0, os.path.join(PROJECT_DIR, 'apps'))
 
-# Security settings
 DEBUG = env('DEBUG', False)
-SECRET_KEY = env('SECRET_KEY', 'wjdh^hIO)jj5')
+SECRET_KEY = env('SECRET_KEY', 'PlaceholderSecretKey')
 CSRF_COOKIE_SECURE = env('CSRF_COOKIE_SECURE', False)
+CSRF_COOKIE_HTTPONLY = env('CSRF_COOKIE_HTTPONLY', False)
 SESSION_COOKIE_SECURE = env('SESSION_COOKIE_SECURE', False)
 if not DEBUG:
     ALLOWED_HOSTS = env('ALLOWED_DOMAINS', 'localhost').split(',')
 else:
     ALLOWED_HOSTS = ['*']
+INTERNAL_IPS = ['127.0.0.1', '::1']
+ROOT_URLCONF = 'biosys.urls'
 
 # Application definition
-# The variables below are added to all responses in biosys/context_processors.py
 SITE_TITLE = 'BioSys - WA Biological Survey Database'
 APPLICATION_VERSION_NO = '5.0.0'
+WSGI_APPLICATION = 'biosys.wsgi.application'
 
 INSTALLED_APPS = (
     'grappelli',  # Must be before django.contrib.admin
@@ -85,7 +87,6 @@ EXTRA_MIDDLEWARE = env('EXTRA_MIDDLEWARE', [
 
 MIDDLEWARE += EXTRA_MIDDLEWARE
 
-ROOT_URLCONF = 'biosys.urls'
 
 TEMPLATES = [
     {
@@ -167,8 +168,6 @@ CORS_ORIGIN_REGEX_WHITELIST = env('CORS_ORIGIN_WHITELIST', [
     r'^.*$',
 ])
 
-WSGI_APPLICATION = 'biosys.wsgi.application'
-
 # Database
 if env('RDS_DB_NAME'):
     # AWS settings found
@@ -205,17 +204,14 @@ DATE_INPUT_FORMATS = (
 )
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = '/static/'
 # Absolute path to the directory static files should be collected to.
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-# Ensure that the media directory exists:
-if not os.path.exists(os.path.join(BASE_DIR, 'media')):
-    os.mkdir(os.path.join(BASE_DIR, 'media'))
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 MEDIA_ROOT = env('MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
 MEDIA_URL = '/media/'
+STATIC_URL = '/static/'
 
 # Additional locations of static files
 STATICFILES_DIRS = (
@@ -246,64 +242,30 @@ BOOTSTRAP3 = {
 # in the environment file.
 SPECIES_FACADE_CLASS = env('SPECIES_FACADE_CLASS', None)
 
-# Logging settings
-# Ensure that the logs directory exists:
-LOG_FOLDER = env('LOG_FOLDER', os.path.join(BASE_DIR, 'logs'))
-if not os.path.exists(LOG_FOLDER):
-    os.mkdir(LOG_FOLDER)
+# Logging settings - log to stdout/stderr
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'precise': {
-            'format': '{%(asctime)s.%(msecs)d}  %(message)s [%(levelname)s %(name)s]',
-            'datefmt': '%H:%M:%S'
-        },
-        'default': {
-            'format': '%(asctime)s %(levelname)-8s [%(name)-15s] %(message)s',
-            'datefmt': '%Y/%m/%d %H:%M:%S',
-        },
-        'import_legacy': {
-            'format': '%(levelname)-8s %(message)s [%(asctime)s]',
-            'datefmt': '%Y/%m/%d %H:%M:%S',
-        }
-    },
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
+        'console': {'format': '%(asctime)s %(levelname)-12s %(name)-12s %(message)s'},
     },
     'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        },
-        'file': {
-            'level': env('LOG_FILE_LEVEL', 'WARNING'),
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': os.path.join(LOG_FOLDER, 'biosys.log'),
-            'when': 'midnight',
-            'backupCount': 2,
-            'formatter': 'default',
-        },
         'console': {
-            'level': env('LOG_CONSOLE_LEVEL', 'WARNING'),
+            'level': 'INFO',
             'class': 'logging.StreamHandler',
-            'formatter': 'precise',
+            'stream': sys.stdout,
+            'formatter': 'console',
         },
     },
     'loggers': {
         '': {
-            'handlers': ['file', 'console'],
-            'level': 'WARNING',
-            'propagate': True
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
         },
-        'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': False,
-        }
+        'biosys': {
+            'handlers': ['console'],
+            'level': 'INFO'
+        },
     }
 }
 
@@ -313,7 +275,7 @@ GRAPPELLI_ADMIN_TITLE = SITE_TITLE + ' administration'
 # Email settings
 EMAIL_HOST = env('EMAIL_HOST', 'localhost')
 EMAIL_PORT = env('EMAIL_PORT', 25)
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', 'noreply@dbca.wa.gov.au')
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = env('EMAIL_USE_TLS', False)
@@ -321,6 +283,7 @@ EMAIL_USE_SSL = env('EMAIL_USE_SSL', False)
 EMAIL_SUBJECT_PREFIX = env('EMAIL_SUBJECT_PREFIX', '[BioSys] ')
 EMAIL_USE_LOCALTIME = env('EMAIL_USE_LOCALTIME', False)
 
+"""
 # djoser is used to manage user password reset workflow.
 # see https://djoser.readthedocs.io
 DJOSER = {
@@ -366,3 +329,4 @@ AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN', None)
 # https://docs.djangoproject.com/en/2.1/ref/settings/#secure-proxy-ssl-header
 SECURE_PROXY_SSL_HEADER = env('SECURE_PROXY_SSL_HEADER')
 USE_X_FORWARDED_HOST = env('USE_X_FORWARDED_HOST', False)
+"""
