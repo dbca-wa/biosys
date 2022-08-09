@@ -3,6 +3,7 @@
 *.py[cod]
 *.pyc
 __pycache__
+.python-version
 
 # Pycharm
 .idea

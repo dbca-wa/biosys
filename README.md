@@ -56,14 +56,12 @@ Python library requirements should be installed using `pip`:
 ## Environment settings
 
 The following environment settings should be defined in a `.env` file
-(set at runtime by `django-confy`). Required settings:
+(set at runtime by `django-confy`). Typical required settings (adjust to suit):
 
-    DJANGO_SETTINGS_MODULE="biosys.settings"
     DEBUG=True
-    DATABASE_URL="postgis://USER:PASSWORD@HOST:PORT/NAME"
+    DATABASE_URL="postgis://USER:PASSWORD@HOST:PORT/DBNAME"
     SECRET_KEY="ThisIsASecretKey"
-    CSRF_COOKIE_SECURE=False
-    SESSION_COOKIE_SECURE=False
+    ALLOWED_DOMAINS=localhost,hostname,.some.other.domain
 
 ## Running
 
@@ -82,10 +80,10 @@ To run unit tests or generate test coverage reports:
 ## AWS Elastic Beanstalk deployment
 
 This project is set for Elastic Beanstalk deployment through the `.elasticbeanstalk` dir with the `.ebextensions\*` environment configuration.
-Note: the deployment is set tu use the 3.6 eb platform.  
+Note: the deployment is set tu use the 3.6 eb platform.
 
-You have to install the eb cli:  
-`pip install awsebcli`  
+You have to install the eb cli:
+`pip install awsebcli`
 Note: It is recommended to install the eb cli in a different virtual env than the project.
 
 You have to have the right credentials set for you AWS account. (~/.aws/credentials)
@@ -96,14 +94,12 @@ Example of how to create an environment:
     eb create --scale 2 -db -db.engine postgres -db.i db.t2.micro
     # same as above with no load balancer (single instance)
     eb create --single -db -db.engine postgres -db.i db.t2.micro
-    
+
 Check environment
-    
+
     eb status
-    
+
 Deploy :
-    
+
         # example: deploy on staging
-        eb deploy eb-biosys-staging 
-    
-     
+        eb deploy eb-biosys-staging
