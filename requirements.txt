@@ -30,7 +30,7 @@ djangorestframework-gis==0.13
 drf-yasg==1.7.4
 django-extra-fields==1.0.0
 Pillow==5.1.0
-djoser==1.2.2
+djoser==1.5.1
 
 # for S3 static/media storage
 django-storages==1.6.6
@@ -54,3 +54,5 @@ django-extensions>=1.7.2,<1.8
 ipython>=5.1.0,<6.0
 Werkzeug>=0.10.4,<1.0
 factory-boy==2.11.1
+setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
+urllib3>=1.26.5 # not directly required, pinned by Snyk to avoid a vulnerability
