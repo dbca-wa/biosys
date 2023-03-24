@@ -19,7 +19,7 @@ global:
   application_name: biosys
   branch: master
   default_ec2_keyname: aws-eb
-  default_platform: Python 3.6
+  default_platform: Python 3.8
   default_region: ap-southeast-2
   include_git_submodules: true
   instance_profile: null
