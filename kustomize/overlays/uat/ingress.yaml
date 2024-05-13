@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: biosys-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: biosys-uat.dbca.wa.gov.au
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: biosys-clusterip-uat
+            port:
+              number: 8080
+  - host: biosys-admin-uat.dbca.wa.gov.au
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: biosys-clusterip-uat
+            port:
+              number: 8080
