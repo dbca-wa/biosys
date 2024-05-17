@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: biosys-deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: biosys
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: biosys-env-prod
+              key: DATABASE_URL
+        - name: EMAIL_HOST
+          valueFrom:
+            secretKeyRef:
+              name: biosys-env-prod
+              key: EMAIL_HOST
+        - name: HERBIE_SPECIES_WFS_URL
+          valueFrom:
+            secretKeyRef:
+              name: biosys-env-prod
+              key: HERBIE_SPECIES_WFS_URL
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: biosys-env-prod
+              key: SECRET_KEY
