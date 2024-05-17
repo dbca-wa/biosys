@@ -54,7 +54,8 @@ spec:
           successThreshold: 1
           failureThreshold: 3
         securityContext:
-          runAsNonRoot: false
+          runAsNonRoot: true
+          runAsUser: 33
           privileged: false
           allowPrivilegeEscalation: false
           capabilities:

@@ -20,4 +20,4 @@ patches:
   - path: service_patch.yaml
 images:
   - name: ghcr.io/dbca-wa/biosys
-    newTag: 1.1
+    newTag: '1.1'
