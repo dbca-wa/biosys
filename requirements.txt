@@ -1,4 +1,4 @@
-Django>=1.11,<2.0
+Django>=4.2.22
 psycopg2-binary==2.7.4
 django-confy==1.0.4
 django-bootstrap3==10.0.1
@@ -6,7 +6,7 @@ openpyxl==2.4.2
 django-reversion==1.10
 pytz>=2016.6.1
 django-timezone-field==2.0
-requests==2.20.0
+requests==2.32.4
 Unipath==1.1
 six==1.10
 python-dateutil==2.6.0
